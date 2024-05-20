@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 project(app VERSION 0.0.1 LANGUAGES C)
 
-
 # Dependencies
 set(RAYLIB_VERSION 5.0)
 include(FetchContent)
@@ -13,7 +12,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(raylib)
 
 find_package(util REQUIRED CONFIG)
-
+find_package(model REQUIRED CONFIG)
 
 # Our Project
 
@@ -32,4 +31,4 @@ target_include_directories(
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC util::util raylib)
+target_link_libraries(${PROJECT_NAME} PUBLIC util::util model::model raylib)

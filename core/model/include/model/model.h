@@ -3,7 +3,6 @@
 #define MODEL_H
 
 #include <util/matrix.h>
-#include <util/vector.h>
 
 typedef struct InputLayer {
     matrix_t layer;
@@ -18,28 +17,30 @@ typedef struct NeuronLayer {
     // weight matrix + bias
     // Y = X.W + b   <- bias added to each row of the output matrix
     matrix_t weight; // r x c
-    vector_t bias; // c x 1
+    matrix_t bias; // 1 x c
 } neuron_layer_t;
 
 typedef struct Layer {
-    union Layer {
+    union {
         input_layer_t input;
         activation_layer_t activation;
         neuron_layer_t neuron;
+        output_layer_t pipeline;
         output_layer_t output;
-    } layer;
+    };
 
     enum LayerType {
         LayerType_INPUT,
         LayerType_ACTIVATION,
         LayerType_NEURON,
+        LayerType_PIPELINE, // overwrite the data instead of reallocating each time the model is ran
         LayerType_OUTPUT
     } type;
 } layer_t;
 
 typedef struct Model {
     // contain info about the various layers of the model
-    // input -> neuron -> activation -> output
+    // input -> neuron -> pipeline -> activation -> output
     layer_t* layers;
     unsigned int num_layers;
 } model_t;
@@ -47,7 +48,7 @@ typedef struct Model {
 
 // todo return useful stats/info out
 void model_run(model_t *model, input_layer_t *input,
-                output_layer_t *output);
+               output_layer_t *output);
 void model_train(model_t *model, int num_data, input_layer_t **inputs, output_layer_t **outputs);
 void model_test(model_t *model, int num_data, input_layer_t **inputs, output_layer_t **outputs);
 
@@ -56,6 +57,7 @@ void model_test(model_t *model, int num_data, input_layer_t **inputs, output_lay
  * and writes to output layer
  */
 void layer_run(layer_t *layer, input_layer_t *input,
-                output_layer_t *output);
+               output_layer_t *output);
+
 
 #endif

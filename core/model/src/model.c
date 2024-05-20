@@ -4,24 +4,32 @@
 #include <memory.h>
 #include <stdlib.h>
 
+static void add_bias(matrix_t *bias, matrix_t *result) {
+    for (int r = 0; r < result->r; r++) {
+        matrix_add_row(bias, 0, result, r, result, r);
+    }
+}
+
 static output_layer_t* layer_run_activation(activation_layer_t *activation_layer, input_layer_t *input,
-                                            output_layer_t *output) {
-    activation_layer->activation(input, output);
+                                            output_layer_t *output_pipeline) {
+    activation_layer->activation(input, output_pipeline);
 }
 
 static output_layer_t* layer_run_neuron(neuron_layer_t *neuron_layer, input_layer_t *input,
-                                        output_layer_t *output) {
+                                        output_layer_t *output_pipeline) {
     // W.X + B
 
+    matrix_multiply(&neuron_layer->weight, &input->layer, &output_pipeline->layer);
+    add_bias(&neuron_layer->bias, &output_pipeline->layer);
 }
 
 void layer_run(layer_t *layer, input_layer_t *input, output_layer_t *output) {
     switch (layer->type) {
         case LayerType_ACTIVATION:
-            layer_run_activation(&layer->layer.activation, input, output);
+            layer_run_activation(&layer->activation, input, output);
             break;
         case LayerType_NEURON:
-            layer_run_neuron(&layer->layer.neuron, input, output);
+            layer_run_neuron(&layer->neuron, input, output);
             break;
         case LayerType_INPUT:
         case LayerType_OUTPUT:

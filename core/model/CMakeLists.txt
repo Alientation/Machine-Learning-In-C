@@ -1,14 +1,18 @@
 cmake_minimum_required(VERSION 3.15)
 project(model VERSION 0.0.1 LANGUAGES C)
 
-find_package(util REQUIRED CONFIG)
-
 add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE 
     # source files for the library
     src/model.c
 )
-target_link_libraries(${PROJECT_NAME} PUBLIC util::util)
+
+include(FetchContent)
+FetchContent_Declare(
+    util
+    SOURCE_DIR ../../util
+)
+FetchContent_MakeAvailable(util)
 
 # sets the search paths for the include files after installation
 # as well as during when building the library (as these may differ)
@@ -20,6 +24,8 @@ target_include_directories(
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+target_link_libraries(${PROJECT_NAME} PUBLIC util)
 
 # this command will append "d" to the name of the debug version 
 # of the library - this is very helpful when installing as it ensures

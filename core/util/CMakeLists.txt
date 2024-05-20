@@ -5,7 +5,7 @@ project(util VERSION 0.0.1 LANGUAGES C)
 add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE 
     # source files for the library
-    src/temp.c
+    src/matrix.c
 )
 
 # sets the search paths for the include files after installation

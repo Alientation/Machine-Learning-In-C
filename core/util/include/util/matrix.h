@@ -3,7 +3,7 @@
 #define MATRIX_H
 
 typedef struct Matrix {
-    int r, c;
+    unsigned int r, c;
     double** matrix;
 } matrix_t;
 
@@ -15,5 +15,7 @@ matrix_t matrix_sub(matrix_t m1, matrix_t m2);
 // extends matrix with copies of itself
 matrix_t matrix_column_extend(matrix_t m, unsigned int col_factor);
 matrix_t matrix_row_extend(matrix_t m, unsigned int row_factor);
+
+matrix_t matrix_transpose(matrix_t m);
 
 #endif

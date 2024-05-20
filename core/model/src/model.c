@@ -1,5 +1,4 @@
 #include <model/model.h>
-#include <util/matrix.h>
 
 #include <assert.h>
 #include <memory.h>

@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "model.h": "c",
-        "matrix.h": "c"
+        "matrix.h": "c",
+        "vector.h": "c",
+        "stdlib.h": "c"
     }
 }

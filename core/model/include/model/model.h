@@ -2,10 +2,11 @@
 #ifndef MODEL_H
 #define MODEL_H
 
+#include <util/matrix.h>
+#include <util/vector.h>
+
 typedef struct InputLayer {
-    double **layer;
-    int r;
-    int c;
+    matrix_t layer;
 } input_layer_t, output_layer_t;
 
 typedef struct ActivationLayer {
@@ -16,10 +17,8 @@ typedef struct ActivationLayer {
 typedef struct NeuronLayer {
     // weight matrix + bias
     // Y = X.W + b   <- bias added to each row of the output matrix
-    double **weight; // r x c
-    int r;
-    int c;
-    double* bias; // 1 x c
+    matrix_t weight; // r x c
+    vector_t bias; // c x 1
 } neuron_layer_t;
 
 typedef struct Layer {

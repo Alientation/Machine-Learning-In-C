@@ -5,9 +5,10 @@
 matrix_t matrix_constructor(int r, int c, double** matrix) {
     assert(matrix != NULL);
 
-    matrix_t matrix = {
+    matrix_t m = {
         .r = r, .c = c, .matrix = matrix
     };
+    return m;
 }
 
 // use https://en.wikipedia.org/wiki/Strassen_algorithm for large matrices
@@ -84,6 +85,21 @@ matrix_t matrix_row_extend(matrix_t m, unsigned int factor) {
             for (int c = 0; c < m.c; c++) {
                 new.matrix[r][copy * m.c] = m.matrix[r][c];
             }
+        }
+    }
+    return new;
+}
+
+matrix_t matrix_transpose(matrix_t m) {
+    matrix_t new = {
+        .r = m.c,
+        .c = m.r,
+        .matrix = malloc(m.r * m.c * sizeof(double))
+    };
+
+    for (int r = 0; r < new.r; r++) {
+        for (int c = 0; c < new.c; c++) {
+            new.matrix[r][c] = m.matrix[c][r];
         }
     }
     return new;

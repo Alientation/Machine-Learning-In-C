@@ -13,6 +13,9 @@ matrix_t matrix_constructor(int r, int c, double** matrix);
  * Frees the allocated 2d double array of the matrix
  */
 void matrix_free(matrix_t* m);
+matrix_t* matrix_copy(matrix_t* src);
+void matrix_memcpy(matrix_t *dst, matrix_t *src);
+
 void matrix_multiply(matrix_t *m1, matrix_t *m2, 
                      matrix_t *result);
 void matrix_add(matrix_t *m1, matrix_t *m2,

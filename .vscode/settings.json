@@ -4,5 +4,10 @@
         "matrix.h": "c",
         "vector.h": "c",
         "stdlib.h": "c"
-    }
+    },
+    "C_Cpp.default.includePath": [
+        "core/app/include",
+        "core/model/include",
+        "core/util/include"
+    ]
 }

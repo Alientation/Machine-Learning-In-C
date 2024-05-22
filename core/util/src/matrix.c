@@ -23,6 +23,30 @@ void matrix_free(matrix_t *matrix) {
     free(matrix->matrix);
 }
 
+matrix_t* matrix_copy(matrix_t* src) {
+    matrix_t *copy = malloc(sizeof(matrix_t));
+    copy->r = src->r;
+    copy->c = src->c;
+    copy->matrix = malloc(src->r * src->c * sizeof(double));
+    matrix_memcpy(copy, src);
+}
+
+void matrix_memcpy(matrix_t *dst, matrix_t *src) {
+    assert(dst != NULL && src != NULL);
+    assert(dst->r == src->r && dst->c == src->c);
+
+    if (dst->matrix == src->matrix) {
+        // points to same matrix, dont need to do any work
+        return;
+    }
+
+    for (int r = 0; r < dst->r; r++) {
+        for (int c = 0; c < dst->c; c++) {
+            dst->matrix[r][c] = src->matrix[r][c];
+        }
+    }
+}
+
 // use https://en.wikipedia.org/wiki/Strassen_algorithm for large matrices
 // todo
 void matrix_multiply(matrix_t *m1, matrix_t *m2,

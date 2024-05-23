@@ -7,6 +7,16 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/model.c
 )
 
+# Set build type to Debug by default
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+# Add compile options for debug
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-g)
+endif()
+
 include(FetchContent)
 FetchContent_Declare(
     util

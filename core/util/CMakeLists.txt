@@ -6,7 +6,18 @@ add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE 
     # source files for the library
     src/matrix.c
+    src/math.c
 )
+
+# Set build type to Debug by default
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+# Add compile options for debug
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-g)
+endif()
 
 # sets the search paths for the include files after installation
 # as well as during when building the library (as these may differ)

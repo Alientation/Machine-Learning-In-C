@@ -1,4 +1,5 @@
 #include <model/model.h>
+#include <util/math.h>
 
 #include <stdio.h>
 #include <math.h>
@@ -146,6 +147,8 @@ matrix_t* layer_get_neurons(layer_t *layer) {
             return layer->layer.output.output_values;
             break;
     }
+
+    assert(0);
 }
 
 void model_free(model_t *model) {
@@ -170,21 +173,22 @@ void model_add_layer(model_t *model, layer_t *layer) {
 }
 
 
-void layer_input(model_t *model, matrix_t *input) {
+layer_t* layer_input(model_t *model, matrix_t *input) {
     assert(model->num_layers == 0 && model->input_layer == NULL);
     // for now, column vector
     assert(input->c == 1);
 
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = INPUT;
-    input_layer_t input_layer = layer->layer.input;
-    input_layer.input_values = matrix_copy(input);
-    input_layer.feed_forward = input_feed_forward;
+    input_layer_t *input_layer = &layer->layer.input;
+    input_layer->input_values = matrix_copy(input);
+    input_layer->feed_forward = input_feed_forward;
 
     model_add_layer(model, layer);
+    return layer;
 }
 
-void layer_dense(model_t *model, matrix_t *neurons) {
+layer_t* layer_dense(model_t *model, matrix_t *neurons) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     // for now, column vector
     assert(neurons->c == 1);
@@ -192,47 +196,57 @@ void layer_dense(model_t *model, matrix_t *neurons) {
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = DENSE;
 
-    dense_layer_t dense = layer->layer.dense;
-    dense.activation_values = matrix_copy(neurons);
+    dense_layer_t *dense = &layer->layer.dense;
+    dense->activation_values = matrix_copy(neurons);
     matrix_t *prev_output = layer_get_neurons(model->output_layer);
-    dense.weights = matrix_allocator(prev_output->r, neurons->r);
-    dense.bias = matrix_allocator(neurons->r, 1);
-    dense.d_cost_wrt_input = matrix_allocator(prev_output->r, 1);
+    dense->weights = matrix_allocator(prev_output->r, neurons->r);
+    dense->bias = matrix_allocator(neurons->r, 1);
+    dense->d_cost_wrt_input = matrix_allocator(prev_output->r, 1);
 
     model_add_layer(model, layer);
+    return layer;
 }
 
-void layer_activation(model_t *model, matrix_t* (*feed_forward)(layer_t*, matrix_t*), matrix_t* (*back_propagation)(layer_t*, matrix_t*, double)) {
+layer_t* layer_activation(model_t *model, matrix_t* (*feed_forward)(layer_t*, matrix_t*), matrix_t* (*back_propagation)(layer_t*, matrix_t*)) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = ACTIVATION;
-    activation_layer_t activation = layer->layer.activation;
+    activation_layer_t *activation = &layer->layer.activation;
     matrix_t *prev_output = layer_get_neurons(model->output_layer);
-    activation.activated_values = matrix_allocator(prev_output->r, prev_output->c);
-    activation.feed_forward = feed_forward;
-    activation.back_propagation = back_propagation;
-    activation.d_cost_wrt_input = matrix_allocator(prev_output->r, 1);
+    activation->activated_values = matrix_allocator(prev_output->r, prev_output->c);
+    activation->feed_forward = feed_forward;
+    activation->back_propagation = back_propagation;
+    activation->d_cost_wrt_input = matrix_allocator(prev_output->r, 1);
 
     model_add_layer(model, layer);
+    return layer;
 }
 
-void layer_output(model_t *model, matrix_t* (*back_propagation)(layer_t*, matrix_t*, double)) {
+layer_t* layer_output(model_t *model, matrix_t* (*make_guess)(layer_t*, matrix_t*), matrix_t* (*back_propagation)(layer_t*, matrix_t*)) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = OUTPUT;
-    output_layer_t output = layer->layer.output;
-    output.output_values = malloc(sizeof(matrix_t));
+    output_layer_t *output = &layer->layer.output;
     matrix_t *prev_output = layer_get_neurons(model->output_layer);
-    output.output_values = matrix_allocator(prev_output->r, prev_output->c);
-    output.back_propagation = back_propagation;
-    output.d_cost_wrt_input = matrix_allocator(prev_output->r, 1);
-    output.guess = matrix_allocator(prev_output->r, 1);
+    output->output_values = matrix_allocator(prev_output->r, prev_output->c);
+    output->make_guess = make_guess;
+    output->back_propagation = back_propagation;
+    output->d_cost_wrt_input = matrix_allocator(prev_output->r, 1);
+    output->guess = matrix_allocator(prev_output->r, 1);
 
     model_add_layer(model, layer);
+    return layer;
 }
 
+void model_initialize_matrix_normal_distribution(matrix_t *matrix, double mean, double standard_deviation) {
+    for (int r = 0; r < matrix->r; r++) {
+        for (int c = 0; c < matrix->c; c++) {
+            matrix->matrix[r][c] = random_normal_distribution_BoxMullerTransform(standard_deviation) + mean;
+        }
+    }
+}
 
 void model_run(model_t *model, matrix_t *input, 
                matrix_t *output) {
@@ -256,10 +270,17 @@ void model_back_propagate(model_t *model, matrix_t *expected_output, double lear
     matrix_t *d_cost_wrt_Y = expected_output;
     for (int layer_i = model->num_layers - 1; layer_i >= 1; layer_i--) {
         assert(current->type != INPUT);
-        
-        // since the different layer structs are arranged in a way that the function pointers are in the same "locations"
-        // this should work for all layers without having to use a switch
-        d_cost_wrt_Y = current->layer.output.back_propagation(current, d_cost_wrt_Y, learning_rate);
+
+        switch (current->type) {
+            case DENSE:
+                d_cost_wrt_Y = current->layer.dense.back_propagation(current, d_cost_wrt_Y, learning_rate);
+                break;
+            case ACTIVATION:
+                d_cost_wrt_Y = current->layer.activation.back_propagation(current, d_cost_wrt_Y);
+                break;
+            case OUTPUT:
+                d_cost_wrt_Y = current->layer.output.back_propagation(current, d_cost_wrt_Y);
+        }
         current = current->prev;
     }
 }

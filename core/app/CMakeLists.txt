@@ -32,3 +32,13 @@ target_include_directories(
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC util::util model::model raylib)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_library(model_debug_options INTERFACE)
+    target_compile_options(model_debug_options INTERFACE -DDEBUG -g)
+    target_link_libraries(model::model INTERFACE model_debug_options)
+
+    add_library(util_debug_options INTERFACE)
+    target_compile_options(util_debug_options INTERFACE -DDEBUG -g)
+    target_link_libraries(util::util INTERFACE util_debug_options)
+endif()

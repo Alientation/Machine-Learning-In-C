@@ -3,7 +3,8 @@
         "model.h": "c",
         "matrix.h": "c",
         "vector.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "math.h": "c"
     },
     "C_Cpp.default.includePath": [
         "core/app/include",

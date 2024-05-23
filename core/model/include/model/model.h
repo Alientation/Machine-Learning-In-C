@@ -62,7 +62,7 @@ typedef struct Dense_Layer {
 // passes in the activation values of the previous layer into the activation function
 typedef struct Activation_Layer {
     matrix_t* (*feed_forward)(layer_t *this, matrix_t *input);
-    matrix_t* (*back_propagation)(layer_t *this, matrix_t *input_gradient, double learning_rate);
+    matrix_t* (*back_propagation)(layer_t *this, matrix_t *input_gradient);
     matrix_t *activated_values;
     // dE/dX = W.T * dE/dY
     // m x 1
@@ -73,7 +73,7 @@ typedef struct Activation_Layer {
 typedef struct Output_Layer {
     // void (*feed_forward)(void); // dummy variable to pad the back_prop function to the same location as other layer structs
     matrix_t* (*make_guess)(layer_t *this, matrix_t *output);
-    matrix_t* (*back_propagation)(layer_t *this, matrix_t *expected_output, double learning_rate);
+    matrix_t* (*back_propagation)(layer_t *this, matrix_t *expected_output);
     matrix_t *output_values;
     // dE/dX = W.T * dE/dY
     // m x 1
@@ -134,15 +134,17 @@ void model_free(model_t *model);
 void model_add_layer(model_t *model, layer_t *layer);
 
 // adds an layers to the model
-void layer_input(model_t *model, matrix_t *input);
-void layer_dense(model_t *model, matrix_t *neurons);
-void layer_activation(model_t *model, matrix_t* (*feed_forward)(layer_t*, matrix_t*), matrix_t* (*back_propagation)(layer_t*, matrix_t*, double));
-void layer_output(model_t *model, matrix_t* (*back_propagation)(layer_t*, matrix_t*, double));
+// todo in future, specify dimensions instead of supply matrix to be then copied
+layer_t* layer_input(model_t *model, matrix_t *input);
+layer_t* layer_dense(model_t *model, matrix_t *neurons);
+layer_t* layer_activation(model_t *model, matrix_t* (*feed_forward)(layer_t*, matrix_t*), matrix_t* (*back_propagation)(layer_t*, matrix_t*));
+layer_t* layer_output(model_t *model, matrix_t* (*make_guess)(layer_t*, matrix_t*), matrix_t* (*back_propagation)(layer_t*, matrix_t*));
 
 
 void model_run(model_t *model, matrix_t *input, 
                matrix_t *output);
 
+void model_initialize_matrix_normal_distribution(matrix_t *model, double mean, double standard_deviation);
 void model_back_propagate(model_t *model, matrix_t *expected_output, double learning_rate);
 void model_train(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_examples, double learning_rate);
 void model_test(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_tests);

@@ -8,6 +8,21 @@
 #include <memory.h>
 #include <stdlib.h>
 
+
+/**
+ * Some Goals
+ * 
+ * line or circle detector
+ * network visualizer
+ * digit detector
+ * batch/mini batch, stochastic gradient descent
+ * add more variety of layers (convolution, pooling, reshaping)
+ * add variable learning rates for each layer support
+ * matrix broadcasting??? support for multi-dimension matrices?????
+ */
+
+
+
 typedef struct Layer layer_t;
 typedef struct Model model_t;
 typedef struct Input_Layer input_layer_t;
@@ -15,18 +30,19 @@ typedef struct Dense_Layer dense_layer_t;
 typedef struct Activation_Layer activation_layer_t;
 typedef struct Output_Layer output_layer_t;
 
-
+// first layer of the model
 typedef struct Input_Layer {
-    matrix_t* (*feed_forward)(input_layer_t *this, matrix_t *input);
+    matrix_t* (*feed_forward)(layer_t *this, matrix_t *input);
     matrix_t *input_values;
 } input_layer_t;
 
+// fully connected inner layer of the model
 // n: number of neurons in this layer
 // m: number of neurons in the previous layer
 typedef struct Dense_Layer {
-    matrix_t* (*feed_forward)(dense_layer_t *this, matrix_t *input);
-    matrix_t* (*back_propagation)(dense_layer_t *this, matrix_t *input_gradient);
-    // n x 1, this layer's neurons
+    matrix_t* (*feed_forward)(layer_t *this, matrix_t *input);
+    matrix_t* (*back_propagation)(layer_t *this, matrix_t *input_gradient, double learning_rate);
+    // n x 1, this layer's neurons which contain the "output" values
     matrix_t *activation_values;
 
     // W.X + b= Y
@@ -37,21 +53,35 @@ typedef struct Dense_Layer {
 
     // n x 1
     matrix_t *bias;
+
+    // dE/dX = W.T * dE/dY
+    // m x 1
+    matrix_t *d_cost_wrt_input;
 } dense_layer_t;
 
+// passes in the activation values of the previous layer into the activation function
 typedef struct Activation_Layer {
-    matrix_t* (*feed_forward)(activation_layer_t *this, matrix_t *input);
-    matrix_t* (*back_propagation)(activation_layer_t *this, matrix_t *input_gradient);
+    matrix_t* (*feed_forward)(layer_t *this, matrix_t *input);
+    matrix_t* (*back_propagation)(layer_t *this, matrix_t *input_gradient, double learning_rate);
     matrix_t *activated_values;
+    // dE/dX = W.T * dE/dY
+    // m x 1
+    matrix_t *d_cost_wrt_input;
 } activation_layer_t;
 
+// final layer, compute the cost and derivatives to initiate backprop
 typedef struct Output_Layer {
-    void (*feed_forward)(void); // dummy variable to pad the back_prop function to the same location as other layer structs
-    matrix_t* (*back_propagation)(activation_layer_t *this, matrix_t *input_gradient);
+    // void (*feed_forward)(void); // dummy variable to pad the back_prop function to the same location as other layer structs
+    matrix_t* (*make_guess)(layer_t *this, matrix_t *output);
+    matrix_t* (*back_propagation)(layer_t *this, matrix_t *expected_output, double learning_rate);
     matrix_t *output_values;
+    // dE/dX = W.T * dE/dY
+    // m x 1
+    matrix_t *d_cost_wrt_input;
+    matrix_t *guess;
 } output_layer_t;
 
-
+// unionized all layers under a common identity
 typedef struct Layer {
     enum {
         INPUT,
@@ -67,123 +97,55 @@ typedef struct Layer {
         output_layer_t output;
     } layer;
 
+    // doubly linked
     layer_t *next;
     layer_t *prev;
 } layer_t;
 
+// nn model
 typedef struct Model {
     unsigned int num_layers;
-    layer_t *input_layer;
-    layer_t *output_layer;
-
-
+    layer_t *input_layer; // first layer
+    layer_t *output_layer; // last layer
 } model_t;
 
-matrix_t *input_feed_forward(input_layer_t *this, matrix_t* input) {
-    matrix_memcpy(this->input_values, input);
-    return this->input_values;
-}
+matrix_t *input_feed_forward(layer_t *this, matrix_t *input); 
 
-void layer_free(layer_t *layer) {
-    switch (layer->type) {
-        case INPUT:
-            matrix_free(layer->layer.input.input_values);
-            break;
-        case DENSE:
-            matrix_free(layer->layer.dense.activation_values);
-            matrix_free(layer->layer.dense.weights);
-            matrix_free(layer->layer.dense.bias);
-            break;
-        case ACTIVATION:
-            matrix_free(layer->layer.activation.activated_values);
-            break;
-        case OUTPUT:
-            matrix_free(layer->layer.output.output_values);
-            break;
-    }
-}
+matrix_t *dense_feed_forward(layer_t *this, matrix_t *input);
+matrix_t *dense_back_propagation(layer_t *this, matrix_t *d_error_wrt_output);
 
-matrix_t* layer_get_neurons(layer_t *layer) {
-    switch (layer->type) {
-        case INPUT:
-            return layer->layer.input.input_values;
-            break;
-        case DENSE:
-            return layer->layer.dense.activation_values;
-            break;
-        case ACTIVATION:
-            return layer->layer.activation.activated_values;
-            break;
-        case OUTPUT:
-            return layer->layer.output.output_values;
-            break;
-    }
-}
+matrix_t *activation_feed_forward_sigmoid(layer_t *this, matrix_t *input);
+matrix_t *activation_feed_forward_relu(layer_t *this, matrix_t *input);
+matrix_t *activation_back_propagation_sigmoid(layer_t *this, matrix_t *d_cost_wrt_output);
+matrix_t *activation_back_propagation_relu(layer_t *this, matrix_t *d_cost_wrt_output);
 
-void model_free(model_t *model) {
-    layer_t *current = model->input_layer;
-    for (int i = 0; i < model->num_layers; i++) {
-        current = current->next;
-        layer_free(current->prev);
-    }
-    assert(current == NULL); // ensure freed all layers
-}
+matrix_t *output_make_guess_one_hot_encoded(layer_t *this, matrix_t *output);
+matrix_t *output_back_propagation_mean_squared(layer_t *this, matrix_t *expected_output);
+matrix_t *output_back_propagation_cross_entropy(layer_t *this, matrix_t *expected_output);
 
-void model_add_layer(model_t *model, layer_t *layer) {
-    if (model->input_layer == NULL) {
-        model->input_layer = layer;
-        model->output_layer = layer;
-    } else {
-        model->output_layer->next = layer;
-        model->output_layer->next->prev = model->output_layer;
-        model->output_layer = layer;
-    }
-    model->num_layers++;
-}
+double output_cost_mean_squared(layer_t *this, matrix_t *expected_output);
+double output_cost_cross_entropy(layer_t *this, matrix_t *expected_output);
 
-void layer_input(model_t *model, matrix_t *input) {
-    assert(model->num_layers == 0 && model->input_layer == NULL);
-    // for now, column vector
-    assert(input->c == 1);
+// frees allocated memory for the layer
+void layer_free(layer_t *layer);
+matrix_t* layer_get_neurons(layer_t *layer);
 
-    layer_t *layer = malloc(sizeof(layer_t));
-    layer->type = INPUT;
-    layer->layer.input.input_values = matrix_copy(input);
-    layer->layer.input.feed_forward = input_feed_forward;
-    model_add_layer(model, layer);
-}
+void model_free(model_t *model);
+void model_add_layer(model_t *model, layer_t *layer);
 
-void layer_dense(model_t *model, matrix_t *neurons) {
-    assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
-    // for now, column vector
-    assert(neurons->c == 1);
-
-    layer_t *layer = malloc(sizeof(layer_t));
-    layer->type = DENSE;
-    layer->layer.dense.activation_values = matrix_copy(neurons);
-
-    layer->layer.dense.weights = malloc(sizeof(matrix_t));
-    layer->layer.dense.weights->matrix = malloc(layer_get_neurons(model->output_layer)->r * neurons->r * sizeof(double));
-    layer->layer.dense.bias = malloc(sizeof(matrix_t));
-    layer->layer.dense.bias->matrix = malloc(neurons->r * 1 * sizeof(double));
-    model_add_layer(model, layer);
-}
-
+// adds an layers to the model
+void layer_input(model_t *model, matrix_t *input);
+void layer_dense(model_t *model, matrix_t *neurons);
+void layer_activation(model_t *model, matrix_t* (*feed_forward)(layer_t*, matrix_t*), matrix_t* (*back_propagation)(layer_t*, matrix_t*, double));
+void layer_output(model_t *model, matrix_t* (*back_propagation)(layer_t*, matrix_t*, double));
 
 
 void model_run(model_t *model, matrix_t *input, 
-               matrix_t *output) {
-    
-    layer_t *current = model->input_layer;
-    matrix_t *prev_output = input;
-    for (int i = 0; i < model->num_layers-1; i++) {
-        assert(current->type != OUTPUT);
+               matrix_t *output);
 
-        prev_output = current->layer.input.feed_forward(model, prev_output);
-        current = current->next;
-    }
+void model_back_propagate(model_t *model, matrix_t *expected_output, double learning_rate);
+void model_train(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_examples, double learning_rate);
+void model_test(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_tests);
 
-    matrix_memcpy(output, prev_output);
-}
 
 #endif

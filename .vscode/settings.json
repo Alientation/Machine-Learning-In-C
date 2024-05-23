@@ -8,6 +8,8 @@
     "C_Cpp.default.includePath": [
         "core/app/include",
         "core/model/include",
-        "core/util/include"
+        "core/util/include",
+        "tests/build/test/_deps/googletest-src/googletest/include",
+        "tests/include"
     ]
 }

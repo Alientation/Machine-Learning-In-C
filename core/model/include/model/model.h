@@ -141,7 +141,7 @@ layer_t* layer_activation(model_t *model, matrix_t* (*feed_forward)(layer_t*, ma
 layer_t* layer_output(model_t *model, matrix_t* (*make_guess)(layer_t*, matrix_t*), matrix_t* (*back_propagation)(layer_t*, matrix_t*));
 
 
-void model_run(model_t *model, matrix_t *input, 
+matrix_t* model_predict(model_t *model, matrix_t *input, 
                matrix_t *output);
 
 void model_initialize_matrix_normal_distribution(matrix_t *model, double mean, double standard_deviation);

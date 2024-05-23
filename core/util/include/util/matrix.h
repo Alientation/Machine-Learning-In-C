@@ -49,4 +49,6 @@ bool matrix_equal(matrix_t *m1, matrix_t *m2);
 void matrix_for_each_operator(matrix_t *m, double (*op)(double), 
                               matrix_t *result);
 
+void matrix_print(matrix_t *m);
+
 #endif

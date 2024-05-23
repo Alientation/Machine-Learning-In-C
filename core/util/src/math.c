@@ -1,7 +1,9 @@
+#include <util/math.h>
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
-#include <util/math.h>
 
 
 
@@ -17,8 +19,14 @@ double random_normal_distribution_BoxMullerTransform(double standard_deviation) 
     // Var(Y) = standard_deviation ^ 2
     // standard_deviation^2 = a^2
     // standard_deviation = a
+    Z0 *= standard_deviation;
 
-    return Z0 / standard_deviation;
+    printf("UNIFORM RANDOM: %f\n", (float) U1);
+    printf("UNIFORM RANDOM: %f\n", (float) U2);
+
+    printf("NORMAL DISTRIBUTED RANDOM: %f\n\n", (float) Z0);
+    
+    return Z0;
 }
 
 double random_uniform_range(double a) {

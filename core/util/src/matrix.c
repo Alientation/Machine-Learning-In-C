@@ -1,7 +1,9 @@
 #include <util/matrix.h>
 
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 matrix_t* matrix_allocator(int r, int c) {
     matrix_t *m = malloc(sizeof(matrix_t));
@@ -198,5 +200,16 @@ void matrix_for_each_operator(matrix_t *m, double (*op)(double),
         for (int c = 0; c < m->c; c++) {
             result->matrix[r][c] = op(m->matrix[r][c]);
         }
+    }
+}
+
+void matrix_print(matrix_t *m) {
+    printf("%d x %d Matrix\n", m->r, m->c);
+    for (int r = 0; r < m->r; r++) {
+        printf("%-3d: ", r);
+        for (int c = 0; c < m->c; c++) {
+            printf("%-6f  ", (float)round(m->matrix[r][c] * 1000)/1000);
+        }
+        printf("\n");
     }
 }

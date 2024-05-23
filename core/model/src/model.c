@@ -11,7 +11,7 @@ matrix_t *input_feed_forward(layer_t *this, matrix_t *input) {
 
 matrix_t *dense_feed_forward(layer_t *this, matrix_t *input) {
     matrix_multiply(this->layer.dense.weights, input, this->layer.dense.activation_values);
-    return this->layer.dense.weights;
+    return this->layer.dense.activation_values;
 }
 
 matrix_t *dense_back_propagation(layer_t *this, matrix_t *d_error_wrt_output) {
@@ -199,9 +199,12 @@ layer_t* layer_dense(model_t *model, matrix_t *neurons) {
     dense_layer_t *dense = &layer->layer.dense;
     dense->activation_values = matrix_copy(neurons);
     matrix_t *prev_output = layer_get_neurons(model->output_layer);
-    dense->weights = matrix_allocator(prev_output->r, neurons->r);
+    dense->weights = matrix_allocator(neurons->r, prev_output->r);
     dense->bias = matrix_allocator(neurons->r, 1);
     dense->d_cost_wrt_input = matrix_allocator(prev_output->r, 1);
+
+    dense->back_propagation = dense_back_propagation;
+    dense->feed_forward = dense_feed_forward;
 
     model_add_layer(model, layer);
     return layer;
@@ -248,8 +251,8 @@ void model_initialize_matrix_normal_distribution(matrix_t *matrix, double mean, 
     }
 }
 
-void model_run(model_t *model, matrix_t *input, 
-               matrix_t *output) {
+matrix_t* model_predict(model_t *model, matrix_t *input, 
+                        matrix_t *output) {
     
     layer_t *current = model->input_layer;
     matrix_t *prev_output = input;
@@ -263,6 +266,7 @@ void model_run(model_t *model, matrix_t *input,
     }
 
     matrix_memcpy(output, prev_output);
+    return output;
 }
 
 void model_back_propagate(model_t *model, matrix_t *expected_output, double learning_rate) {
@@ -288,7 +292,7 @@ void model_back_propagate(model_t *model, matrix_t *expected_output, double lear
 void model_train(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_examples, double learning_rate) {
     matrix_t *output = matrix_copy(model->output_layer->layer.output.output_values);
     for (int example_i = 0; example_i < num_examples; example_i++) {
-        model_run(model, inputs[example_i], output);
+        model_predict(model, inputs[example_i], output);
         model_back_propagate(model, expected_outputs[example_i], learning_rate);
     }
 }
@@ -297,7 +301,7 @@ void model_test(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, 
     matrix_t *output = matrix_copy(model->output_layer->layer.output.output_values);
     int passed = 0;
     for (int test_i = 0; test_i < num_tests; test_i++) {
-        model_run(model, inputs[test_i], output);
+        model_predict(model, inputs[test_i], output);
 
         matrix_t *guess = model->output_layer->layer.output.make_guess(model->output_layer, output);
         if (matrix_equal(expected_outputs[test_i], guess)) {

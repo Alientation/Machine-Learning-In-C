@@ -40,11 +40,12 @@ matrix_t* matrix_copy(matrix_t* src) {
     matrix_t *copy = malloc(sizeof(matrix_t));
     copy->r = src->r;
     copy->c = src->c;
-    copy->matrix = (double**) malloc(src->r * sizeof(double*));
+    copy->matrix = (double**) malloc(copy->r * sizeof(double*));
     for (int i = 0; i < copy->r; i++) {
         copy->matrix[i] = (double*) malloc(copy->c * sizeof(double));
     }
     matrix_memcpy(copy, src);
+    return copy;
 }
 
 void matrix_memcpy(matrix_t *dst, matrix_t *src) {
@@ -67,13 +68,13 @@ void matrix_memcpy(matrix_t *dst, matrix_t *src) {
 void matrix_multiply(matrix_t *m1, matrix_t *m2,
                      matrix_t *result) {
     assert(m1->c == m2->r);
-    assert(m1->r == result->r && result->c == result->c);
+    assert(m1->r == result->r && m2->c == result->c);
 
     for (int r = 0; r < result->r; r++) {
         for (int c = 0; c < result->c; c++) {
             double dot = 0;
             for (int i = 0; i < m1->c; i++) {
-                dot += m1->matrix[r][c+i] * m2->matrix[r+i][c];
+                dot += m1->matrix[r][i] * m2->matrix[i][c];
             }
             result->matrix[r][c] = dot;
         }

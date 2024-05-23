@@ -4,6 +4,7 @@ project(library_tester LANGUAGES CXX)
 # GoogleTest requires at least C++14
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_FLAGS, "-g")
 
 include(FetchContent)
 FetchContent_Declare(

@@ -56,14 +56,16 @@ int main() {
     printf("\nInitial Test\n");
     model_test(&model, input_data, output_data, num_examples);
 
-    const int num_epochs = 1000;
+    const int num_epochs = 100000;
+    const int num_epoch_prints = 10;
+    const int epochs_print = num_epochs / num_epoch_prints;
     printf("Training epochs=%d\n", num_epochs);
     for (int i = 0; i < num_epochs; i++) {
         
         // printf("----\nepoch %d\n", i+1);
         double avg_error = model_train(&model, input_data, output_data, num_examples, 0.1);
 
-        if ((i+1) % 100 == 0) {
+        if (i != 0 && (i+1) % epochs_print == 0) {
             printf("----\nepoch %d\n", i+1);
             printf("avg error: %f\n", avg_error);
             printf("\ndense_layer_1 weights:\n");

@@ -4,6 +4,19 @@
 #include <stdio.h>
 #include <math.h>
 
+char* get_layer_name(layer_t *layer) {
+    switch (layer->type) {
+        case INPUT:
+            return "Input";
+        case DENSE:
+            return "Dense";
+        case ACTIVATION:
+            return "Activation";
+        case OUTPUT:
+            return "Output";
+    }
+}
+
 matrix_t *input_feed_forward(layer_t *this, matrix_t *input) {
     matrix_memcpy(this->layer.input.input_values, input);
     return this->layer.input.input_values;
@@ -11,16 +24,33 @@ matrix_t *input_feed_forward(layer_t *this, matrix_t *input) {
 
 matrix_t *dense_feed_forward(layer_t *this, matrix_t *input) {
     matrix_multiply(this->layer.dense.weights, input, this->layer.dense.activation_values);
+    matrix_add(this->layer.dense.activation_values, this->layer.dense.bias, this->layer.dense.activation_values);
     return this->layer.dense.activation_values;
 }
 
-matrix_t *dense_back_propagation(layer_t *this, matrix_t *d_error_wrt_output) {
+matrix_t *dense_back_propagation(layer_t *this, matrix_t *d_error_wrt_output, double learning_rate) {
     // transpose input matrix
     matrix_t *X = layer_get_neurons(this->prev);
     matrix_t *X_T = matrix_allocator(X->c, X->r);
     matrix_transpose(X, X_T);
 
-    matrix_multiply(d_error_wrt_output, X_T, this->layer.dense.d_cost_wrt_input);
+    matrix_t *W = this->layer.dense.weights;
+    matrix_t *W_T = matrix_allocator(W->c, W->r);
+    matrix_transpose(W, W_T);
+
+    matrix_multiply(d_error_wrt_output, X_T, this->layer.dense.d_cost_wrt_weight);
+    matrix_memcpy(this->layer.dense.d_cost_wrt_bias, d_error_wrt_output);
+    matrix_multiply(W_T, d_error_wrt_output, this->layer.dense.d_cost_wrt_input);
+
+    // apply adjustments
+    matrix_multiply_scalar(this->layer.dense.d_cost_wrt_weight, learning_rate, this->layer.dense.d_cost_wrt_weight);
+    matrix_multiply_scalar(this->layer.dense.d_cost_wrt_bias, learning_rate, this->layer.dense.d_cost_wrt_bias);
+    
+    matrix_sub(this->layer.dense.weights, this->layer.dense.d_cost_wrt_weight, this->layer.dense.weights);
+    matrix_sub(this->layer.dense.bias, this->layer.dense.d_cost_wrt_bias, this->layer.dense.bias);
+
+    matrix_free(X_T);
+    matrix_free(W_T);
     return this->layer.dense.d_cost_wrt_input;
 }
 
@@ -46,7 +76,8 @@ matrix_t *activation_feed_forward_relu(layer_t *this, matrix_t *input) {
 }
 
 double sigmoid_prime(double z) {
-    // todo
+    z = sigmoid(z);
+    return z * (1-z);
 }
 
 matrix_t *activation_back_propagation_sigmoid(layer_t *this, matrix_t *d_cost_wrt_output) {
@@ -58,7 +89,7 @@ matrix_t *activation_back_propagation_sigmoid(layer_t *this, matrix_t *d_cost_wr
 }
 
 double relu_prime(double z) {
-    // todo
+    return z >= 0;
 }
 
 matrix_t *activation_back_propagation_relu(layer_t *this, matrix_t *d_cost_wrt_output) {
@@ -79,7 +110,37 @@ matrix_t *output_make_guess_one_hot_encoded(layer_t *this, matrix_t *output) {
 
     for (int r = 0; r < output->r; r++) {
         for (int c = 0; c < output->c; c++) {
-            this->layer.output.guess->matrix[r][c] = output->matrix[r][c] == max ? 1 : 0;
+            this->layer.output.guess->matrix[r][c] = (output->matrix[r][c] == max) ? 1 : 0;
+        }
+    }
+    return this->layer.output.guess;
+}
+
+matrix_t *output_make_guess_passforward(layer_t *this, matrix_t *output) {
+    matrix_memcpy(this->layer.output.guess, output);
+    return this->layer.output.guess;
+}
+
+matrix_t *output_make_guess_round(layer_t *this, matrix_t *output) {
+    for (int r = 0; r < output->r; r++) {
+        for (int c = 0; c < output->c; c++) {
+            this->layer.output.guess->matrix[r][c] = round(output->matrix[r][c]);
+        }
+    }
+    return this->layer.output.guess;
+}
+
+matrix_t *output_make_guess_softmax(layer_t *this, matrix_t *output) {
+    double sum = 0;
+    for (int r = 0; r < output->r; r++) {
+        for (int c = 0; c < output->c; c++) {
+            sum += exp(output->matrix[r][c]);
+        }
+    }
+
+    for (int r = 0; r < output->r; r++) {
+        for (int c = 0; c < output->c; c++) {
+            this->layer.output.guess->matrix[r][c] = exp(output->matrix[r][c]) / sum;
         }
     }
     return this->layer.output.guess;
@@ -88,7 +149,7 @@ matrix_t *output_make_guess_one_hot_encoded(layer_t *this, matrix_t *output) {
 matrix_t *output_back_propagation_mean_squared(layer_t *this, matrix_t *expected_output) {
     matrix_t *output = this->layer.output.output_values;
     matrix_sub(output, expected_output, this->layer.output.d_cost_wrt_input);
-    matrix_multiply_scalar(this->layer.output.d_cost_wrt_input, 2.0 / output->r, this->layer.output.d_cost_wrt_input);
+    matrix_multiply_scalar(this->layer.output.d_cost_wrt_input, 2.0 / (float) output->r, this->layer.output.d_cost_wrt_input);
     return this->layer.output.d_cost_wrt_input;
 }
 
@@ -101,10 +162,10 @@ double output_cost_mean_squared(layer_t *this, matrix_t *expected_output) {
     matrix_t *actual_output = layer_get_neurons(this);
     for (int r = 0; r < actual_output->r; r++) {
         for (int c = 0; c < actual_output->c; c++) {
-            mean_squared += pow(actual_output->matrix[r][c] - expected_output->matrix[r][c], 2);
+            mean_squared += pow(expected_output->matrix[r][c] - actual_output->matrix[r][c], 2);
         }
     }
-    mean_squared *= 2.0 / expected_output->r;
+    mean_squared /= expected_output->r;
     return mean_squared;
 }
 
@@ -202,6 +263,8 @@ layer_t* layer_dense(model_t *model, matrix_t *neurons) {
     dense->weights = matrix_allocator(neurons->r, prev_output->r);
     dense->bias = matrix_allocator(neurons->r, 1);
     dense->d_cost_wrt_input = matrix_allocator(prev_output->r, 1);
+    dense->d_cost_wrt_weight = matrix_allocator(dense->weights->r, dense->weights->c);
+    dense->d_cost_wrt_bias = matrix_allocator(dense->bias->r, dense->bias->c);
 
     dense->back_propagation = dense_back_propagation;
     dense->feed_forward = dense_feed_forward;
@@ -265,6 +328,8 @@ matrix_t* model_predict(model_t *model, matrix_t *input,
         current = current->next;
     }
 
+    model->output_layer->layer.output.make_guess(model->output_layer, prev_output);
+    matrix_memcpy(current->layer.output.output_values, prev_output);
     matrix_memcpy(output, prev_output);
     return output;
 }
@@ -272,7 +337,7 @@ matrix_t* model_predict(model_t *model, matrix_t *input,
 void model_back_propagate(model_t *model, matrix_t *expected_output, double learning_rate) {
     layer_t *current = model->output_layer;
     matrix_t *d_cost_wrt_Y = expected_output;
-    for (int layer_i = model->num_layers - 1; layer_i >= 1; layer_i--) {
+    for (int layer_i = model->num_layers; layer_i > 1; layer_i--) {
         assert(current->type != INPUT);
 
         switch (current->type) {
@@ -286,15 +351,23 @@ void model_back_propagate(model_t *model, matrix_t *expected_output, double lear
                 d_cost_wrt_Y = current->layer.output.back_propagation(current, d_cost_wrt_Y);
         }
         current = current->prev;
+
+        // printf("\n%s: de/dy: \n", get_layer_name(current->next));
+        // matrix_print(d_cost_wrt_Y);
     }
 }
 
-void model_train(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_examples, double learning_rate) {
+double model_train(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_examples, double learning_rate) {
     matrix_t *output = matrix_copy(model->output_layer->layer.output.output_values);
+    double avg_error = 0;
     for (int example_i = 0; example_i < num_examples; example_i++) {
         model_predict(model, inputs[example_i], output);
+        avg_error += output_cost_mean_squared(model->output_layer, expected_outputs[example_i]);
         model_back_propagate(model, expected_outputs[example_i], learning_rate);
     }
+    avg_error /= (float) num_examples;
+    // printf("train avg error=%f", (float) avg_error);
+    return avg_error;
 }
 
 void model_test(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_tests) {
@@ -303,6 +376,13 @@ void model_test(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, 
     for (int test_i = 0; test_i < num_tests; test_i++) {
         model_predict(model, inputs[test_i], output);
 
+        printf("input\n");
+        matrix_print(inputs[test_i]);
+        printf("guess vs expected\n");
+        matrix_print(model->output_layer->layer.output.guess);
+        matrix_print(expected_outputs[test_i]);
+        printf("\n");
+
         matrix_t *guess = model->output_layer->layer.output.make_guess(model->output_layer, output);
         if (matrix_equal(expected_outputs[test_i], guess)) {
             passed++;
@@ -310,7 +390,7 @@ void model_test(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, 
     }
 
     // 2 decimal places
-    double accuracy = ((int)(100 * passed / (double) num_tests)) / 100;
+    double accuracy = ((int)(100.0 * (double) passed / (double) num_tests)) / 100.0;
 
-    printf("%f", accuracy, passed, num_tests);
+    printf("accuracy: %f  passed=%d, total=%d\n", accuracy, passed, num_tests);
 }

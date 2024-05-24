@@ -21,10 +21,12 @@ double random_normal_distribution_BoxMullerTransform(double standard_deviation) 
     // standard_deviation = a
     Z0 *= standard_deviation;
 
+    #if DEBUG
     printf("UNIFORM RANDOM: %f\n", (float) U1);
     printf("UNIFORM RANDOM: %f\n", (float) U2);
 
     printf("NORMAL DISTRIBUTED RANDOM: %f\n\n", (float) Z0);
+    #endif
     
     return Z0;
 }

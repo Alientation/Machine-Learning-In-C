@@ -57,6 +57,9 @@ typedef struct Dense_Layer {
     // dE/dX = W.T * dE/dY
     // m x 1
     matrix_t *d_cost_wrt_input;
+    // same dimensions as weight and bias matrices
+    matrix_t *d_cost_wrt_weight;
+    matrix_t *d_cost_wrt_bias;
 } dense_layer_t;
 
 // passes in the activation values of the previous layer into the activation function
@@ -112,14 +115,21 @@ typedef struct Model {
 matrix_t *input_feed_forward(layer_t *this, matrix_t *input); 
 
 matrix_t *dense_feed_forward(layer_t *this, matrix_t *input);
-matrix_t *dense_back_propagation(layer_t *this, matrix_t *d_error_wrt_output);
+matrix_t *dense_back_propagation(layer_t *this, matrix_t *d_error_wrt_output, double learning_rate);
 
 matrix_t *activation_feed_forward_sigmoid(layer_t *this, matrix_t *input);
 matrix_t *activation_feed_forward_relu(layer_t *this, matrix_t *input);
+// matrix_t *activation_feed_forward_softmax(layer_t *this, matrix_t *input); //todo
+// todo tanh
 matrix_t *activation_back_propagation_sigmoid(layer_t *this, matrix_t *d_cost_wrt_output);
 matrix_t *activation_back_propagation_relu(layer_t *this, matrix_t *d_cost_wrt_output);
+// matrix_t *activation_back_propagation_softmax(layer_t *this, matrix_t *input); //todo
+// todo tanh back prop
 
 matrix_t *output_make_guess_one_hot_encoded(layer_t *this, matrix_t *output);
+matrix_t *output_make_guess_passforward(layer_t *this, matrix_t *output);
+matrix_t *output_make_guess_round(layer_t *this, matrix_t *output);
+matrix_t *output_make_guess_softmax(layer_t *this, matrix_t *output);
 matrix_t *output_back_propagation_mean_squared(layer_t *this, matrix_t *expected_output);
 matrix_t *output_back_propagation_cross_entropy(layer_t *this, matrix_t *expected_output);
 
@@ -146,7 +156,7 @@ matrix_t* model_predict(model_t *model, matrix_t *input,
 
 void model_initialize_matrix_normal_distribution(matrix_t *model, double mean, double standard_deviation);
 void model_back_propagate(model_t *model, matrix_t *expected_output, double learning_rate);
-void model_train(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_examples, double learning_rate);
+double model_train(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_examples, double learning_rate);
 void model_test(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, unsigned int num_tests);
 
 

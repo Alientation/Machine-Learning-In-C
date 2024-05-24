@@ -213,3 +213,14 @@ void matrix_print(matrix_t *m) {
         printf("\n");
     }
 }
+
+void matrix_set_values_to_fit(matrix_t *m, double* elements, unsigned int num_elements) {
+    assert(m->r * m->c == num_elements);
+    int element_i = 0;
+    for (int r = 0; r < m->r; r++) {
+        for (int c = 0; c < m->c; c++) {
+            m->matrix[r][c] = elements[element_i];
+            element_i++;
+        }
+    }
+}

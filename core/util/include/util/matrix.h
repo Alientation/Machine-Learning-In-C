@@ -51,4 +51,6 @@ void matrix_for_each_operator(matrix_t *m, double (*op)(double),
 
 void matrix_print(matrix_t *m);
 
+void matrix_set_values_to_fit(matrix_t *m, double* elements, unsigned int num_elements);
+
 #endif

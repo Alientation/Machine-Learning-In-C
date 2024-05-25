@@ -4,9 +4,13 @@
 
 #include <stdbool.h>
 
+// todo GOAL, since matrix_t is super small, dont bother returning as pointer, just return a copy
+
 typedef struct Matrix {
     unsigned int r, c;
     double** matrix;
+
+    bool transposed;
 } matrix_t;
 
 matrix_t* matrix_allocator(int r, int c);

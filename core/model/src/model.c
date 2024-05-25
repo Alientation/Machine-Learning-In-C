@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <math.h>
 
+#include <util/debug_memory.h>
+
 char* get_layer_name(layer_t *layer) {
     switch (layer->type) {
         case INPUT:
@@ -30,6 +32,7 @@ matrix_t *dense_feed_forward(layer_t *this, matrix_t *input) {
 
 matrix_t *dense_back_propagation(layer_t *this, matrix_t *d_error_wrt_output, double learning_rate) {
     // transpose input matrix
+    // todo see if this needs optimization, likely does since allocation on every iteration is a lot of work
     matrix_t *X = layer_get_neurons(this->prev);
     matrix_t *X_T = matrix_allocator(X->c, X->r);
     matrix_transpose(X, X_T);
@@ -183,14 +186,21 @@ void layer_free(layer_t *layer) {
             matrix_free(layer->layer.dense.activation_values);
             matrix_free(layer->layer.dense.weights);
             matrix_free(layer->layer.dense.bias);
+            matrix_free(layer->layer.dense.d_cost_wrt_input);
+            matrix_free(layer->layer.dense.d_cost_wrt_weight);
+            matrix_free(layer->layer.dense.d_cost_wrt_bias);
             break;
         case ACTIVATION:
             matrix_free(layer->layer.activation.activated_values);
+            matrix_free(layer->layer.activation.d_cost_wrt_input);
             break;
         case OUTPUT:
             matrix_free(layer->layer.output.output_values);
+            matrix_free(layer->layer.output.guess);
+            matrix_free(layer->layer.output.d_cost_wrt_input);
             break;
     }
+    free(layer);
 }
 
 matrix_t* layer_get_neurons(layer_t *layer) {
@@ -215,8 +225,9 @@ matrix_t* layer_get_neurons(layer_t *layer) {
 void model_free(model_t *model) {
     layer_t *current = model->input_layer;
     for (int layer_i = 0; layer_i < model->num_layers; layer_i++) {
+        layer_t *prev = current;
         current = current->next;
-        layer_free(current->prev);
+        layer_free(prev);
     }
     assert(current == NULL); // ensure freed all layers
 }
@@ -225,12 +236,14 @@ void model_add_layer(model_t *model, layer_t *layer) {
     if (model->input_layer == NULL) {
         model->input_layer = layer;
         model->output_layer = layer;
+        model->input_layer->prev = NULL;
     } else {
         model->output_layer->next = layer;
         model->output_layer->next->prev = model->output_layer;
         model->output_layer = layer;
     }
     model->num_layers++;
+    model->output_layer->next = NULL;
 }
 
 
@@ -367,6 +380,7 @@ double model_train(model_t *model, matrix_t **inputs, matrix_t **expected_output
     }
     avg_error /= (float) num_examples;
     // printf("train avg error=%f", (float) avg_error);
+    matrix_free(output);
     return avg_error;
 }
 
@@ -393,4 +407,6 @@ void model_test(model_t *model, matrix_t **inputs, matrix_t **expected_outputs, 
     double accuracy = ((int)(100.0 * (double) passed / (double) num_tests)) / 100.0;
 
     printf("accuracy: %f  passed=%d, total=%d\n", accuracy, passed, num_tests);
+
+    matrix_free(output);
 }

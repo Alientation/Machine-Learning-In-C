@@ -4,7 +4,9 @@
         "matrix.h": "c",
         "vector.h": "c",
         "stdlib.h": "c",
-        "math.h": "c"
+        "math.h": "c",
+        "debug_memory.h": "c",
+        "crtdbg.h": "c"
     },
     "C_Cpp.default.includePath": [
         "core/app/include",

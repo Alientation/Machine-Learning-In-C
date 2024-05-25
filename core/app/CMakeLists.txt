@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.15)
 project(app VERSION 0.0.1 LANGUAGES C)
 
+# Set default build type to Debug if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
 # Dependencies
 set(RAYLIB_VERSION 5.0)
 include(FetchContent)
@@ -10,6 +15,16 @@ FetchContent_Declare(
     URL https://github.com/raysan5/raylib/archive/refs/tags/${RAYLIB_VERSION}.tar.gz
 )
 FetchContent_MakeAvailable(raylib)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions("_DEBUG")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG -D_DEBUG -gdwarf-2")
+    add_compile_options(-gdwarf-2)
+    add_link_options(-gdwarf-2)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -D_DEBUG -gdwarf-2")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
+endif()
 
 find_package(util REQUIRED CONFIG)
 find_package(model REQUIRED CONFIG)
@@ -33,12 +48,3 @@ target_include_directories(
 
 target_link_libraries(${PROJECT_NAME} PUBLIC util::util model::model raylib)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_library(model_debug_options INTERFACE)
-    target_compile_options(model_debug_options INTERFACE -DDEBUG -g)
-    target_link_libraries(model::model INTERFACE model_debug_options)
-
-    add_library(util_debug_options INTERFACE)
-    target_compile_options(util_debug_options INTERFACE -DDEBUG -g)
-    target_link_libraries(util::util INTERFACE util_debug_options)
-endif()

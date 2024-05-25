@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <util/debug_memory.h>
+
 matrix_t* matrix_allocator(int r, int c) {
     matrix_t *m = malloc(sizeof(matrix_t));
     m->r = r;
@@ -13,6 +15,7 @@ matrix_t* matrix_allocator(int r, int c) {
     for (int i = 0; i < r; i++) {
         m->matrix[i] = (double*) malloc(c * sizeof(double));
     }
+    m->transposed = false;
     
     return m;
 }
@@ -22,6 +25,7 @@ matrix_t* matrix_constructor(int r, int c, double** matrix) {
     m->r = r;
     m->c = c;
     m->matrix = matrix;
+    m->transposed = false;
     return m;
 }
 

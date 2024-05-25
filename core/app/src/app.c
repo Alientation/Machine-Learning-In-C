@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 
+#include <util/debug_memory.h>
 
 int main() {
     // AND training
@@ -56,12 +57,13 @@ int main() {
     printf("\nInitial Test\n");
     model_test(&model, input_data, output_data, num_examples);
 
-    const int num_epochs = 100000;
-    const int num_epoch_prints = 10;
-    const int epochs_print = num_epochs / num_epoch_prints;
+    const int num_epochs = 2000000;
+    const int num_epoch_prints = 5;
+    const int epochs_print = num_epoch_prints == 0 ? INT_MAX : num_epochs / num_epoch_prints;
     printf("Training epochs=%d\n", num_epochs);
     for (int i = 0; i < num_epochs; i++) {
         
+
         // printf("----\nepoch %d\n", i+1);
         double avg_error = model_train(&model, input_data, output_data, num_examples, 0.1);
 
@@ -82,5 +84,22 @@ int main() {
 
     printf("\nTesting\n");
     model_test(&model, input_data, output_data, num_examples);
-    return 0;
+
+
+    matrix_free(input);
+    input = NULL;
+    matrix_free(dense_1);
+    dense_1 = NULL;
+    matrix_free(dense_2);
+    dense_2 = NULL;
+    model_free(&model);
+
+    for (int i = 0; i < num_examples; i++) {
+        matrix_free(input_data[i]);
+        matrix_free(output_data[i]);
+    }
+    free(input_data);
+    free(output_data);
+
+    return EXIT_SUCCESS;
 }

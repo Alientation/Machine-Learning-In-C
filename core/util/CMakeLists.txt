@@ -16,7 +16,7 @@ endif()
 
 # Add compile options for debug
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options(-g)
+    add_compile_options(-gdwarf-2)
 endif()
 
 # sets the search paths for the include files after installation

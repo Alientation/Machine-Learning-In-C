@@ -2,9 +2,12 @@
 
 #include <stdio.h>
 
+#include <util/profiler.h>
 #include <util/debug_memory.h>
 
-int main() {
+int main(void) {
+    CLOCK_MARK
+
     // AND training
     model_t model = {
         .input_layer = NULL,
@@ -58,7 +61,7 @@ int main() {
     model_test(&model, input_data, output_data, num_examples);
 
     const int num_epochs = 2000000;
-    const int num_epoch_prints = 5;
+    const int num_epoch_prints = 0;
     const int epochs_print = num_epoch_prints == 0 ? INT_MAX : num_epochs / num_epoch_prints;
     printf("Training epochs=%d\n", num_epochs);
     for (int i = 0; i < num_epochs; i++) {

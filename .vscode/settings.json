@@ -6,13 +6,17 @@
         "stdlib.h": "c",
         "math.h": "c",
         "debug_memory.h": "c",
-        "crtdbg.h": "c"
+        "crtdbg.h": "c",
+        "profiler.h": "c",
+        "time.h": "c",
+        "stdio.h": "c"
     },
     "C_Cpp.default.includePath": [
         "core/app/include",
         "core/model/include",
         "core/util/include",
         "tests/build/test/_deps/googletest-src/googletest/include",
-        "tests/include"
+        "tests/include",
+        "core/app/build/release/_deps/raylib-build/raylib/include"
     ]
 }

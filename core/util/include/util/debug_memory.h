@@ -2,6 +2,8 @@
 #ifndef DEBUG_MEMORY_H
 #define DEBUG_MEMORY_H
 
-// #define printf(...) ;
+#ifndef KEEP_PRINT
+#define printf(...) ;
+#endif
 
 #endif // DEBUG_MEMORY_H

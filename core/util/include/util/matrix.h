@@ -10,7 +10,7 @@ typedef struct Matrix {
     unsigned int r, c;
     double** matrix;
 
-    bool transposed;
+    bool transposed; // todo
 } matrix_t;
 
 matrix_t* matrix_allocator(int r, int c);

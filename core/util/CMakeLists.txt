@@ -6,6 +6,7 @@ add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE 
     # source files for the library
     src/matrix.c
+    src/profiler.c
     src/math.c
 )
 

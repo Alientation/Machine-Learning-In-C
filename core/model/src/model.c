@@ -34,11 +34,11 @@ matrix_t *dense_back_propagation(layer_t *this, matrix_t *d_error_wrt_output, do
     // transpose input matrix
     // todo see if this needs optimization, likely does since allocation on every iteration is a lot of work
     matrix_t *X = layer_get_neurons(this->prev);
-    matrix_t *X_T = matrix_allocator(X->c, X->r);
+    matrix_t *X_T = this->layer.dense.transposed_inputs;
     matrix_transpose(X, X_T);
 
     matrix_t *W = this->layer.dense.weights;
-    matrix_t *W_T = matrix_allocator(W->c, W->r);
+    matrix_t *W_T = this->layer.dense.transposed_weights;
     matrix_transpose(W, W_T);
 
     matrix_multiply(d_error_wrt_output, X_T, this->layer.dense.d_cost_wrt_weight);
@@ -52,8 +52,6 @@ matrix_t *dense_back_propagation(layer_t *this, matrix_t *d_error_wrt_output, do
     matrix_sub(this->layer.dense.weights, this->layer.dense.d_cost_wrt_weight, this->layer.dense.weights);
     matrix_sub(this->layer.dense.bias, this->layer.dense.d_cost_wrt_bias, this->layer.dense.bias);
 
-    matrix_free(X_T);
-    matrix_free(W_T);
     return this->layer.dense.d_cost_wrt_input;
 }
 
@@ -78,6 +76,7 @@ matrix_t *activation_feed_forward_relu(layer_t *this, matrix_t *input) {
     return this->layer.activation.activated_values;
 }
 
+// todo move to util library
 double sigmoid_prime(double z) {
     z = sigmoid(z);
     return z * (1-z);
@@ -91,6 +90,7 @@ matrix_t *activation_back_propagation_sigmoid(layer_t *this, matrix_t *d_cost_wr
     return this->layer.activation.activated_values;
 }
 
+// todo move to util library
 double relu_prime(double z) {
     return z >= 0;
 }
@@ -157,7 +157,8 @@ matrix_t *output_back_propagation_mean_squared(layer_t *this, matrix_t *expected
 }
 
 matrix_t *output_back_propagation_cross_entropy(layer_t *this, matrix_t *expected_output) {
-
+    // todo
+    return NULL;
 }
 
 double output_cost_mean_squared(layer_t *this, matrix_t *expected_output) {
@@ -274,6 +275,8 @@ layer_t* layer_dense(model_t *model, matrix_t *neurons) {
     dense->activation_values = matrix_copy(neurons);
     matrix_t *prev_output = layer_get_neurons(model->output_layer);
     dense->weights = matrix_allocator(neurons->r, prev_output->r);
+    dense->transposed_weights = matrix_allocator(dense->weights->c, dense->weights->r);
+    dense->transposed_inputs = matrix_allocator(prev_output->c, prev_output->r);
     dense->bias = matrix_allocator(neurons->r, 1);
     dense->d_cost_wrt_input = matrix_allocator(prev_output->r, 1);
     dense->d_cost_wrt_weight = matrix_allocator(dense->weights->r, dense->weights->c);

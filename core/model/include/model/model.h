@@ -50,6 +50,8 @@ typedef struct Dense_Layer {
     // connecting the previous layer to this layer
     // the edges are the weights
     matrix_t *weights;
+    matrix_t *transposed_weights; // to not have to reallocate memory
+    matrix_t *transposed_inputs; 
 
     // n x 1
     matrix_t *bias;

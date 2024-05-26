@@ -11,7 +11,9 @@
         "time.h": "c",
         "stdio.h": "c",
         "queue": "c",
-        "app.h": "c"
+        "app.h": "c",
+        "ios": "cpp",
+        "raylib.h": "c"
     },
     "C_Cpp.default.includePath": [
         "core/app/include",

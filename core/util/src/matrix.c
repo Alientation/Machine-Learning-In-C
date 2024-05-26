@@ -7,8 +7,8 @@
 
 #include <util/debug_memory.h>
 
-matrix_t matrix_allocator(int r, int c) {
-    matrix_t m;
+mymatrix_t matrix_allocator(int r, int c) {
+    mymatrix_t m;
     m.r = r;
     m.c = c;
     m.matrix = (double**) malloc(r * sizeof(double*));
@@ -20,8 +20,8 @@ matrix_t matrix_allocator(int r, int c) {
     return m;
 }
 
-matrix_t matrix_constructor(int r, int c, double** matrix) {
-    matrix_t m;
+mymatrix_t matrix_constructor(int r, int c, double** matrix) {
+    mymatrix_t m;
     m.r = r;
     m.c = c;
     m.matrix = matrix;
@@ -29,7 +29,7 @@ matrix_t matrix_constructor(int r, int c, double** matrix) {
     return m;
 }
 
-void matrix_free(matrix_t matrix) {
+void matrix_free(mymatrix_t matrix) {
     if (matrix.matrix == NULL) {
         return;
     }
@@ -40,8 +40,8 @@ void matrix_free(matrix_t matrix) {
     free(matrix.matrix);
 }
 
-matrix_t matrix_copy(matrix_t src) {
-    matrix_t copy;
+mymatrix_t matrix_copy(mymatrix_t src) {
+    mymatrix_t copy;
     copy.r = src.r;
     copy.c = src.c;
     copy.matrix = (double**) malloc(copy.r * sizeof(double*));
@@ -52,7 +52,7 @@ matrix_t matrix_copy(matrix_t src) {
     return copy;
 }
 
-void matrix_memcpy(matrix_t dst, matrix_t src) {
+void matrix_memcpy(mymatrix_t dst, mymatrix_t src) {
     assert(dst.r == src.r && dst.c == src.c);
 
     if (dst.matrix == src.matrix) {
@@ -69,8 +69,8 @@ void matrix_memcpy(matrix_t dst, matrix_t src) {
 
 // use https://en.wikipedia.org/wiki/Strassen_algorithm for large matrices
 // todo
-void matrix_multiply(matrix_t m1, matrix_t m2,
-                     matrix_t result) {
+void matrix_multiply(mymatrix_t m1, mymatrix_t m2,
+                     mymatrix_t result) {
     assert(m1.c == m2.r);
     assert(m1.r == result.r && m2.c == result.c);
 
@@ -85,8 +85,8 @@ void matrix_multiply(matrix_t m1, matrix_t m2,
     }
 }
 
-void matrix_multiply_scalar(matrix_t m1, double scalar,
-                            matrix_t result) {
+void matrix_multiply_scalar(mymatrix_t m1, double scalar,
+                            mymatrix_t result) {
     assert(m1.r == result.r && m1.c == result.c);
     for (int r = 0; r < result.r; r++) {
         for (int c = 0; c < result.c; c++) {
@@ -95,8 +95,8 @@ void matrix_multiply_scalar(matrix_t m1, double scalar,
     }
 }
 
-void matrix_elementwise_multiply(matrix_t m1, matrix_t m2,
-                                 matrix_t result) {
+void matrix_elementwise_multiply(mymatrix_t m1, mymatrix_t m2,
+                                 mymatrix_t result) {
     assert(m1.r == m2.r && m1.c == m2.c);
     assert(m1.r == result.r && m2.c == result.c);
 
@@ -107,8 +107,8 @@ void matrix_elementwise_multiply(matrix_t m1, matrix_t m2,
     }
 }
 
-void matrix_add(matrix_t m1, matrix_t m2,
-                matrix_t result) {
+void matrix_add(mymatrix_t m1, mymatrix_t m2,
+                mymatrix_t result) {
     assert(m1.r == m2.r && m1.c == m2.c);
     assert(m1.r == result.r && m2.c == result.c);
 
@@ -119,8 +119,8 @@ void matrix_add(matrix_t m1, matrix_t m2,
     }
 }
 
-void matrix_add_row(matrix_t m1, unsigned int r1, matrix_t m2, unsigned int r2,
-                    matrix_t result, unsigned int r_result) {
+void matrix_add_row(mymatrix_t m1, unsigned int r1, mymatrix_t m2, unsigned int r2,
+                    mymatrix_t result, unsigned int r_result) {
     assert(m1.c == m2.c && m1.c == result.c);
     assert(r1 < m1.r && r2 < m2.r);
 
@@ -129,8 +129,8 @@ void matrix_add_row(matrix_t m1, unsigned int r1, matrix_t m2, unsigned int r2,
     }
 }
 
-void matrix_sub(matrix_t m1, matrix_t m2,
-                matrix_t result) {
+void matrix_sub(mymatrix_t m1, mymatrix_t m2,
+                mymatrix_t result) {
     assert(m1.r == m2.r && m1.c == m2.c);
     assert(m1.r == result.r && m2.c == result.c);
 
@@ -141,8 +141,8 @@ void matrix_sub(matrix_t m1, matrix_t m2,
     }
 }
 
-void matrix_column_extend(matrix_t m, unsigned int factor,
-                          matrix_t result) {
+void matrix_column_extend(mymatrix_t m, unsigned int factor,
+                          mymatrix_t result) {
     assert(factor > 0);
     assert(m.r * factor == result.r && m.c == result.c);
 
@@ -155,8 +155,8 @@ void matrix_column_extend(matrix_t m, unsigned int factor,
     }
 }
 
-void matrix_row_extend(matrix_t m, unsigned int factor,
-                       matrix_t result) {
+void matrix_row_extend(mymatrix_t m, unsigned int factor,
+                       mymatrix_t result) {
     assert(factor > 0);
     assert(m.r == result.r && m.c * factor == result.c);
 
@@ -169,8 +169,8 @@ void matrix_row_extend(matrix_t m, unsigned int factor,
     }
 }
 
-void matrix_transpose(matrix_t m,
-                      matrix_t result) {
+void matrix_transpose(mymatrix_t m,
+                      mymatrix_t result) {
     assert(m.r == result.c && m.c == result.r);
 
     for (int r = 0; r < result.r; r++) {
@@ -180,7 +180,7 @@ void matrix_transpose(matrix_t m,
     }
 }
 
-bool matrix_equal(matrix_t m1, matrix_t m2) {
+bool matrix_equal(mymatrix_t m1, mymatrix_t m2) {
     if (m1.r != m2.r || m1.c != m2.c) {
         return false;
     }
@@ -195,8 +195,8 @@ bool matrix_equal(matrix_t m1, matrix_t m2) {
     return true;
 }
 
-void matrix_for_each_operator(matrix_t m, double (*op)(double),
-                              matrix_t result) {
+void matrix_for_each_operator(mymatrix_t m, double (*op)(double),
+                              mymatrix_t result) {
     assert(m.r == result.r && m.c == result.c);
     for (int r = 0; r < m.r; r++) {
         for (int c = 0; c < m.c; c++) {
@@ -205,7 +205,7 @@ void matrix_for_each_operator(matrix_t m, double (*op)(double),
     }
 }
 
-void matrix_print(matrix_t m) {
+void matrix_print(mymatrix_t m) {
     printf("%d x %d Matrix\n", m.r, m.c);
     for (int r = 0; r < m.r; r++) {
         printf("%-3d: ", r);
@@ -216,7 +216,7 @@ void matrix_print(matrix_t m) {
     }
 }
 
-void matrix_set_values_to_fit(matrix_t m, double* elements, unsigned int num_elements) {
+void matrix_set_values_to_fit(mymatrix_t m, double* elements, unsigned int num_elements) {
     assert(m.r * m.c == num_elements);
     int element_i = 0;
     for (int r = 0; r < m.r; r++) {

@@ -35,6 +35,7 @@ add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE 
     # source files for the library
     src/app.c
+    src/visualizer.c
 )
 
 # sets the search paths for the include files

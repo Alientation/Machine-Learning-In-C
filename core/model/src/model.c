@@ -19,26 +19,26 @@ char* get_layer_name(layer_t *layer) {
     }
 }
 
-matrix_t input_feed_forward(layer_t *this, matrix_t input) {
+mymatrix_t input_feed_forward(layer_t *this, mymatrix_t input) {
     matrix_memcpy(this->layer.input.input_values, input);
     return this->layer.input.input_values;
 }
 
-matrix_t dense_feed_forward(layer_t *this, matrix_t input) {
+mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input) {
     matrix_multiply(this->layer.dense.weights, input, this->layer.dense.activation_values);
     matrix_add(this->layer.dense.activation_values, this->layer.dense.bias, this->layer.dense.activation_values);
     return this->layer.dense.activation_values;
 }
 
-matrix_t dense_back_propagation(layer_t *this, matrix_t d_error_wrt_output, double learning_rate) {
+mymatrix_t dense_back_propagation(layer_t *this, mymatrix_t d_error_wrt_output, double learning_rate) {
     // transpose input matrix
     // todo see if this needs optimization, likely does since allocation on every iteration is a lot of work
-    matrix_t X = layer_get_neurons(this->prev);
-    matrix_t X_T = this->layer.dense.transposed_inputs;
+    mymatrix_t X = layer_get_neurons(this->prev);
+    mymatrix_t X_T = this->layer.dense.transposed_inputs;
     matrix_transpose(X, X_T);
 
-    matrix_t W = this->layer.dense.weights;
-    matrix_t W_T = this->layer.dense.transposed_weights;
+    mymatrix_t W = this->layer.dense.weights;
+    mymatrix_t W_T = this->layer.dense.transposed_weights;
     matrix_transpose(W, W_T);
 
     matrix_multiply(d_error_wrt_output, X_T, this->layer.dense.d_cost_wrt_weight);
@@ -55,33 +55,33 @@ matrix_t dense_back_propagation(layer_t *this, matrix_t d_error_wrt_output, doub
     return this->layer.dense.d_cost_wrt_input;
 }
 
-matrix_t activation_feed_forward_sigmoid(layer_t *this, matrix_t input) {
+mymatrix_t activation_feed_forward_sigmoid(layer_t *this, mymatrix_t input) {
     matrix_for_each_operator(input, sigmoid, this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
 }
 
-matrix_t activation_feed_forward_relu(layer_t *this, matrix_t input) {
+mymatrix_t activation_feed_forward_relu(layer_t *this, mymatrix_t input) {
     matrix_for_each_operator(input, relu, this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
 }
 
-matrix_t activation_back_propagation_sigmoid(layer_t *this, matrix_t d_cost_wrt_output) {
-    matrix_t X = layer_get_neurons(this->prev);
+mymatrix_t activation_back_propagation_sigmoid(layer_t *this, mymatrix_t d_cost_wrt_output) {
+    mymatrix_t X = layer_get_neurons(this->prev);
 
     matrix_for_each_operator(X, sigmoid_prime, this->layer.activation.activated_values);
     matrix_elementwise_multiply(d_cost_wrt_output, this->layer.activation.activated_values, this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
 }
 
-matrix_t activation_back_propagation_relu(layer_t *this, matrix_t d_cost_wrt_output) {
-    matrix_t X = layer_get_neurons(this->prev);
+mymatrix_t activation_back_propagation_relu(layer_t *this, mymatrix_t d_cost_wrt_output) {
+    mymatrix_t X = layer_get_neurons(this->prev);
 
     matrix_for_each_operator(X, relu_prime, this->layer.activation.activated_values);
     matrix_elementwise_multiply(d_cost_wrt_output, this->layer.activation.activated_values, this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
 }
 
-matrix_t output_make_guess_one_hot_encoded(layer_t *this, matrix_t output) {
+mymatrix_t output_make_guess_one_hot_encoded(layer_t *this, mymatrix_t output) {
     double max = -INFINITY;
     for (int r = 0; r < output.r; r++) {
         for (int c = 0; c < output.c; c++) {
@@ -97,12 +97,12 @@ matrix_t output_make_guess_one_hot_encoded(layer_t *this, matrix_t output) {
     return this->layer.output.guess;
 }
 
-matrix_t output_make_guess_passforward(layer_t *this, matrix_t output) {
+mymatrix_t output_make_guess_passforward(layer_t *this, mymatrix_t output) {
     matrix_memcpy(this->layer.output.guess, output);
     return this->layer.output.guess;
 }
 
-matrix_t output_make_guess_round(layer_t *this, matrix_t output) {
+mymatrix_t output_make_guess_round(layer_t *this, mymatrix_t output) {
     for (int r = 0; r < output.r; r++) {
         for (int c = 0; c < output.c; c++) {
             this->layer.output.guess.matrix[r][c] = round(output.matrix[r][c]);
@@ -111,7 +111,7 @@ matrix_t output_make_guess_round(layer_t *this, matrix_t output) {
     return this->layer.output.guess;
 }
 
-matrix_t output_make_guess_softmax(layer_t *this, matrix_t output) {
+mymatrix_t output_make_guess_softmax(layer_t *this, mymatrix_t output) {
     double sum = 0;
     for (int r = 0; r < output.r; r++) {
         for (int c = 0; c < output.c; c++) {
@@ -127,22 +127,22 @@ matrix_t output_make_guess_softmax(layer_t *this, matrix_t output) {
     return this->layer.output.guess;
 }
 
-matrix_t output_back_propagation_mean_squared(layer_t *this, matrix_t expected_output) {
-    matrix_t output = this->layer.output.output_values;
+mymatrix_t output_back_propagation_mean_squared(layer_t *this, mymatrix_t expected_output) {
+    mymatrix_t output = this->layer.output.output_values;
     matrix_sub(output, expected_output, this->layer.output.d_cost_wrt_input);
     matrix_multiply_scalar(this->layer.output.d_cost_wrt_input, 2.0 / (float) output.r, this->layer.output.d_cost_wrt_input);
     return this->layer.output.d_cost_wrt_input;
 }
 
-matrix_t output_back_propagation_cross_entropy(layer_t *this, matrix_t expected_output) {
+mymatrix_t output_back_propagation_cross_entropy(layer_t *this, mymatrix_t expected_output) {
     // todo
-    matrix_t output;
+    mymatrix_t output;
     return output;
 }
 
-double output_cost_mean_squared(layer_t *this, matrix_t expected_output) {
+double output_cost_mean_squared(layer_t *this, mymatrix_t expected_output) {
     double mean_squared = 0;
-    matrix_t actual_output = layer_get_neurons(this);
+    mymatrix_t actual_output = layer_get_neurons(this);
     for (int r = 0; r < actual_output.r; r++) {
         for (int c = 0; c < actual_output.c; c++) {
             mean_squared += pow(expected_output.matrix[r][c] - actual_output.matrix[r][c], 2);
@@ -152,7 +152,7 @@ double output_cost_mean_squared(layer_t *this, matrix_t expected_output) {
     return mean_squared;
 }
 
-double output_cost_cross_entropy(layer_t *this, matrix_t expected_output) {
+double output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output) {
     // TODO
     return -1.0;
 }
@@ -183,7 +183,7 @@ void layer_free(layer_t *layer) {
     free(layer);
 }
 
-matrix_t layer_get_neurons(layer_t *layer) {
+mymatrix_t layer_get_neurons(layer_t *layer) {
     switch (layer->type) {
         case INPUT:
             return layer->layer.input.input_values;
@@ -202,7 +202,7 @@ matrix_t layer_get_neurons(layer_t *layer) {
     assert(0);
 }
 
-void model_free(model_t *model) {
+void model_free(neural_network_model_t *model) {
     layer_t *current = model->input_layer;
     for (int layer_i = 0; layer_i < model->num_layers; layer_i++) {
         layer_t *prev = current;
@@ -212,7 +212,7 @@ void model_free(model_t *model) {
     assert(current == NULL); // ensure freed all layers
 }
 
-void model_add_layer(model_t *model, layer_t *layer) {
+void model_add_layer(neural_network_model_t *model, layer_t *layer) {
     if (model->input_layer == NULL) {
         model->input_layer = layer;
         model->output_layer = layer;
@@ -227,7 +227,7 @@ void model_add_layer(model_t *model, layer_t *layer) {
 }
 
 
-layer_t* layer_input(model_t *model, matrix_t input) {
+layer_t* layer_input(neural_network_model_t *model, mymatrix_t input) {
     assert(model->num_layers == 0 && model->input_layer == NULL);
     // for now, column vector
     assert(input.c == 1);
@@ -242,7 +242,7 @@ layer_t* layer_input(model_t *model, matrix_t input) {
     return layer;
 }
 
-layer_t* layer_dense(model_t *model, matrix_t neurons) {
+layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     // for now, column vector
     assert(neurons.c == 1);
@@ -252,7 +252,7 @@ layer_t* layer_dense(model_t *model, matrix_t neurons) {
 
     dense_layer_t *dense = &layer->layer.dense;
     dense->activation_values = matrix_copy(neurons);
-    matrix_t prev_output = layer_get_neurons(model->output_layer);
+    mymatrix_t prev_output = layer_get_neurons(model->output_layer);
     dense->weights = matrix_allocator(neurons.r, prev_output.r);
     dense->transposed_weights = matrix_allocator(dense->weights.c, dense->weights.r);
     dense->transposed_inputs = matrix_allocator(prev_output.c, prev_output.r);
@@ -268,13 +268,13 @@ layer_t* layer_dense(model_t *model, matrix_t neurons) {
     return layer;
 }
 
-layer_t* layer_activation(model_t *model, matrix_t (*feed_forward)(layer_t*, matrix_t), matrix_t (*back_propagation)(layer_t*, matrix_t)) {
+layer_t* layer_activation(neural_network_model_t *model, mymatrix_t (*feed_forward)(layer_t*, mymatrix_t), mymatrix_t (*back_propagation)(layer_t*, mymatrix_t)) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = ACTIVATION;
     activation_layer_t *activation = &layer->layer.activation;
-    matrix_t prev_output = layer_get_neurons(model->output_layer);
+    mymatrix_t prev_output = layer_get_neurons(model->output_layer);
     activation->activated_values = matrix_allocator(prev_output.r, prev_output.c);
     activation->feed_forward = feed_forward;
     activation->back_propagation = back_propagation;
@@ -284,13 +284,13 @@ layer_t* layer_activation(model_t *model, matrix_t (*feed_forward)(layer_t*, mat
     return layer;
 }
 
-layer_t* layer_output(model_t *model, matrix_t (*make_guess)(layer_t*, matrix_t), matrix_t (*back_propagation)(layer_t*, matrix_t)) {
+layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), mymatrix_t (*back_propagation)(layer_t*, mymatrix_t)) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = OUTPUT;
     output_layer_t *output = &layer->layer.output;
-    matrix_t prev_output = layer_get_neurons(model->output_layer);
+    mymatrix_t prev_output = layer_get_neurons(model->output_layer);
     output->output_values = matrix_allocator(prev_output.r, prev_output.c);
     output->make_guess = make_guess;
     output->back_propagation = back_propagation;
@@ -301,7 +301,7 @@ layer_t* layer_output(model_t *model, matrix_t (*make_guess)(layer_t*, matrix_t)
     return layer;
 }
 
-void model_initialize_matrix_normal_distribution(matrix_t matrix, double mean, double standard_deviation) {
+void model_initialize_matrix_normal_distribution(mymatrix_t matrix, double mean, double standard_deviation) {
     for (int r = 0; r < matrix.r; r++) {
         for (int c = 0; c < matrix.c; c++) {
             matrix.matrix[r][c] = random_normal_distribution_BoxMullerTransform(standard_deviation) + mean;
@@ -309,11 +309,11 @@ void model_initialize_matrix_normal_distribution(matrix_t matrix, double mean, d
     }
 }
 
-matrix_t model_predict(model_t *model, matrix_t input, 
-                        matrix_t output) {
+mymatrix_t model_predict(neural_network_model_t *model, mymatrix_t input, 
+                        mymatrix_t output) {
     
     layer_t *current = model->input_layer;
-    matrix_t prev_output = input;
+    mymatrix_t prev_output = input;
     for (int layer_i = 0; layer_i < model->num_layers-1; layer_i++) {
         assert(current->type != OUTPUT);
         
@@ -329,9 +329,9 @@ matrix_t model_predict(model_t *model, matrix_t input,
     return output;
 }
 
-void model_back_propagate(model_t *model, matrix_t expected_output, double learning_rate) {
+void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_output, double learning_rate) {
     layer_t *current = model->output_layer;
-    matrix_t d_cost_wrt_Y = expected_output;
+    mymatrix_t d_cost_wrt_Y = expected_output;
     for (int layer_i = model->num_layers; layer_i > 1; layer_i--) {
         assert(current->type != INPUT);
 
@@ -352,8 +352,8 @@ void model_back_propagate(model_t *model, matrix_t expected_output, double learn
     }
 }
 
-double model_train(model_t *model, matrix_t *inputs, matrix_t *expected_outputs, unsigned int num_examples, double learning_rate) {
-    matrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
+double model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, double learning_rate) {
+    mymatrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
     double avg_error = 0;
     for (int example_i = 0; example_i < num_examples; example_i++) {
         model_predict(model, inputs[example_i], output);
@@ -366,8 +366,8 @@ double model_train(model_t *model, matrix_t *inputs, matrix_t *expected_outputs,
     return avg_error;
 }
 
-void model_test(model_t *model, matrix_t *inputs, matrix_t *expected_outputs, unsigned int num_tests) {
-    matrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
+void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_tests) {
+    mymatrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
     int passed = 0;
     for (int test_i = 0; test_i < num_tests; test_i++) {
         model_predict(model, inputs[test_i], output);
@@ -379,7 +379,7 @@ void model_test(model_t *model, matrix_t *inputs, matrix_t *expected_outputs, un
         matrix_print(expected_outputs[test_i]);
         printf("\n");
 
-        matrix_t guess = model->output_layer->layer.output.make_guess(model->output_layer, output);
+        mymatrix_t guess = model->output_layer->layer.output.make_guess(model->output_layer, output);
         if (matrix_equal(expected_outputs[test_i], guess)) {
             passed++;
         }

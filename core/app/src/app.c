@@ -1,6 +1,6 @@
 #include <app/app.h>
 #include <model/model.h>
-#include <model/visualizer.h>
+#include <app/visualizer.h>
 
 #include <stdio.h>
 
@@ -12,11 +12,14 @@ int main(void) {
     // nn_AND();
     // nn_XOR();
     // nn_binary_digit_recognizer();
+    
+    window_run(NULL);
+
     return EXIT_SUCCESS;
 }
 
 void nn_binary_digit_recognizer() {
-    model_t model_binary_digit_recognizer = {
+    neural_network_model_t model_binary_digit_recognizer = {
         .input_layer = NULL,
         .output_layer = NULL,
         .num_layers = 0
@@ -27,15 +30,15 @@ void nn_binary_digit_recognizer() {
 
 
 void nn_XOR() {
-    model_t model_xor = {
+    neural_network_model_t model_xor = {
         .input_layer = NULL,
         .output_layer = NULL,
         .num_layers = 0
     };
 
-    matrix_t input = matrix_allocator(2, 1);
-    matrix_t dense_1 = matrix_allocator(2, 1);
-    matrix_t dense_2 = matrix_allocator(1, 1);
+    mymatrix_t input = matrix_allocator(2, 1);
+    mymatrix_t dense_1 = matrix_allocator(2, 1);
+    mymatrix_t dense_2 = matrix_allocator(1, 1);
 
     layer_t *input_layer = layer_input(&model_xor, input);
     layer_t *dense_layer_1 = layer_dense(&model_xor, dense_1);
@@ -66,8 +69,8 @@ void nn_XOR() {
         {0}
     };
 
-    matrix_t *input_data = malloc(num_examples * sizeof(matrix_t));
-    matrix_t *output_data = malloc(num_examples * sizeof(matrix_t));
+    mymatrix_t *input_data = malloc(num_examples * sizeof(mymatrix_t));
+    mymatrix_t *output_data = malloc(num_examples * sizeof(mymatrix_t));
     for (int i = 0; i < num_examples; i++) {
         input_data[i] = matrix_allocator(input_size, 1);
         output_data[i] = matrix_allocator(output_size, 1);
@@ -121,15 +124,15 @@ void nn_XOR() {
 }
 
 void nn_AND() {
-    model_t model_and = {
+    neural_network_model_t model_and = {
         .input_layer = NULL,
         .output_layer = NULL,
         .num_layers = 0
     };
 
-    matrix_t input = matrix_allocator(2, 1);
-    matrix_t dense_1 = matrix_allocator(2, 1);
-    matrix_t dense_2 = matrix_allocator(1, 1);
+    mymatrix_t input = matrix_allocator(2, 1);
+    mymatrix_t dense_1 = matrix_allocator(2, 1);
+    mymatrix_t dense_2 = matrix_allocator(1, 1);
 
     layer_t *input_layer = layer_input(&model_and, input);
     layer_t *dense_layer_1 = layer_dense(&model_and, dense_1);
@@ -160,8 +163,8 @@ void nn_AND() {
         {1}
     };
 
-    matrix_t *input_data = malloc(num_examples * sizeof(matrix_t));
-    matrix_t *output_data = malloc(num_examples * sizeof(matrix_t));
+    mymatrix_t *input_data = malloc(num_examples * sizeof(mymatrix_t));
+    mymatrix_t *output_data = malloc(num_examples * sizeof(mymatrix_t));
     for (int i = 0; i < num_examples; i++) {
         input_data[i] = matrix_allocator(input_size, 1);
         output_data[i] = matrix_allocator(output_size, 1);

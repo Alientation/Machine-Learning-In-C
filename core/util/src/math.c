@@ -34,3 +34,20 @@ double random_normal_distribution_BoxMullerTransform(double standard_deviation) 
 double random_uniform_range(double a) {
     return (double) rand() / (double) (RAND_MAX / a);
 }
+
+double sigmoid(double z) {
+    return 1. / (1 + exp(-z));
+}
+
+double relu(double z) {
+    return fmax(0, z);
+}
+
+double sigmoid_prime(double z) {
+    z = sigmoid(z);
+    return z * (1-z);
+}
+
+double relu_prime(double z) {
+    return z >= 0;
+}

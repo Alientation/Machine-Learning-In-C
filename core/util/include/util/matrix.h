@@ -4,6 +4,12 @@
 
 #include <stdbool.h>
 
+
+// FIGURE OUT HOW TO OPTIMIZE
+// TODO
+// https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms#Level_3
+
+
 typedef struct Matrix {
     unsigned int r, c;
     double** matrix;

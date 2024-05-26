@@ -10,4 +10,10 @@ double random_normal_distribution_BoxMullerTransform(double standard_deviation);
 double random_uniform_range(double a_max);
 
 
+double sigmoid(double z);
+double relu(double z);
+double sigmoid_prime(double z);
+double relu_prime(double z);
+
+
 #endif

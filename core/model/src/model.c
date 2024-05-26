@@ -55,31 +55,14 @@ matrix_t dense_back_propagation(layer_t *this, matrix_t d_error_wrt_output, doub
     return this->layer.dense.d_cost_wrt_input;
 }
 
-// todo move to util library
-double sigmoid(double z) {
-    return 1. / (1 + exp(-z));
-}
-
 matrix_t activation_feed_forward_sigmoid(layer_t *this, matrix_t input) {
     matrix_for_each_operator(input, sigmoid, this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
 }
 
-
-// todo move to util library
-double relu(double z) {
-    return fmax(0, z);
-}
-
 matrix_t activation_feed_forward_relu(layer_t *this, matrix_t input) {
     matrix_for_each_operator(input, relu, this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
-}
-
-// todo move to util library
-double sigmoid_prime(double z) {
-    z = sigmoid(z);
-    return z * (1-z);
 }
 
 matrix_t activation_back_propagation_sigmoid(layer_t *this, matrix_t d_cost_wrt_output) {
@@ -88,11 +71,6 @@ matrix_t activation_back_propagation_sigmoid(layer_t *this, matrix_t d_cost_wrt_
     matrix_for_each_operator(X, sigmoid_prime, this->layer.activation.activated_values);
     matrix_elementwise_multiply(d_cost_wrt_output, this->layer.activation.activated_values, this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
-}
-
-// todo move to util library
-double relu_prime(double z) {
-    return z >= 0;
 }
 
 matrix_t activation_back_propagation_relu(layer_t *this, matrix_t d_cost_wrt_output) {

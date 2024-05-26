@@ -6,6 +6,8 @@
 
 
 // FIGURE OUT HOW TO OPTIMIZE
+// INSTEAD OF 2D ARRAY (IE ARRAY OF POINTERS TO ARRAYS)
+// USE 1D ARRAY TO MODEL THE 2D ARRAY
 // TODO
 // https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms#Level_3
 

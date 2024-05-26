@@ -10,7 +10,8 @@
         "profiler.h": "c",
         "time.h": "c",
         "stdio.h": "c",
-        "queue": "c"
+        "queue": "c",
+        "app.h": "c"
     },
     "C_Cpp.default.includePath": [
         "core/app/include",

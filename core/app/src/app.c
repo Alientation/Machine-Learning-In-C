@@ -1,5 +1,6 @@
 #include <app/app.h>
 #include <model/model.h>
+#include <model/visualizer.h>
 
 #include <stdio.h>
 
@@ -10,11 +11,18 @@ int main(void) {
     CLOCK_MARK
     // nn_AND();
     // nn_XOR();
+    // nn_binary_digit_recognizer();
     return EXIT_SUCCESS;
 }
 
 void nn_binary_digit_recognizer() {
+    model_t model_binary_digit_recognizer = {
+        .input_layer = NULL,
+        .output_layer = NULL,
+        .num_layers = 0
+    };
 
+    // idea, 2 hidden layers, input matrix 10x10 => 100 x 1, output 2x1
 }
 
 

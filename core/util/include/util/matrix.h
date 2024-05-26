@@ -63,4 +63,4 @@ void matrix_print(matrix_t m);
 
 void matrix_set_values_to_fit(matrix_t m, double* elements, unsigned int num_elements);
 
-#endif
+#endif // MATRIX_H

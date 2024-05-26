@@ -7,4 +7,4 @@ void nn_AND();
 void nn_XOR();
 
 
-#endif
+#endif // APP_H

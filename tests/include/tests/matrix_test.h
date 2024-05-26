@@ -9,4 +9,4 @@ extern "C" {
 #include <util/matrix.h>
 }
 
-#endif
+#endif // MATRIX_TEST_H

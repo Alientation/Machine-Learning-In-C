@@ -16,4 +16,4 @@ double sigmoid_prime(double z);
 double relu_prime(double z);
 
 
-#endif
+#endif // MY_MATH_H

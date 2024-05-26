@@ -14,6 +14,8 @@
  * 
  * line or circle detector
  * network visualizer
+ * save model to file
+ * load model from file  *so we can pretrain models
  * digit detector
  * batch/mini batch, stochastic gradient descent
  * add more variety of layers (convolution, pooling, reshaping)
@@ -162,4 +164,4 @@ double model_train(model_t *model, matrix_t *inputs, matrix_t *expected_outputs,
 void model_test(model_t *model, matrix_t *inputs, matrix_t *expected_outputs, unsigned int num_tests);
 
 
-#endif
+#endif // MODEL_H

@@ -5,6 +5,7 @@ add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE 
     # source files for the library
     src/model.c
+    src/visualizer.c
 )
 
 # Set build type to Debug by default

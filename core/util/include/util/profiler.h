@@ -16,4 +16,4 @@ return
     #undef CLOCK_MARK_ENTRY
     #undef return
 #endif
-#endif
+#endif // PROFILER_H

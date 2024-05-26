@@ -15,9 +15,9 @@ int main(void) {
         .num_layers = 0
     };
 
-    matrix_t *input = matrix_allocator(2, 1);
-    matrix_t *dense_1 = matrix_allocator(2, 1);
-    matrix_t *dense_2 = matrix_allocator(1, 1);
+    matrix_t input = matrix_allocator(2, 1);
+    matrix_t dense_1 = matrix_allocator(2, 1);
+    matrix_t dense_2 = matrix_allocator(1, 1);
 
     layer_t *input_layer = layer_input(&model, input);
     layer_t *dense_layer_1 = layer_dense(&model, dense_1);
@@ -48,8 +48,8 @@ int main(void) {
         {1}
     };
 
-    matrix_t **input_data = malloc(num_examples * sizeof(matrix_t*));
-    matrix_t **output_data = malloc(num_examples * sizeof(matrix_t*));
+    matrix_t *input_data = malloc(num_examples * sizeof(matrix_t));
+    matrix_t *output_data = malloc(num_examples * sizeof(matrix_t));
     for (int i = 0; i < num_examples; i++) {
         input_data[i] = matrix_allocator(input_size, 1);
         output_data[i] = matrix_allocator(output_size, 1);
@@ -90,11 +90,8 @@ int main(void) {
 
 
     matrix_free(input);
-    input = NULL;
     matrix_free(dense_1);
-    dense_1 = NULL;
     matrix_free(dense_2);
-    dense_2 = NULL;
     model_free(&model);
 
     for (int i = 0; i < num_examples; i++) {

@@ -9,7 +9,8 @@
         "crtdbg.h": "c",
         "profiler.h": "c",
         "time.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "queue": "c"
     },
     "C_Cpp.default.includePath": [
         "core/app/include",

@@ -3,14 +3,21 @@
 #include <raylib.h>
 #include <time.h>
 
-void window_run(neural_network_model_t *model) {
+static bool is_window_open = false;
+
+void* window_run(void *vargp) {
+    assert(!is_window_open);
+
+    neural_network_model_t *model = (neural_network_model_t*) vargp;
+
     const int screenWidth = 800;
     const int screenHeight = 450;
+    is_window_open = true;
 
     InitWindow(screenWidth, screenHeight, "model visualizer");
     SetTargetFPS(60);
 
-    window_keep_open(model, 5);
+    window_keep_open(model, 0);
 }
 
 void window_draw(neural_network_model_t *model) {
@@ -27,10 +34,15 @@ void window_close() {
 }
 
 void window_keep_open(neural_network_model_t *model, unsigned int num_seconds) {
+    if (num_seconds == 0) {
+        num_seconds = ~0;
+    }
+
     time_t now = clock();
     unsigned long long num_ms = num_seconds * 1000L;
     while (!WindowShouldClose() && clock() - now < num_ms) {
         window_draw(model);
     }
+    is_window_open = false;
 }
 

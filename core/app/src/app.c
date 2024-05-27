@@ -3,18 +3,22 @@
 #include <app/visualizer.h>
 
 #include <stdio.h>
+#include <pthread.h>
 
 #include <util/profiler.h>
 #include <util/debug_memory.h>
 
 int main(void) {
     CLOCK_MARK
-    // nn_AND();
+    
+    pthread_t thread_id;
+    pthread_create(&thread_id, NULL, window_run, NULL);
+
+    nn_AND();
     // nn_XOR();
     // nn_binary_digit_recognizer();
     
-    window_run(NULL);
-
+    pthread_join(thread_id, NULL);
     return EXIT_SUCCESS;
 }
 

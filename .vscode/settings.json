@@ -13,7 +13,8 @@
         "queue": "c",
         "app.h": "c",
         "ios": "cpp",
-        "raylib.h": "c"
+        "raylib.h": "c",
+        "pthread.h": "c"
     },
     "C_Cpp.default.includePath": [
         "core/app/include",

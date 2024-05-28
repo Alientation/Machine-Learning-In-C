@@ -14,6 +14,8 @@
  * 
  * line or circle detector
  * network visualizer
+ * add dropout and other regularlization techniques
+ * add momentum (remembers previous gradients)
  * save model to file
  * load model from file  *so we can pretrain models
  * digit detector
@@ -110,10 +112,16 @@ typedef struct Layer {
 } layer_t;
 
 // nn model
+// todo store more useful information of the model like
+//  - training accuracy, avg error, epoch/iterations count
+// for the visualizer
 typedef struct NeuralNetworkModel {
     unsigned int num_layers;
     layer_t *input_layer; // first layer
     layer_t *output_layer; // last layer
+
+    // info data
+    
 } neural_network_model_t;
 
 mymatrix_t input_feed_forward(layer_t *this, mymatrix_t input); 
@@ -154,6 +162,8 @@ layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons);
 layer_t* layer_activation(neural_network_model_t *model, mymatrix_t (*feed_forward)(layer_t*, mymatrix_t), mymatrix_t (*back_propagation)(layer_t*, mymatrix_t));
 layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), mymatrix_t (*back_propagation)(layer_t*, mymatrix_t));
 
+char* get_layer_name(layer_t *layer);
+mymatrix_t layer_get_neurons(layer_t *layer);
 
 mymatrix_t model_predict(neural_network_model_t *model, mymatrix_t input, 
                mymatrix_t output);

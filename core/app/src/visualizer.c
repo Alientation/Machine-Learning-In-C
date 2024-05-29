@@ -6,6 +6,17 @@
 #include <stdio.h>
 #include <string.h>
 
+
+/*
+GOALS
+
+modify input node values to see what the model will output
+weights lines coloring based on the strength
+button to start training, selection of train/test data, graph of train/test accuracy and output loss
+
+*/
+
+
 static bool is_window_open = false;
 static const int screenWidth = 800;
 static const int screenHeight = 450;
@@ -26,6 +37,7 @@ static const Color node_negative_color = {
     .r = 255, .g = 178, .b = 150
 };
 
+static const int weight_value_precision = 8;
 static const int node_value_precision = 6;
 static const int node_value_font_size = 10;
 static const int node_radius = 25;
@@ -51,6 +63,7 @@ static const Color tooltip_background_color = {
 static const int tooltip_buffer_size = 100;
 static bool show_tooltip = false;
 static char tooltip_msg[100];
+
 
 void* window_run(void *vargp) {
     assert(!is_window_open);
@@ -112,8 +125,8 @@ void draw_edges(int layer_index, layer_t *layer, layer_t *prev) {
                 DrawLineV(this_pos, prev_pos, BLACK);
                 if (CheckCollisionPointLine(GetMousePosition(), prev_pos, this_pos, mouse_hover_distance_threshold)) { 
                     // display information about the weight
-                    char weight[6]; // DEFINITELY HAVING BUFFER OVERFLOW //TODO 
-                    sprintf(weight, "%f", weights.matrix[r2][r1]);
+                    char weight[weight_value_precision];
+                    snprintf(weight, weight_value_precision, "%f", weights.matrix[r2][r1]);
                     open_tooltip(weight);
                 }
             }
@@ -171,7 +184,7 @@ void draw_layer(int layer_index, layer_t *layer) {
         DrawCircleLinesV(pos, node_radius, BLACK);
         
         // draw value of node
-        char node_value[node_value_precision]; // DEFINITELY HAVING BUFFER OVERFLOWS!! //TODO
+        char node_value[node_value_precision];
         snprintf(node_value, node_value_precision, "%f", (float) nodes.matrix[i][0]);
         draw_centered_text(node_value, pos.x, pos.y, node_value_font_size, BLACK);
     }

@@ -14,13 +14,16 @@
  * 
  * line or circle detector
  * network visualizer
- * add dropout and other regularlization techniques
+ * add dropout
+ * weight regularlization techniques (L2/L1)
+ * weight clipping?
  * add momentum (remembers previous gradients)
+ * layer/batch normalization?
  * weights should probably be normalized
  * save model to file
  * load model from file  *so we can pretrain models
  * digit detector
- * batch/mini batch, stochastic gradient descent
+ * batch/mini batch, full gradient descent (apparently we are using stochastic gradient descent)
  * add more variety of layers (convolution, pooling, reshaping)
  * add variable learning rates for each layer support
  * matrix broadcasting??? support for multi-dimension matrices?????

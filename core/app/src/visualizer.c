@@ -23,6 +23,7 @@ button to start training, selection of train/test data, graph of train/test accu
 */
 extern training_info_t training_info;
 bool is_training = false;
+bool is_testing = false;
 
 static bool is_window_open = false;
 static const int screenWidth = 800;
@@ -49,7 +50,7 @@ static const int node_value_precision = 7;
 static const int node_value_font_size = 10;
 static const int node_radius = 25;
 static const int node_gap = 20;
-static const int layer_font_size = 14;
+static const int layer_font_size = 16;
 static const int layer_name_offset_y = 20;
 static const int layer_gap = 60;
 
@@ -86,10 +87,26 @@ void* window_run(void *vargp) {
     window_keep_open(model, 0);
 }
 
-void draw_centered_text(const char* text, int centerx, int centery, int fontsize, Color fontcolor) {
+void DrawCenteredText(const char* text, int centerx, int centery, int fontsize, Color fontcolor) {
     int width = MeasureText(text, fontsize);
     DrawText(text, centerx - width / 2, centery - fontsize/2, fontsize, fontcolor);
 }
+
+void DrawOutlinedText(const char *text, int posX, int posY, int fontSize, Color color, int outlineSize, Color outlineColor) {
+    DrawText(text, posX - outlineSize, posY - outlineSize, fontSize, outlineColor);
+    DrawText(text, posX + outlineSize, posY - outlineSize, fontSize, outlineColor);
+    DrawText(text, posX - outlineSize, posY + outlineSize, fontSize, outlineColor);
+    DrawText(text, posX + outlineSize, posY + outlineSize, fontSize, outlineColor);
+    DrawText(text, posX, posY, fontSize, color);
+}
+
+void DrawOutlinedCenteredText(const char* text, int posX, int posY, int fontSize, Color color, int outlineSize, Color outlineColor) {
+    DrawCenteredText(text, posX - outlineSize, posY - outlineSize, fontSize, outlineColor);
+    DrawCenteredText(text, posX + outlineSize, posY - outlineSize, fontSize, outlineColor);
+    DrawCenteredText(text, posX - outlineSize, posY + outlineSize, fontSize, outlineColor);
+    DrawCenteredText(text, posX + outlineSize, posY + outlineSize, fontSize, outlineColor);
+    DrawCenteredText(text, posX, posY, fontSize, color);
+} 
 
 Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
     int layer_height = nodes.r * (node_gap + 2 * node_radius) - node_gap;
@@ -105,7 +122,7 @@ Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
     return vec;
 }
 
-void open_tooltip(const char* msg) {
+void OpenTooltip(const char* msg) {
     if (show_tooltip) {
         return;
     }
@@ -116,29 +133,45 @@ void open_tooltip(const char* msg) {
     show_tooltip = true;
 }
 
-void draw_edges(int layer_index, layer_t *layer, layer_t *prev) {
+void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
     mymatrix_t this_neurons = layer_get_neurons(layer);
     mymatrix_t prev_neurons = layer_get_neurons(prev);
     if (layer->type == DENSE) { // fully connected
         mymatrix_t weights = layer->layer.dense.weights;
-        for (int r1 = 0; r1 < prev_neurons.r; r1++) {
-            for (int r2 = 0; r2 < this_neurons.r; r2++) {
+        for (int r2 = 0; r2 < this_neurons.r; r2++) {
+            double max_weight = -1;
+            for (int r1 = 0; r1 < prev_neurons.r; r1++) {
+                double value = fabs(weights.matrix[r2][r1]);
+                max_weight = max_weight < value ? value : max_weight;
+            }
+            
+            for (int r1 = 0; r1 < prev_neurons.r; r1++) {
                 Vector2 this_pos = get_node_position(layer_index, r2, this_neurons);
                 Vector2 prev_pos = get_node_position(layer_index-1, r1, prev_neurons);
 
                 this_pos.x -= node_radius;
                 prev_pos.x += node_radius;
-
-                DrawLineV(this_pos, prev_pos, BLACK);
+                double ratio = 0.5;
+                if (max_weight != 0) {
+                    ratio = fabs(weights.matrix[r2][r1]) / max_weight;
+                }
+                
+                int cval = (int) (255 * ratio);
+                Color color = {
+                    .a = 255,
+                    .r = cval,
+                    .g = cval,
+                    .b = cval,
+                };
+                DrawLineV(this_pos, prev_pos, color);
                 if (CheckCollisionPointLine(GetMousePosition(), prev_pos, this_pos, mouse_hover_distance_threshold)) { 
                     // display information about the weight
                     char weight[weight_value_precision];
                     snprintf(weight, weight_value_precision, "%f", weights.matrix[r2][r1]);
-                    open_tooltip(weight);
+                    OpenTooltip(weight);
                 }
             }
         }
-
     } else { // Activation or Output, one to one connections
         assert(this_neurons.r == prev_neurons.r);
         for (int r = 0; r < prev_neurons.r; r++) {
@@ -147,15 +180,28 @@ void draw_edges(int layer_index, layer_t *layer, layer_t *prev) {
 
             this_pos.x -= node_radius;
             prev_pos.x += node_radius;
+            
+            const int num_dots = 11;
+            for (int dot = 1; dot <= num_dots; dot++) {
+                if (dot % 2 == 0) {
+                    continue;
+                }
 
-            DrawLineV(this_pos, prev_pos, BLACK);
+                Vector2 draw_end;
+                draw_end.x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * (dot / (float) num_dots));
+                draw_end.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * (dot / (float) num_dots));
+                Vector2 draw_start;
+                draw_start.x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * ((dot-1) / (float) num_dots));
+                draw_start.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * ((dot-1) / (float) num_dots));
+                DrawLineV(draw_start, draw_end, BLACK);
+            }
 
             // todo draw tooltip info like (activation function type or output guess function)
         }
     }
 }
 
-void draw_layer(int layer_index, layer_t *layer) {
+void DrawLayer(int layer_index, layer_t *layer) {
     mymatrix_t nodes = layer_get_neurons(layer);
 
     double max_node_value = -1;
@@ -189,56 +235,77 @@ void draw_layer(int layer_index, layer_t *layer) {
         DrawCircleV(pos, node_radius, WHITE);
         DrawCircleV(pos, node_radius, shade);
         DrawCircleLinesV(pos, node_radius, BLACK);
+
+        // todo maybe in future allow user to alter value in node maybe
+        // clicking it opens a small gui that has a slider for the node's value
         
         // draw value of node
         char node_value[node_value_precision];
         snprintf(node_value, node_value_precision, "%f", (float) nodes.matrix[i][0]);
-        draw_centered_text(node_value, pos.x, pos.y, node_value_font_size, BLACK);
+        DrawCenteredText(node_value, pos.x, pos.y, node_value_font_size, BLACK);
     }
 
     // draw layer name
     int layer_height = nodes.r * (node_gap + 2 * node_radius) - node_gap;
     int layer_start_y = model_start_y + (modelHeight - layer_height) / 2;
+    int layer_name_y = layer_start_y + layer_height + layer_name_offset_y + layer_font_size / 2;
+    int layer_function_name_y = layer_name_y - layer_font_size / 2 + layer_font_size * 2;
     int layer_x = model_start_x + layer_index * (layer_gap + 2 * node_radius) + node_radius;
 
     
-    draw_centered_text(get_layer_name(layer), layer_x, layer_start_y + layer_height + layer_name_offset_y + layer_font_size / 2, layer_font_size, BLACK);
+
+    DrawOutlinedCenteredText(get_layer_name(layer), layer_x, layer_name_y, layer_font_size, WHITE, 1, BLACK);
     if (layer->type == ACTIVATION) {
-        draw_centered_text(get_activation_function_name(&layer->layer.activation), layer_x, layer_start_y + layer_height + layer_name_offset_y + 2 * layer_font_size, layer_font_size-2, BLACK);
+        DrawOutlinedCenteredText(get_activation_function_name(&layer->layer.activation), layer_x, 
+                layer_function_name_y, layer_font_size-4, WHITE, 1, BLACK);
     } else if (layer->type == OUTPUT) {
-        draw_centered_text(get_output_function_name(&layer->layer.output), layer_x, layer_start_y + layer_height + layer_name_offset_y + 2 * layer_font_size, layer_font_size-2, BLACK);
+        DrawOutlinedCenteredText(get_output_function_name(&layer->layer.output), layer_x, 
+                layer_function_name_y, layer_font_size-4, WHITE, 1, BLACK);
     }
 }
 
-void draw_model(neural_network_model_t *model) {
+void DrawNeuralNetwork(neural_network_model_t *model) {
     // calculate center x for the model
     int model_width = model->num_layers * (layer_gap + 2 * node_radius) - layer_gap;
     model_start_x = modelX + (modelWidth - model_width) / 2;
     model_start_y = modelY;
 
     // draw model background
-    DrawRectangle(modelX, modelY, modelWidth, modelHeight, LIGHTGRAY);
+    Color color = DARKBLUE;
+    color.a = 170;
+    DrawRectangle(modelX, modelY, modelWidth, modelHeight, color);
 
     layer_t *cur = model->input_layer;
     for (int layer_i = 0; layer_i < model->num_layers; layer_i++) {
-        draw_layer(layer_i, cur);
+        DrawLayer(layer_i, cur);
         if (layer_i != 0) {
-            draw_edges(layer_i, cur, cur->prev);
+            DrawLayerEdges(layer_i, cur, cur->prev);
         }
         cur = cur->next;
     }
 }
 
 void* train_run(void *vargp) {
-    if (!is_training) {
+    if (!is_training && !is_testing) {
         is_training = true;
         CLOCK_MARK
         model_train_info((training_info_t*) vargp);
         CLOCK_MARK_ENTRY("TRAINING")
+        is_training = false;
     }
 }
 
-void window_draw(neural_network_model_t *model) {
+void* test_run(void *vargp) {
+    if (!is_testing && !is_training) {
+        is_testing = true;
+        CLOCK_MARK
+        // model_test_info((training_info_t*) vargp); // TODO
+        CLOCK_MARK_ENTRY("TESTING")
+        is_testing = false;
+    }
+}
+
+void DrawWindow(neural_network_model_t *model) {
     BeginDrawing();
     {
         ClearBackground(RAYWHITE);
@@ -246,7 +313,7 @@ void window_draw(neural_network_model_t *model) {
         show_tooltip = false;        
         // maybe have a better way to signify if a model is built or not
         if (model && model->input_layer != NULL) {
-            draw_model(model);
+            DrawNeuralNetwork(model);
         }
         
         DrawText(TextFormat("%d FPS", GetFPS()), 5, 5, 10, BLACK);
@@ -256,13 +323,18 @@ void window_draw(neural_network_model_t *model) {
             pthread_create(&thread_id, NULL, train_run, &training_info);
         }
 
+        if (GuiButton((Rectangle) {.x = 200, .y = 50, .height = 20, .width = 100}, "Start Test")) {
+            pthread_t thread_id;
+            pthread_create(&thread_id, NULL, test_run, &training_info);
+        }
+
         // draw tooltip
         if (show_tooltip) {
             Vector2 mouse_pos = GetMousePosition();
             int inner_width = tooltip_width - tooltip_border * 2;
             DrawRectangleLines(mouse_pos.x - 1, mouse_pos.y - tooltip_height - 1, tooltip_width + 2, tooltip_height+2, BLACK);
             DrawRectangle(mouse_pos.x, mouse_pos.y - tooltip_height, tooltip_width, tooltip_height, tooltip_background_color);
-            draw_centered_text(tooltip_msg, mouse_pos.x + tooltip_width / 2, mouse_pos.y - tooltip_height / 2, tooltip_fontsize, tooltip_fontcolor);
+            DrawCenteredText(tooltip_msg, mouse_pos.x + tooltip_width / 2, mouse_pos.y - tooltip_height / 2, tooltip_fontsize, tooltip_fontcolor);
         }
     }
     EndDrawing();
@@ -280,7 +352,7 @@ void window_keep_open(neural_network_model_t *model, unsigned int num_seconds) {
     time_t now = clock();
     unsigned long long num_ms = num_seconds * 1000L;
     while (!WindowShouldClose() && clock() - now < num_ms) {
-        window_draw(model);
+        DrawWindow(model);
     }
     is_window_open = false;
 }

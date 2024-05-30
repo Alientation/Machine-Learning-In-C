@@ -1,11 +1,18 @@
 #include <app/visualizer.h>
 
 #include <raylib.h>
+#define RAYGUI_IMPLEMENTATION
+#include <app/raygui.h>
+
+#include <pthread.h>
 #include <math.h>
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
 
+#define PROFILER_DISABLE_FUNCTION_RETURN
+#include <util/profiler.h>
+#include <util/debug_memory.h>
 
 /*
 GOALS
@@ -13,9 +20,9 @@ GOALS
 modify input node values to see what the model will output
 weights lines coloring based on the strength
 button to start training, selection of train/test data, graph of train/test accuracy and output loss
-
 */
-
+extern training_info_t training_info;
+bool is_training = false;
 
 static bool is_window_open = false;
 static const int screenWidth = 800;
@@ -37,8 +44,8 @@ static const Color node_negative_color = {
     .r = 255, .g = 178, .b = 150
 };
 
-static const int weight_value_precision = 8;
-static const int node_value_precision = 6;
+static const int weight_value_precision = 9;
+static const int node_value_precision = 7;
 static const int node_value_font_size = 10;
 static const int node_radius = 25;
 static const int node_gap = 20;
@@ -193,7 +200,14 @@ void draw_layer(int layer_index, layer_t *layer) {
     int layer_height = nodes.r * (node_gap + 2 * node_radius) - node_gap;
     int layer_start_y = model_start_y + (modelHeight - layer_height) / 2;
     int layer_x = model_start_x + layer_index * (layer_gap + 2 * node_radius) + node_radius;
+
+    
     draw_centered_text(get_layer_name(layer), layer_x, layer_start_y + layer_height + layer_name_offset_y + layer_font_size / 2, layer_font_size, BLACK);
+    if (layer->type == ACTIVATION) {
+        draw_centered_text(get_activation_function_name(&layer->layer.activation), layer_x, layer_start_y + layer_height + layer_name_offset_y + 2 * layer_font_size, layer_font_size-2, BLACK);
+    } else if (layer->type == OUTPUT) {
+        draw_centered_text(get_output_function_name(&layer->layer.output), layer_x, layer_start_y + layer_height + layer_name_offset_y + 2 * layer_font_size, layer_font_size-2, BLACK);
+    }
 }
 
 void draw_model(neural_network_model_t *model) {
@@ -215,16 +229,31 @@ void draw_model(neural_network_model_t *model) {
     }
 }
 
+void* train_run(void *vargp) {
+    if (!is_training) {
+        is_training = true;
+        CLOCK_MARK
+        model_train_info((training_info_t*) vargp);
+        CLOCK_MARK_ENTRY("TRAINING")
+    }
+}
+
 void window_draw(neural_network_model_t *model) {
     BeginDrawing();
     {
         ClearBackground(RAYWHITE);
 
-        show_tooltip = false;
-
+        show_tooltip = false;        
         // maybe have a better way to signify if a model is built or not
         if (model && model->input_layer != NULL) {
             draw_model(model);
+        }
+        
+        DrawText(TextFormat("%d FPS", GetFPS()), 5, 5, 10, BLACK);
+
+        if (GuiButton((Rectangle) {.x = 50, .y = 50, .height = 20, .width = 140}, "Start Training")) {
+            pthread_t thread_id;
+            pthread_create(&thread_id, NULL, train_run, &training_info);
         }
 
         // draw tooltip

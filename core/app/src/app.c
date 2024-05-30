@@ -7,34 +7,51 @@
 #include <util/profiler.h>
 #include <util/debug_memory.h>
 
+training_info_t training_info;
+
+void free_matrix_list(mymatrix_t *matrix_list, int size) {
+    for (int i = 0; i < size; i++) {
+        matrix_free(matrix_list[i]);
+    }
+
+    free(matrix_list);
+}
+
 int main(void) {
     CLOCK_MARK
     neural_network_model_t nnmodel;
+    // todo, app should connect to visualizer's start button and only start the training process when it is clicked
 
+    training_info = nn_AND(&nnmodel);
+    training_info.model = &nnmodel;
+    // nn_XOR();
+    // nn_binary_digit_recognizer();
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, window_run, &nnmodel);
 
-    // todo, app should connect to visualizer's start button and only start the training process when it is clicked
-
-    nn_AND(&nnmodel);
-    // nn_XOR();
-    // nn_binary_digit_recognizer();
-    
-    pthread_join(thread_id, NULL);
+    // clean up
+    pthread_join(thread_id, NULL);   
     model_free(&nnmodel);
+
+    free_matrix_list(training_info.train_x, training_info.train_size);
+    free_matrix_list(training_info.train_y, training_info.train_size);
+    free_matrix_list(training_info.test_x, training_info.test_size);
+    free_matrix_list(training_info.test_y, training_info.test_size);
+
     return EXIT_SUCCESS;
 }
 
-void nn_binary_digit_recognizer(neural_network_model_t *model_binary) {
+training_info_t nn_binary_digit_recognizer(neural_network_model_t *model_binary) {
     model_binary->input_layer = NULL;
     model_binary->output_layer = NULL;
     model_binary->num_layers = 0;
 
     // idea, 2 hidden layers, input matrix 10x10 => 100 x 1, output 2x1
+    return (training_info_t) {};
 }
 
 
-void nn_XOR(neural_network_model_t *model_xor) {
+training_info_t nn_XOR(neural_network_model_t *model_xor) {
     model_xor->input_layer = NULL;
     model_xor->output_layer = NULL;
     model_xor->num_layers = 0;
@@ -81,51 +98,28 @@ void nn_XOR(neural_network_model_t *model_xor) {
         matrix_set_values_to_fit(output_data[i], raw_output_data[i], output_size);
     }
 
-    printf("\nInitial Test XOR\n");
-    model_test(model_xor, input_data, output_data, num_examples);
+    training_info_t training_info;
+    training_info.in_progress = false;
+    training_info.train_size = num_examples;
+    training_info.train_x = input_data;
+    training_info.train_y = output_data;
+    training_info.test_size = 0;
+    training_info.test_x = NULL;
+    training_info.test_y = NULL;
 
-    const int num_epochs = 2000000;
-    const int num_epoch_prints = 50;
-    const int epochs_print = num_epoch_prints == 0 ? INT_MAX : num_epochs / num_epoch_prints;
-    printf("Training epochs=%d\n", num_epochs);
-    for (int i = 0; i < num_epochs; i++) {
-        
-
-        // printf("----\nepoch %d\n", i+1);
-        double avg_error = model_train(model_xor, input_data, output_data, num_examples, 0.1);
-
-        if (i != 0 && (i+1) % epochs_print == 0) {
-            printf("----\nepoch %d\n", i+1);
-            printf("avg error: %f\n", avg_error);
-            // printf("\ndense_layer_1 weights:\n");
-            // matrix_print(dense_layer_1->layer.dense.weights);
-            // printf("\ndense_layer_1 bias:\n");
-            // matrix_print(dense_layer_1->layer.dense.bias);
-            
-            // printf("\ndense_layer_2 weights:\n");
-            // matrix_print(dense_layer_2->layer.dense.weights);
-            // printf("\ndense_layer_2 bias:\n");
-            // matrix_print(dense_layer_2->layer.dense.bias);
-        }
-    }
-
-    printf("\nTesting XOR\n");
-    model_test(model_xor, input_data, output_data, num_examples);
-
+    training_info.batch_size = 1;
+    training_info.learning_rate = 0.1;
+    training_info.target_epochs = 20;
+    training_info.target_accuracy = 1;
 
     matrix_free(input);
     matrix_free(dense_1);
     matrix_free(dense_2);
 
-    for (int i = 0; i < num_examples; i++) {
-        matrix_free(input_data[i]);
-        matrix_free(output_data[i]);
-    }
-    free(input_data);
-    free(output_data);
+    return training_info;
 }
 
-void nn_AND(neural_network_model_t *model_and) {
+training_info_t nn_AND(neural_network_model_t *model_and) {
     model_and->input_layer = NULL;
     model_and->output_layer = NULL;
     model_and->num_layers = 0;
@@ -172,46 +166,22 @@ void nn_AND(neural_network_model_t *model_and) {
         matrix_set_values_to_fit(output_data[i], raw_output_data[i], output_size);
     }
 
-    printf("\nInitial Test AND\n");
-    model_test(model_and, input_data, output_data, num_examples);
+    training_info_t training_info;
+    training_info.train_size = num_examples;
+    training_info.train_x = input_data;
+    training_info.train_y = output_data;
+    training_info.test_size = 0;
+    training_info.test_x = NULL;
+    training_info.test_y = NULL;
 
-    const int num_epochs = 2000000;
-    const int num_epoch_prints = 50;
-    const int epochs_print = num_epoch_prints == 0 ? INT_MAX : num_epochs / num_epoch_prints;
-    printf("Training epochs=%d\n", num_epochs);
-    for (int i = 0; i < num_epochs; i++) {
-        
-
-        // printf("----\nepoch %d\n", i+1);
-        double avg_error = model_train(model_and, input_data, output_data, num_examples, 0.1);
-
-        if (i != 0 && (i+1) % epochs_print == 0) {
-            printf("----\nepoch %d\n", i+1);
-            printf("avg error: %f\n", avg_error);
-            // printf("\ndense_layer_1 weights:\n");
-            // matrix_print(dense_layer_1->layer.dense.weights);
-            // printf("\ndense_layer_1 bias:\n");
-            // matrix_print(dense_layer_1->layer.dense.bias);
-            
-            // printf("\ndense_layer_2 weights:\n");
-            // matrix_print(dense_layer_2->layer.dense.weights);
-            // printf("\ndense_layer_2 bias:\n");
-            // matrix_print(dense_layer_2->layer.dense.bias);
-        }
-    }
-
-    printf("\nTesting AND\n");
-    model_test(model_and, input_data, output_data, num_examples);
-
+    training_info.batch_size = 1;
+    training_info.learning_rate = 0.1;
+    training_info.target_epochs = 2000000;
+    training_info.target_accuracy = 1;
 
     matrix_free(input);
     matrix_free(dense_1);
     matrix_free(dense_2);
 
-    for (int i = 0; i < num_examples; i++) {
-        matrix_free(input_data[i]);
-        matrix_free(output_data[i]);
-    }
-    free(input_data);
-    free(output_data);
+    return training_info;
 }

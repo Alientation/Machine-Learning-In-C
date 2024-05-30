@@ -16,6 +16,28 @@ char* get_layer_name(layer_t *layer) {
             return "Activation";
         case OUTPUT:
             return "Output";
+        default:
+            assert(0);
+    }
+}
+
+char* get_activation_function_name(activation_layer_t *layer) {
+    if (layer->feed_forward == activation_feed_forward_sigmoid) {
+        return "Sigmoid";
+    } else if (layer->feed_forward == activation_feed_forward_relu) {
+        return "RELU";
+    } else {
+        assert(0);
+    }
+}
+
+char* get_output_function_name(output_layer_t *layer) {
+    if (layer->back_propagation == output_back_propagation_mean_squared) {
+        return "Mean Squared Loss";
+    } else if (layer->back_propagation == output_back_propagation_cross_entropy) {
+        return "Cross Entropy Loss";
+    } else {
+        assert(0);
     }
 }
 
@@ -391,4 +413,65 @@ void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *e
     printf("accuracy: %f  passed=%d, total=%d\n", accuracy, passed, num_tests);
 
     matrix_free(output);
+}
+
+void model_train_info(training_info_t *training_info) {
+    // todo support batch size in future
+    assert(training_info->batch_size == 1);
+    neural_network_model_t *model = training_info->model;
+    
+    unsigned int *epoch = &training_info->epoch;
+    unsigned int target_epochs = training_info->target_epochs;
+    unsigned int *train_index = &training_info->train_index;
+    unsigned int train_size = training_info->train_size;
+    unsigned int *test_index = &training_info->test_index;
+    unsigned int test_size = training_info->test_size;
+
+    output_layer_t output_layer = model->output_layer->layer.output;
+    mymatrix_t *train_x = training_info->train_x;
+    mymatrix_t *train_y = training_info->train_y;
+    mymatrix_t *test_x = training_info->test_x;
+    mymatrix_t *test_y = training_info->test_y;
+
+    mymatrix_t actual_output = matrix_allocator(output_layer.output_values.r, output_layer.output_values.c);
+    for (*epoch = 0; *epoch < target_epochs; (*epoch)++) {
+        // perform training
+        double avg_train_error = 0;
+        int passed_train = 0;
+        for (*train_index = 0; *train_index < train_size; (*train_index)++) {
+            model_predict(model, train_x[*train_index], actual_output);
+            avg_train_error += output_cost_mean_squared(model->output_layer, train_y[*train_index]);
+            model_back_propagate(model, train_y[*train_index], training_info->learning_rate);
+
+            mymatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
+            if (matrix_equal(train_y[*train_index], model_guess)) {
+                passed_train++;
+            }
+        }
+        training_info->avg_train_error = avg_train_error / (float) train_size;
+        training_info->train_accuracy = ((int)(100.0 * (double) passed_train / (double) train_size)) / 100.0;
+
+        // perform test
+        double avg_test_error = 0;
+        int passed_test = 0;
+        for (*test_index = 0; *test_index < test_size; (*test_index)++) {
+            model_predict(model, test_x[*test_index], actual_output);
+            avg_test_error += output_cost_mean_squared(model->output_layer, test_y[*test_index]);
+            
+            mymatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
+            if (matrix_equal(test_y[*test_index], model_guess)) {
+                passed_test++;
+            }
+        }
+
+        training_info->avg_test_error = avg_test_error / (float) test_size;
+        training_info->test_accuracy = ((int)(100.0 * (double) passed_test / (double) test_size)) / 100.0;
+
+
+        // check if we can stop
+        if (training_info->target_accuracy <= training_info->test_accuracy && training_info->target_accuracy <= training_info->train_accuracy) {
+            break; // finish early
+        }
+    }
+    matrix_free(actual_output);
 }

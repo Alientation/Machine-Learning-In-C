@@ -16,6 +16,7 @@
  * network visualizer
  * add dropout and other regularlization techniques
  * add momentum (remembers previous gradients)
+ * weights should probably be normalized
  * save model to file
  * load model from file  *so we can pretrain models
  * digit detector
@@ -124,6 +125,36 @@ typedef struct NeuralNetworkModel {
     
 } neural_network_model_t;
 
+typedef struct TrainingInfo {
+    neural_network_model_t *model;
+    unsigned int train_size;
+    mymatrix_t *train_x; // stored as an array of columns
+    mymatrix_t *train_y;
+    unsigned int batch_size;
+    double learning_rate;
+
+    // when training stops, either condition is met => stops training
+    unsigned int target_epochs;
+    double target_accuracy; 
+
+    unsigned int test_size;
+    mymatrix_t *test_x;
+    mymatrix_t *test_y;
+    
+    // stats
+    bool in_progress;
+    double train_accuracy;
+    double test_accuracy;
+    double avg_train_error;
+    double avg_test_error;
+    unsigned int epoch;
+    unsigned int train_index;
+    unsigned int test_index;
+
+    // todo add some data collection like list of error/accuracy and which epoch it occured in
+    // for data viz
+} training_info_t;
+
 mymatrix_t input_feed_forward(layer_t *this, mymatrix_t input); 
 
 mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input);
@@ -163,6 +194,8 @@ layer_t* layer_activation(neural_network_model_t *model, mymatrix_t (*feed_forwa
 layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), mymatrix_t (*back_propagation)(layer_t*, mymatrix_t));
 
 char* get_layer_name(layer_t *layer);
+char* get_activation_function_name(activation_layer_t *layer);
+char* get_output_function_name(output_layer_t *layer);
 mymatrix_t layer_get_neurons(layer_t *layer);
 
 mymatrix_t model_predict(neural_network_model_t *model, mymatrix_t input, 
@@ -172,6 +205,9 @@ void model_initialize_matrix_normal_distribution(mymatrix_t model, double mean, 
 void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_output, double learning_rate);
 double model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, double learning_rate);
 void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_tests);
+
+
+void model_train_info(training_info_t *training_info);
 
 
 #endif // MODEL_H

@@ -24,6 +24,7 @@ button to start training, selection of train/test data, graph of train/test accu
 extern training_info_t training_info;
 bool is_training = false;
 bool is_testing = false;
+bool playground_state = false;
 
 static bool is_window_open = false;
 static const int screenWidth = 800;
@@ -318,14 +319,18 @@ void DrawWindow(neural_network_model_t *model) {
         
         DrawText(TextFormat("%d FPS", GetFPS()), 5, 5, 10, BLACK);
 
-        if (GuiButton((Rectangle) {.x = 50, .y = 50, .height = 20, .width = 140}, "Start Training")) {
+        if (GuiButton((Rectangle) {.x = 50, .y = 50, .height = 20, .width = 110}, "Start Training")) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, train_run, &training_info);
         }
 
-        if (GuiButton((Rectangle) {.x = 200, .y = 50, .height = 20, .width = 100}, "Start Test")) {
+        if (GuiButton((Rectangle) {.x = 180, .y = 50, .height = 20, .width = 90}, "Start Test")) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, test_run, &training_info);
+        }
+
+        if (GuiButton((Rectangle) {.x = 280, .y = 50, .height = 20, .width = 100}, TextFormat("Playground %s", playground_state ? "ON" : "OFF"))) {
+            playground_state = !playground_state;
         }
 
         // draw tooltip

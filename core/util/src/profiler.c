@@ -23,24 +23,25 @@ profiler_info_t mark_time() {
     count_marks++;
 
     prev_time = now;
-    profiler_info_t info;
-    info.cur = now;
-    info.delta = time_since;
-    return info;
+    return (profiler_info_t) {.cur = now, .delta = time_since};
 }
 
 
 void mark_func_time(const char* file, const char* func, int line) {
     profiler_info_t info = mark_time();
-    printf("%s:%d [%s] in %llu ms (at %llu s)\n", file, line, func, info.delta, info.cur / 1000);
+    printf("%s:%d [%s] in %llu ms (at %.4f s)\n", file, line, func, info.delta, info.cur / 1000.0);
+    mark_time(); // dont count the time of printing
 }
 
 void mark_func_entry_time(const char* file, const char* func, int line, const char* entry) {
     profiler_info_t info = mark_time();
-    printf("%s:%d [%s] in %llu ms (at %llu s): %s\n", file, line, func, info.delta, info.cur / 1000, entry);
+    printf("%s:%d [%s] in %llu ms (at %.4f s): %s\n", file, line, func, info.delta, info.cur / 1000.0, entry);
+    mark_time(); // dont count the time of printing
 }
 
 void mark_func_exit(const char* file, const char* func, int line) {
-    mark_func_time(file, func, line);
+    profiler_info_t info = mark_time();
+    printf("%s:%d [%s] in %llu ms (at %.4f s)\n", file, line, func, info.delta, info.cur / 1000.0);
     printf("EXITING %s\n", func);
+    mark_time(); // dont count the time of printing
 }

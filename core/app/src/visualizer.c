@@ -96,11 +96,7 @@ Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
     int x = model_start_x + layer_index * (layer_gap + 2 * node_radius) + node_radius;
     int y = layer_start_y + r * (node_gap + 2 * node_radius) + node_radius;
 
-    Vector2 vec = {
-        .x = x,
-        .y = y,
-    };
-    return vec;
+    return (Vector2) {.x = x, .y = y};
 }
 
 void OpenTooltip(const char* msg) {
@@ -114,12 +110,16 @@ void OpenTooltip(const char* msg) {
     show_tooltip = true;
 }
 
+// todo, in future, don't draw redundant Activation/Output layer neurons, group all activation/output layers after a dense layer together
 void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
     mymatrix_t this_neurons = layer_get_neurons(layer);
     mymatrix_t prev_neurons = layer_get_neurons(prev);
+    
     if (layer->type == DENSE) { // fully connected
         mymatrix_t weights = layer->layer.dense.weights;
         for (int r2 = 0; r2 < this_neurons.r; r2++) {
+            // so we can color each weight based on its respective value to other weights
+            // connecting to the same output neuron
             double max_weight = -1;
             for (int r1 = 0; r1 < prev_neurons.r; r1++) {
                 double value = fabs(weights.matrix[r2][r1]);
@@ -177,7 +177,7 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 DrawLineV(draw_start, draw_end, BLACK);
             }
 
-            // todo draw tooltip info like (activation function type or output guess function)
+            // todo draw tooltip info about layer?
         }
     }
 }
@@ -299,14 +299,16 @@ void DrawWindow(neural_network_model_t *model) {
     BeginDrawing();
     {
         ClearBackground(RAYWHITE);
+        DrawText(TextFormat("%d FPS", GetFPS()), 5, 5, 10, BLACK);
 
         show_tooltip = false;        
         // maybe have a better way to signify if a model is built or not
         if (model && model->input_layer != NULL) {
             DrawNeuralNetwork(model);
         }
-        
-        DrawText(TextFormat("%d FPS", GetFPS()), 5, 5, 10, BLACK);
+
+        // draw model's training_info
+        // TODO
 
         // some model control buttons
         if (GuiButton((Rectangle) {.x = 50, .y = 50, .height = 20, .width = 110}, "Start Training")) {

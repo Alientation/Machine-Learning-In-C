@@ -158,6 +158,7 @@ mymatrix_t output_back_propagation_mean_squared(layer_t *this, mymatrix_t expect
 
 mymatrix_t output_back_propagation_cross_entropy(layer_t *this, mymatrix_t expected_output) {
     // todo
+    assert(0);
     mymatrix_t output;
     return output;
 }
@@ -176,6 +177,7 @@ double output_cost_mean_squared(layer_t *this, mymatrix_t expected_output) {
 
 double output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output) {
     // TODO
+    assert(0);
     return -1.0;
 }
 

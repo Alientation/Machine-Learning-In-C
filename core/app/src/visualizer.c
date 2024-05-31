@@ -1,4 +1,5 @@
 #include <app/visualizer.h>
+#include <app/visutil.h>
 
 #include <raylib.h>
 #define RAYGUI_IMPLEMENTATION
@@ -87,27 +88,6 @@ void* window_run(void *vargp) {
 
     window_keep_open(model, 0);
 }
-
-void DrawCenteredText(const char* text, int centerx, int centery, int fontsize, Color fontcolor) {
-    int width = MeasureText(text, fontsize);
-    DrawText(text, centerx - width / 2, centery - fontsize/2, fontsize, fontcolor);
-}
-
-void DrawOutlinedText(const char *text, int posX, int posY, int fontSize, Color color, int outlineSize, Color outlineColor) {
-    DrawText(text, posX - outlineSize, posY - outlineSize, fontSize, outlineColor);
-    DrawText(text, posX + outlineSize, posY - outlineSize, fontSize, outlineColor);
-    DrawText(text, posX - outlineSize, posY + outlineSize, fontSize, outlineColor);
-    DrawText(text, posX + outlineSize, posY + outlineSize, fontSize, outlineColor);
-    DrawText(text, posX, posY, fontSize, color);
-}
-
-void DrawOutlinedCenteredText(const char* text, int posX, int posY, int fontSize, Color color, int outlineSize, Color outlineColor) {
-    DrawCenteredText(text, posX - outlineSize, posY - outlineSize, fontSize, outlineColor);
-    DrawCenteredText(text, posX + outlineSize, posY - outlineSize, fontSize, outlineColor);
-    DrawCenteredText(text, posX - outlineSize, posY + outlineSize, fontSize, outlineColor);
-    DrawCenteredText(text, posX + outlineSize, posY + outlineSize, fontSize, outlineColor);
-    DrawCenteredText(text, posX, posY, fontSize, color);
-} 
 
 Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
     int layer_height = nodes.r * (node_gap + 2 * node_radius) - node_gap;
@@ -220,7 +200,7 @@ void DrawLayer(int layer_index, layer_t *layer) {
 
     // center
     for (int i = 0; i < nodes.r; i++) {
-        // draw node outline
+        // draw node with color respective to its value
         double ratio = .5;
         if (max_node_value != min_node_value) {
             ratio = (fabs(tanh(nodes.matrix[i][0])) - min_node_value) / (max_node_value - min_node_value);
@@ -235,7 +215,12 @@ void DrawLayer(int layer_index, layer_t *layer) {
         Vector2 pos = get_node_position(layer_index, i, nodes);
         DrawCircleV(pos, node_radius, WHITE);
         DrawCircleV(pos, node_radius, shade);
-        DrawCircleLinesV(pos, node_radius, BLACK);
+        DrawCircleLinesV(pos, node_radius, BLACK); // outline
+        
+        // edit input node values
+        if (playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, node_radius + 4)) {
+            // GuiSlider() // todo
+        }
 
         // todo maybe in future allow user to alter value in node maybe
         // clicking it opens a small gui that has a slider for the node's value
@@ -246,15 +231,12 @@ void DrawLayer(int layer_index, layer_t *layer) {
         DrawCenteredText(node_value, pos.x, pos.y, node_value_font_size, BLACK);
     }
 
-    // draw layer name
+    // draw layer name and information about it
     int layer_height = nodes.r * (node_gap + 2 * node_radius) - node_gap;
     int layer_start_y = model_start_y + (modelHeight - layer_height) / 2;
     int layer_name_y = layer_start_y + layer_height + layer_name_offset_y + layer_font_size / 2;
     int layer_function_name_y = layer_name_y - layer_font_size / 2 + layer_font_size * 2;
     int layer_x = model_start_x + layer_index * (layer_gap + 2 * node_radius) + node_radius;
-
-    
-
     DrawOutlinedCenteredText(get_layer_name(layer), layer_x, layer_name_y, layer_font_size, WHITE, 1, BLACK);
     if (layer->type == ACTIVATION) {
         DrawOutlinedCenteredText(get_activation_function_name(&layer->layer.activation), layer_x, 
@@ -276,6 +258,7 @@ void DrawNeuralNetwork(neural_network_model_t *model) {
     color.a = 170;
     DrawRectangle(modelX, modelY, modelWidth, modelHeight, color);
 
+    // draw each layer
     layer_t *cur = model->input_layer;
     for (int layer_i = 0; layer_i < model->num_layers; layer_i++) {
         DrawLayer(layer_i, cur);
@@ -286,6 +269,9 @@ void DrawNeuralNetwork(neural_network_model_t *model) {
     }
 }
 
+/**
+ * Ran as a separate thread
+ */
 void* train_run(void *vargp) {
     if (!is_training && !is_testing) {
         is_training = true;
@@ -296,6 +282,9 @@ void* train_run(void *vargp) {
     }
 }
 
+/**
+ * Ran as a separate thread
+ */
 void* test_run(void *vargp) {
     if (!is_testing && !is_training) {
         is_testing = true;
@@ -319,18 +308,22 @@ void DrawWindow(neural_network_model_t *model) {
         
         DrawText(TextFormat("%d FPS", GetFPS()), 5, 5, 10, BLACK);
 
+        // some model control buttons
         if (GuiButton((Rectangle) {.x = 50, .y = 50, .height = 20, .width = 110}, "Start Training")) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, train_run, &training_info);
+            pthread_detach(thread_id);
         }
 
-        if (GuiButton((Rectangle) {.x = 180, .y = 50, .height = 20, .width = 90}, "Start Test")) {
+        if (GuiButton((Rectangle) {.x = 170, .y = 50, .height = 20, .width = 80}, "Start Test")) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, test_run, &training_info);
+            pthread_detach(thread_id);
         }
 
-        if (GuiButton((Rectangle) {.x = 280, .y = 50, .height = 20, .width = 100}, TextFormat("Playground %s", playground_state ? "ON" : "OFF"))) {
-            playground_state = !playground_state;
+        GuiToggle((Rectangle) {.x = 260, .y = 50, .height = 20, .width = 80}, "Playground", &playground_state);
+        if (is_testing || is_training) { // dont mess with training
+            playground_state = false;
         }
 
         // draw tooltip
@@ -345,9 +338,6 @@ void DrawWindow(neural_network_model_t *model) {
     EndDrawing();
 }
 
-void window_close() {
-    CloseWindow();
-}
 
 void window_keep_open(neural_network_model_t *model, unsigned int num_seconds) {
     if (num_seconds == 0) {

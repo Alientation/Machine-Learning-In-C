@@ -22,10 +22,8 @@ int main(void) {
     neural_network_model_t nnmodel;
     // todo, app should connect to visualizer's start button and only start the training process when it is clicked
 
-    training_info = nn_AND(&nnmodel);
+    training_info = nn_XOR(&nnmodel);
     training_info.model = &nnmodel;
-    // nn_XOR();
-    // nn_binary_digit_recognizer();
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, window_run, &nnmodel);
 
@@ -109,7 +107,7 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
 
     training_info.batch_size = 1;
     training_info.learning_rate = 0.1;
-    training_info.target_epochs = 20;
+    training_info.target_epochs = 2000000;
     training_info.target_accuracy = 1;
 
     matrix_free(input);
@@ -167,6 +165,7 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     }
 
     training_info_t training_info;
+    training_info.in_progress = false;
     training_info.train_size = num_examples;
     training_info.train_x = input_data;
     training_info.train_y = output_data;

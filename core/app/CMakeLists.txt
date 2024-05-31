@@ -36,6 +36,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     # source files for the library
     src/app.c
     src/visualizer.c
+    src/visutil.c
 )
 
 # sets the search paths for the include files

@@ -4,8 +4,15 @@
 
 #include <model/model.h>
 
+typedef struct VisualizerArgument {
+    neural_network_model_t *model;
+    char *model_name;
+    
+} visualizer_argument_t;
+
+
 /**
- * thread for the window, supplied a neural_network_model_t object pointer
+ * thread for the window, supplied a VisualizerArgument object pointer
  */
 void* window_run(void *vargp);
 

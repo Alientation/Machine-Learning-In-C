@@ -24,8 +24,13 @@ int main(void) {
 
     training_info = nn_XOR(&nnmodel);
     training_info.model = &nnmodel;
+    model_calculate(&nnmodel);
+
     pthread_t thread_id;
-    pthread_create(&thread_id, NULL, window_run, &nnmodel);
+    visualizer_argument_t vis_args;
+    vis_args.model = &nnmodel;
+    vis_args.model_name = "XOR Model";
+    pthread_create(&thread_id, NULL, window_run, &vis_args);
 
     // clean up
     pthread_join(thread_id, NULL);   

@@ -22,16 +22,17 @@ modify input node values to see what the model will output
 weights lines coloring based on the strength
 button to start training, selection of train/test data, graph of train/test accuracy and output loss
 */
+visualizer_argument_t vis_args;
 extern training_info_t training_info;
 bool is_training = false;
 bool is_testing = false;
 bool playground_state = false;
 
 static bool is_window_open = false;
-static const int screenWidth = 800;
-static const int screenHeight = 450;
-static const int modelWidth = 760;
-static const int modelHeight = 300;
+static const int screenWidth = 1200;
+static const int screenHeight = 700;
+static const int modelWidth = 1160;
+static const int modelHeight = 450;
 static const int modelX = 20;
 static const int modelY = 20;
 
@@ -49,8 +50,8 @@ static const Color node_negative_color = {
 
 static const int weight_value_precision = 9;
 static const int node_value_precision = 7;
-static const int node_value_font_size = 10;
-static const int node_radius = 25;
+static const int node_value_font_size = 15;
+static const int node_radius = 35;
 static const int node_gap = 20;
 static const int layer_font_size = 16;
 static const int layer_name_offset_y = 20;
@@ -78,15 +79,14 @@ static char tooltip_msg[100];
 void* window_run(void *vargp) {
     assert(!is_window_open);
 
-    neural_network_model_t *model = (neural_network_model_t*) vargp;
-
-    
+    visualizer_argument_t *args = (visualizer_argument_t*) vargp;
+    vis_args = *args;    
     is_window_open = true;
 
-    InitWindow(screenWidth, screenHeight, "model visualizer");
+    InitWindow(screenWidth, screenHeight, TextFormat("%s Visualizer", args->model_name));
     SetTargetFPS(60);
 
-    window_keep_open(model, 0);
+    window_keep_open(args->model, 0);
 }
 
 Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
@@ -266,6 +266,7 @@ void DrawNeuralNetwork(neural_network_model_t *model) {
     Color color = DARKBLUE;
     color.a = 170;
     DrawRectangle(modelX, modelY, modelWidth, modelHeight, color);
+    DrawCenteredText(vis_args.model_name, modelWidth/2, 35, 20, BLACK);
 
     // draw each layer
     layer_t *cur = model->input_layer;
@@ -320,19 +321,19 @@ void DrawWindow(neural_network_model_t *model) {
         // TODO
 
         // some model control buttons
-        if (GuiButton((Rectangle) {.x = 50, .y = 50, .height = 20, .width = 110}, "Start Training")) {
+        if (GuiButton((Rectangle) {.x = 50, .y = 60, .height = 30, .width = 130}, "Start Training")) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, train_run, &training_info);
             pthread_detach(thread_id);
         }
 
-        if (GuiButton((Rectangle) {.x = 170, .y = 50, .height = 20, .width = 80}, "Start Test")) {
+        if (GuiButton((Rectangle) {.x = 190, .y = 60, .height = 30, .width = 100}, "Start Test")) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, test_run, &training_info);
             pthread_detach(thread_id);
         }
 
-        GuiToggle((Rectangle) {.x = 260, .y = 50, .height = 20, .width = 80}, "Playground", &playground_state);
+        GuiToggle((Rectangle) {.x = 300, .y = 60, .height = 30, .width = 100}, "Playground", &playground_state);
         if (is_testing || is_training) { // dont mess with training
             playground_state = false;
         }

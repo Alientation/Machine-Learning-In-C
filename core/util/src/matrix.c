@@ -14,6 +14,9 @@ mymatrix_t matrix_allocator(int r, int c) {
     m.matrix = (float**) malloc(r * sizeof(float*));
     for (int i = 0; i < r; i++) {
         m.matrix[i] = (float*) malloc(c * sizeof(float));
+        for (int j = 0; j < c; j++) {
+            m.matrix[i][j] = 0;
+        }
     }
     m.transposed = false;
 

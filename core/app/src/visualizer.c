@@ -219,9 +219,15 @@ void DrawLayer(int layer_index, layer_t *layer) {
         DrawCircleLinesV(pos, node_radius, BLACK); // outline
         
         // edit input node values
-        if (playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, node_radius + 4)) {
-            GuiSlider((Rectangle) {.x = pos.x - 3 * node_radius / 4, .y = pos.y + node_value_font_size + 5, .width = 3 * node_radius / 2, .height = node_value_font_size},
+        if (playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, node_radius + node_gap/2)) {
+            DrawRectangle(pos.x - node_radius - 6, pos.y + node_value_font_size - 4, node_radius * 2 + 12, node_value_font_size + 8, tooltip_background_color);
+            DrawRectangleLines(pos.x - node_radius - 6, pos.y + node_value_font_size - 4, node_radius * 2 + 12, node_value_font_size + 8, BLACK);
+            GuiSlider((Rectangle) {.x = pos.x - 3 * node_radius / 4, .y = pos.y + node_value_font_size, .width = 3 * node_radius / 2, .height = node_value_font_size},
                     "0", "1", &nodes.matrix[r][0], 0, 1);
+
+            // todo this should most likely be ran on a separate thread, perhaps just have one thread always running
+            // that detects changes to the model's inputs when not currently training or testing and recalculates the corresponding output
+            mymatrix_t output = model_calculate(training_info.model);
         }
 
         // todo maybe in future allow user to alter value in node maybe

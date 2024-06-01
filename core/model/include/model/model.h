@@ -208,7 +208,7 @@ void model_initialize_matrix_normal_distribution(mymatrix_t model, float mean, f
 void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_output, float learning_rate);
 float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, float learning_rate);
 void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_tests);
-
+mymatrix_t model_calculate(neural_network_model_t *model);
 
 void model_train_info(training_info_t *training_info);
 

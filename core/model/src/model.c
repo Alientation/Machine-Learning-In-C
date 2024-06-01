@@ -411,10 +411,25 @@ void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *e
 
     // 2 decimal places
     float accuracy = ((int)(100.0 * (float) passed / (float) num_tests)) / 100.0;
-
     printf("accuracy: %f  passed=%d, total=%d\n", accuracy, passed, num_tests);
-
     matrix_free(output);
+}
+
+mymatrix_t model_calculate(neural_network_model_t *model) {
+    layer_t *current = model->input_layer;
+    mymatrix_t prev_output = model->input_layer->layer.input.input_values;
+    for (int layer_i = 0; layer_i < model->num_layers-1; layer_i++) {
+        assert(current->type != OUTPUT);
+        
+        // since the different layer structs are arranged in a way that the function pointers are in the same "locations"
+        // this should work for all layers without having to use a switch
+        prev_output = current->layer.input.feed_forward(current, prev_output);
+        current = current->next;
+    }
+
+    model->output_layer->layer.output.make_guess(model->output_layer, prev_output);
+    matrix_memcpy(current->layer.output.output_values, prev_output);
+    return current->layer.output.output_values;
 }
 
 void model_train_info(training_info_t *training_info) {

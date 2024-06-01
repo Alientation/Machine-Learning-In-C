@@ -11,16 +11,16 @@ mymatrix_t matrix_allocator(int r, int c) {
     mymatrix_t m;
     m.r = r;
     m.c = c;
-    m.matrix = (double**) malloc(r * sizeof(double*));
+    m.matrix = (float**) malloc(r * sizeof(float*));
     for (int i = 0; i < r; i++) {
-        m.matrix[i] = (double*) malloc(c * sizeof(double));
+        m.matrix[i] = (float*) malloc(c * sizeof(float));
     }
     m.transposed = false;
 
     return m;
 }
 
-mymatrix_t matrix_constructor(int r, int c, double** matrix) {
+mymatrix_t matrix_constructor(int r, int c, float** matrix) {
     mymatrix_t m;
     m.r = r;
     m.c = c;
@@ -44,9 +44,9 @@ mymatrix_t matrix_copy(mymatrix_t src) {
     mymatrix_t copy;
     copy.r = src.r;
     copy.c = src.c;
-    copy.matrix = (double**) malloc(copy.r * sizeof(double*));
+    copy.matrix = (float**) malloc(copy.r * sizeof(float*));
     for (int i = 0; i < copy.r; i++) {
-        copy.matrix[i] = (double*) malloc(copy.c * sizeof(double));
+        copy.matrix[i] = (float*) malloc(copy.c * sizeof(float));
     }
     matrix_memcpy(copy, src);
     return copy;
@@ -76,7 +76,7 @@ void matrix_multiply(mymatrix_t m1, mymatrix_t m2,
 
     for (int r = 0; r < result.r; r++) {
         for (int c = 0; c < result.c; c++) {
-            double dot = 0;
+            float dot = 0;
             for (int i = 0; i < m1.c; i++) {
                 dot += m1.matrix[r][i] * m2.matrix[i][c];
             }
@@ -85,7 +85,7 @@ void matrix_multiply(mymatrix_t m1, mymatrix_t m2,
     }
 }
 
-void matrix_multiply_scalar(mymatrix_t m1, double scalar,
+void matrix_multiply_scalar(mymatrix_t m1, float scalar,
                             mymatrix_t result) {
     assert(m1.r == result.r && m1.c == result.c);
     for (int r = 0; r < result.r; r++) {
@@ -195,7 +195,7 @@ bool matrix_equal(mymatrix_t m1, mymatrix_t m2) {
     return true;
 }
 
-void matrix_for_each_operator(mymatrix_t m, double (*op)(double),
+void matrix_for_each_operator(mymatrix_t m, float (*op)(float),
                               mymatrix_t result) {
     assert(m.r == result.r && m.c == result.c);
     for (int r = 0; r < m.r; r++) {
@@ -216,7 +216,7 @@ void matrix_print(mymatrix_t m) {
     }
 }
 
-void matrix_set_values_to_fit(mymatrix_t m, double* elements, unsigned int num_elements) {
+void matrix_set_values_to_fit(mymatrix_t m, float* elements, unsigned int num_elements) {
     assert(m.r * m.c == num_elements);
     int element_i = 0;
     for (int r = 0; r < m.r; r++) {

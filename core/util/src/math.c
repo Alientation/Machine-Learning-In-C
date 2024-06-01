@@ -7,11 +7,11 @@
 
 
 
-double random_normal_distribution_BoxMullerTransform(double standard_deviation) {
+float random_normal_distribution_BoxMullerTransform(float standard_deviation) {
     // standard normal distribution with var(x) = 1
-    double U1 = random_uniform_range(1);
-    double U2 = random_uniform_range(1);
-    double Z0 = sqrt(-2 * log10(U1) / log10(exp(1))) * cos(2 * acos(-1) * U2);
+    float U1 = random_uniform_range(1);
+    float U2 = random_uniform_range(1);
+    float Z0 = sqrt(-2 * log10(U1) / log10(exp(1))) * cos(2 * acos(-1) * U2);
     
     // scale to correct standard deviation
     // Var(Y) = Var(aX) = a^2Var(X)
@@ -31,23 +31,23 @@ double random_normal_distribution_BoxMullerTransform(double standard_deviation) 
     return Z0;
 }
 
-double random_uniform_range(double a) {
-    return (double) rand() / (double) (RAND_MAX / a);
+float random_uniform_range(float a) {
+    return (float) rand() / (float) (RAND_MAX / a);
 }
 
-double sigmoid(double z) {
+float sigmoid(float z) {
     return 1. / (1 + exp(-z));
 }
 
-double relu(double z) {
+float relu(float z) {
     return fmax(0, z);
 }
 
-double sigmoid_prime(double z) {
+float sigmoid_prime(float z) {
     z = sigmoid(z);
     return z * (1-z);
 }
 
-double relu_prime(double z) {
+float relu_prime(float z) {
     return z >= 0;
 }

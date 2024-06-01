@@ -73,14 +73,14 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
     const int num_examples = 4;
     const int input_size = 2;
     const int output_size = 1;
-    double raw_input_data[][2] = {
+    float raw_input_data[][2] = {
         {0,0},
         {0,1},
         {1,0},
         {1,1}
     };
 
-    double raw_output_data[][1] = {
+    float raw_output_data[][1] = {
         {0},
         {1},
         {1},
@@ -141,14 +141,14 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     const int num_examples = 4;
     const int input_size = 2;
     const int output_size = 1;
-    double raw_input_data[][2] = {
+    float raw_input_data[][2] = {
         {0,0},
         {0,1},
         {1,0},
         {1,1}
     };
 
-    double raw_output_data[][1] = {
+    float raw_output_data[][1] = {
         {0},
         {0},
         {0},

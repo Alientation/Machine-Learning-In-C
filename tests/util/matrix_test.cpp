@@ -1,7 +1,7 @@
 #include <tests/matrix_test.h>
 
 TEST(matrix, matrix_allocator) {
-    matrix_t m = matrix_allocator(2,2);
+    mymatrix_t m = matrix_allocator(2,2);
 
     EXPECT_NE(m.matrix, nullptr);
     EXPECT_EQ(m.r, 2);
@@ -10,10 +10,10 @@ TEST(matrix, matrix_allocator) {
 }
 
 TEST(matrix, matrix_constructor) {
-    double a0[2] = {1,0};
-    double a1[2] = {0,1};
-    double *array[2] = {a0, a1};
-    matrix_t m = matrix_constructor(2, 2, (double**) array);
+    float a0[2] = {1,0};
+    float a1[2] = {0,1};
+    float *array[2] = {a0, a1};
+    mymatrix_t m = matrix_constructor(2, 2, (float**) array);
 
     EXPECT_EQ(m.r, 2);
     EXPECT_EQ(m.c, 2);
@@ -25,11 +25,11 @@ TEST(matrix, matrix_constructor) {
 }
 
 TEST(matrix, matrix_copy) {
-    double a0[2] = {1,2};
-    double a1[2] = {2,1};
-    double *array[2] = {a0, a1};
-    matrix_t m = matrix_constructor(2, 2, (double**) array);
-    matrix_t copy = matrix_copy(m);
+    float a0[2] = {1,2};
+    float a1[2] = {2,1};
+    float *array[2] = {a0, a1};
+    mymatrix_t m = matrix_constructor(2, 2, (float**) array);
+    mymatrix_t copy = matrix_copy(m);
 
     EXPECT_EQ(copy.r, 2);
     EXPECT_EQ(copy.c, 2);
@@ -43,11 +43,11 @@ TEST(matrix, matrix_copy) {
 }
 
 TEST(matrix, matrix_memcpy) {
-    double a0[2] = {1,2};
-    double a1[2] = {2,1};
-    double *array[2] = {a0, a1};
-    matrix_t m = matrix_constructor(2, 2, (double**) array);
-    matrix_t copy = matrix_allocator(2, 2);
+    float a0[2] = {1,2};
+    float a1[2] = {2,1};
+    float *array[2] = {a0, a1};
+    mymatrix_t m = matrix_constructor(2, 2, (float**) array);
+    mymatrix_t copy = matrix_allocator(2, 2);
     matrix_memcpy(copy, m);
 
     EXPECT_EQ(copy.r, 2);
@@ -62,17 +62,17 @@ TEST(matrix, matrix_memcpy) {
 }
 
 TEST(matrix, matrix_multiply_identity) {
-    double a0[2] = {1,0};
-    double a1[2] = {0,1};
-    double *array1[2] = {a0, a1};
-    matrix_t m1 = matrix_constructor(2, 2, (double**) array1);
+    float a0[2] = {1,0};
+    float a1[2] = {0,1};
+    float *array1[2] = {a0, a1};
+    mymatrix_t m1 = matrix_constructor(2, 2, (float**) array1);
 
-    double a2[2] = {2, 1};
-    double a3[2] = {3, 4};
-    double *array2[2] = {a2, a3};
-    matrix_t m2 = matrix_constructor(2, 2, (double**) array2);
+    float a2[2] = {2, 1};
+    float a3[2] = {3, 4};
+    float *array2[2] = {a2, a3};
+    mymatrix_t m2 = matrix_constructor(2, 2, (float**) array2);
 
-    matrix_t m3 = matrix_allocator(2, 2);
+    mymatrix_t m3 = matrix_allocator(2, 2);
     matrix_multiply(m1, m2, m3);
 
     EXPECT_EQ(m3.r, 2);
@@ -87,16 +87,16 @@ TEST(matrix, matrix_multiply_identity) {
 }
 
 TEST(matrix, matrix_multiply) {
-    double a0[2] = {1,2};
-    double *array1[1] = {a0};
-    matrix_t m1 = matrix_constructor(1, 2, (double**) array1);
+    float a0[2] = {1,2};
+    float *array1[1] = {a0};
+    mymatrix_t m1 = matrix_constructor(1, 2, (float**) array1);
 
-    double a2[2] = {2, 1};
-    double a3[2] = {3, 4};
-    double *array2[2] = {a2, a3};
-    matrix_t m2 = matrix_constructor(2, 2, (double**) array2);
+    float a2[2] = {2, 1};
+    float a3[2] = {3, 4};
+    float *array2[2] = {a2, a3};
+    mymatrix_t m2 = matrix_constructor(2, 2, (float**) array2);
 
-    matrix_t m3 = matrix_allocator(1, 2);
+    mymatrix_t m3 = matrix_allocator(1, 2);
     matrix_multiply(m1, m2, m3);
 
     EXPECT_EQ(m3.r, 1);
@@ -109,11 +109,11 @@ TEST(matrix, matrix_multiply) {
 }
 
 TEST(matrix, matrix_multiply_scalar) {
-    double a0[3] = {1,2,3};
-    double a1[3] = {4,5,6};
-    double *array1[2] = {a0, a1};
-    matrix_t m1 = matrix_constructor(2, 3, (double**) array1);
-    matrix_t m2 = matrix_allocator(2, 3);
+    float a0[3] = {1,2,3};
+    float a1[3] = {4,5,6};
+    float *array1[2] = {a0, a1};
+    mymatrix_t m1 = matrix_constructor(2, 3, (float**) array1);
+    mymatrix_t m2 = matrix_allocator(2, 3);
     matrix_multiply_scalar(m1, 2, m2);
 
     EXPECT_EQ(m2.r, 2);
@@ -130,17 +130,17 @@ TEST(matrix, matrix_multiply_scalar) {
 }
 
 TEST(matrix, elementwise_multiply) {
-    double a0[2] = {1,0};
-    double a1[2] = {0,1};
-    double *array1[2] = {a0, a1};
-    matrix_t m1 = matrix_constructor(2, 2, (double**) array1);
+    float a0[2] = {1,0};
+    float a1[2] = {0,1};
+    float *array1[2] = {a0, a1};
+    mymatrix_t m1 = matrix_constructor(2, 2, (float**) array1);
 
-    double a2[2] = {2, 1};
-    double a3[2] = {3, 4};
-    double *array2[2] = {a2, a3};
-    matrix_t m2 = matrix_constructor(2, 2, (double**) array2);
+    float a2[2] = {2, 1};
+    float a3[2] = {3, 4};
+    float *array2[2] = {a2, a3};
+    mymatrix_t m2 = matrix_constructor(2, 2, (float**) array2);
 
-    matrix_t m3 = matrix_allocator(2, 2);
+    mymatrix_t m3 = matrix_allocator(2, 2);
     matrix_elementwise_multiply(m1, m2, m3);
 
     EXPECT_EQ(m3.r, 2);
@@ -155,17 +155,17 @@ TEST(matrix, elementwise_multiply) {
 }
 
 TEST(matrix, add) {
-    double a0[2] = {1,0};
-    double a1[2] = {0,1};
-    double *array1[2] = {a0, a1};
-    matrix_t m1 = matrix_constructor(2, 2, (double**) array1);
+    float a0[2] = {1,0};
+    float a1[2] = {0,1};
+    float *array1[2] = {a0, a1};
+    mymatrix_t m1 = matrix_constructor(2, 2, (float**) array1);
 
-    double a2[2] = {2, 1};
-    double a3[2] = {3, 4};
-    double *array2[2] = {a2, a3};
-    matrix_t m2 = matrix_constructor(2, 2, (double**) array2);
+    float a2[2] = {2, 1};
+    float a3[2] = {3, 4};
+    float *array2[2] = {a2, a3};
+    mymatrix_t m2 = matrix_constructor(2, 2, (float**) array2);
 
-    matrix_t m3 = matrix_allocator(2, 2);
+    mymatrix_t m3 = matrix_allocator(2, 2);
     matrix_add(m1, m2, m3);
 
     EXPECT_EQ(m3.r, 2);
@@ -180,17 +180,17 @@ TEST(matrix, add) {
 }
 
 TEST(matrix, add_row) {
-    double a0[2] = {1,0};
-    double a1[2] = {0,1};
-    double *array1[2] = {a0, a1};
-    matrix_t m1 = matrix_constructor(2, 2, (double**) array1);
+    float a0[2] = {1,0};
+    float a1[2] = {0,1};
+    float *array1[2] = {a0, a1};
+    mymatrix_t m1 = matrix_constructor(2, 2, (float**) array1);
 
-    double a2[2] = {2, 1};
-    double a3[2] = {3, 4};
-    double *array2[2] = {a2, a3};
-    matrix_t m2 = matrix_constructor(2, 2, (double**) array2);
+    float a2[2] = {2, 1};
+    float a3[2] = {3, 4};
+    float *array2[2] = {a2, a3};
+    mymatrix_t m2 = matrix_constructor(2, 2, (float**) array2);
 
-    matrix_t m3 = matrix_allocator(2, 2);
+    mymatrix_t m3 = matrix_allocator(2, 2);
     matrix_add_row(m1, 0, m2, 1, m3, 0);
 
     EXPECT_EQ(m3.r, 2);
@@ -203,17 +203,17 @@ TEST(matrix, add_row) {
 }
 
 TEST(matrix, sub) {
-    double a0[2] = {1,0};
-    double a1[2] = {0,1};
-    double *array1[2] = {a0, a1};
-    matrix_t m1 = matrix_constructor(2, 2, (double**) array1);
+    float a0[2] = {1,0};
+    float a1[2] = {0,1};
+    float *array1[2] = {a0, a1};
+    mymatrix_t m1 = matrix_constructor(2, 2, (float**) array1);
 
-    double a2[2] = {2, 1};
-    double a3[2] = {3, 4};
-    double *array2[2] = {a2, a3};
-    matrix_t m2 = matrix_constructor(2, 2, (double**) array2);
+    float a2[2] = {2, 1};
+    float a3[2] = {3, 4};
+    float *array2[2] = {a2, a3};
+    mymatrix_t m2 = matrix_constructor(2, 2, (float**) array2);
 
-    matrix_t m3 = matrix_allocator(2, 2);
+    mymatrix_t m3 = matrix_allocator(2, 2);
     matrix_sub(m1, m2, m3);
 
     EXPECT_EQ(m3.r, 2);
@@ -236,12 +236,12 @@ TEST(matrix, row_extend) {
 }
 
 TEST(matrix, transpose) {
-    double a0[3] = {1,2,3};
-    double a1[3] = {4,5,6};
-    double *array1[2] = {a0, a1};
-    matrix_t m1 = matrix_constructor(2, 3, (double**) array1);
+    float a0[3] = {1,2,3};
+    float a1[3] = {4,5,6};
+    float *array1[2] = {a0, a1};
+    mymatrix_t m1 = matrix_constructor(2, 3, (float**) array1);
 
-    matrix_t m2 = matrix_allocator(3, 2);
+    mymatrix_t m2 = matrix_allocator(3, 2);
     matrix_transpose(m1, m2);
 
     EXPECT_EQ(m2.r, 3);
@@ -258,15 +258,15 @@ TEST(matrix, transpose) {
 }
 
 TEST(matrix, equal) {
-    double a0[2] = {2,1};
-    double a1[2] = {3,4};
-    double *array1[2] = {a0, a1};
-    matrix_t m1 = matrix_constructor(2, 2, (double**) array1);
+    float a0[2] = {2,1};
+    float a1[2] = {3,4};
+    float *array1[2] = {a0, a1};
+    mymatrix_t m1 = matrix_constructor(2, 2, (float**) array1);
 
-    double a2[2] = {2, 1};
-    double a3[2] = {3, 4};
-    double *array2[2] = {a2, a3};
-    matrix_t m2 = matrix_constructor(2, 2, (double**) array2);
+    float a2[2] = {2, 1};
+    float a3[2] = {3, 4};
+    float *array2[2] = {a2, a3};
+    mymatrix_t m2 = matrix_constructor(2, 2, (float**) array2);
 
     EXPECT_EQ(matrix_equal(m1, m2), true);
 

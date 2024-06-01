@@ -52,7 +52,7 @@ mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input) {
     return this->layer.dense.activation_values;
 }
 
-mymatrix_t dense_back_propagation(layer_t *this, mymatrix_t d_error_wrt_output, double learning_rate) {
+mymatrix_t dense_back_propagation(layer_t *this, mymatrix_t d_error_wrt_output, float learning_rate) {
     // transpose input matrix
     // todo see if this needs optimization, likely does since allocation on every iteration is a lot of work
     mymatrix_t X = layer_get_neurons(this->prev);
@@ -104,7 +104,7 @@ mymatrix_t activation_back_propagation_relu(layer_t *this, mymatrix_t d_cost_wrt
 }
 
 mymatrix_t output_make_guess_one_hot_encoded(layer_t *this, mymatrix_t output) {
-    double max = -INFINITY;
+    float max = -INFINITY;
     for (int r = 0; r < output.r; r++) {
         for (int c = 0; c < output.c; c++) {
             max = fmax(max, output.matrix[r][c]);
@@ -134,7 +134,7 @@ mymatrix_t output_make_guess_round(layer_t *this, mymatrix_t output) {
 }
 
 mymatrix_t output_make_guess_softmax(layer_t *this, mymatrix_t output) {
-    double sum = 0;
+    float sum = 0;
     for (int r = 0; r < output.r; r++) {
         for (int c = 0; c < output.c; c++) {
             sum += exp(output.matrix[r][c]);
@@ -163,8 +163,8 @@ mymatrix_t output_back_propagation_cross_entropy(layer_t *this, mymatrix_t expec
     return output;
 }
 
-double output_cost_mean_squared(layer_t *this, mymatrix_t expected_output) {
-    double mean_squared = 0;
+float output_cost_mean_squared(layer_t *this, mymatrix_t expected_output) {
+    float mean_squared = 0;
     mymatrix_t actual_output = layer_get_neurons(this);
     for (int r = 0; r < actual_output.r; r++) {
         for (int c = 0; c < actual_output.c; c++) {
@@ -175,7 +175,7 @@ double output_cost_mean_squared(layer_t *this, mymatrix_t expected_output) {
     return mean_squared;
 }
 
-double output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output) {
+float output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output) {
     // TODO
     assert(0);
     return -1.0;
@@ -325,7 +325,7 @@ layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(la
     return layer;
 }
 
-void model_initialize_matrix_normal_distribution(mymatrix_t matrix, double mean, double standard_deviation) {
+void model_initialize_matrix_normal_distribution(mymatrix_t matrix, float mean, float standard_deviation) {
     for (int r = 0; r < matrix.r; r++) {
         for (int c = 0; c < matrix.c; c++) {
             matrix.matrix[r][c] = random_normal_distribution_BoxMullerTransform(standard_deviation) + mean;
@@ -353,7 +353,7 @@ mymatrix_t model_predict(neural_network_model_t *model, mymatrix_t input,
     return output;
 }
 
-void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_output, double learning_rate) {
+void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_output, float learning_rate) {
     layer_t *current = model->output_layer;
     mymatrix_t d_cost_wrt_Y = expected_output;
     for (int layer_i = model->num_layers; layer_i > 1; layer_i--) {
@@ -376,9 +376,9 @@ void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_out
     }
 }
 
-double model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, double learning_rate) {
+float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, float learning_rate) {
     mymatrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
-    double avg_error = 0;
+    float avg_error = 0;
     for (int example_i = 0; example_i < num_examples; example_i++) {
         model_predict(model, inputs[example_i], output);
         avg_error += output_cost_mean_squared(model->output_layer, expected_outputs[example_i]);
@@ -410,7 +410,7 @@ void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *e
     }
 
     // 2 decimal places
-    double accuracy = ((int)(100.0 * (double) passed / (double) num_tests)) / 100.0;
+    float accuracy = ((int)(100.0 * (float) passed / (float) num_tests)) / 100.0;
 
     printf("accuracy: %f  passed=%d, total=%d\n", accuracy, passed, num_tests);
 
@@ -438,7 +438,7 @@ void model_train_info(training_info_t *training_info) {
     mymatrix_t actual_output = matrix_allocator(output_layer.output_values.r, output_layer.output_values.c);
     for (*epoch = 0; *epoch < target_epochs; (*epoch)++) {
         // perform training
-        double avg_train_error = 0;
+        float avg_train_error = 0;
         int passed_train = 0;
         for (*train_index = 0; *train_index < train_size; (*train_index)++) {
             model_predict(model, train_x[*train_index], actual_output);
@@ -451,10 +451,10 @@ void model_train_info(training_info_t *training_info) {
             }
         }
         training_info->avg_train_error = avg_train_error / (float) train_size;
-        training_info->train_accuracy = ((int)(100.0 * (double) passed_train / (double) train_size)) / 100.0;
+        training_info->train_accuracy = ((int)(100.0 * (float) passed_train / (float) train_size)) / 100.0;
 
         // perform test
-        double avg_test_error = 0;
+        float avg_test_error = 0;
         int passed_test = 0;
         for (*test_index = 0; *test_index < test_size; (*test_index)++) {
             model_predict(model, test_x[*test_index], actual_output);
@@ -467,7 +467,7 @@ void model_train_info(training_info_t *training_info) {
         }
 
         training_info->avg_test_error = avg_test_error / (float) test_size;
-        training_info->test_accuracy = ((int)(100.0 * (double) passed_test / (double) test_size)) / 100.0;
+        training_info->test_accuracy = ((int)(100.0 * (float) passed_test / (float) test_size)) / 100.0;
 
 
         // check if we can stop

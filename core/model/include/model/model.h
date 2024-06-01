@@ -49,7 +49,7 @@ typedef struct Input_Layer {
 // m: number of neurons in the previous layer
 typedef struct Dense_Layer {
     mymatrix_t (*feed_forward)(layer_t *this, mymatrix_t input);
-    mymatrix_t (*back_propagation)(layer_t *this, mymatrix_t input_gradient, double learning_rate);
+    mymatrix_t (*back_propagation)(layer_t *this, mymatrix_t input_gradient, float learning_rate);
     // n x 1, this layer's neurons which contain the "output" values
     mymatrix_t activation_values;
 
@@ -134,11 +134,11 @@ typedef struct TrainingInfo {
     mymatrix_t *train_x; // stored as an array of columns
     mymatrix_t *train_y;
     unsigned int batch_size;
-    double learning_rate;
+    float learning_rate;
 
     // when training stops, either condition is met => stops training
     unsigned int target_epochs;
-    double target_accuracy; 
+    float target_accuracy; 
 
     unsigned int test_size;
     mymatrix_t *test_x;
@@ -146,10 +146,10 @@ typedef struct TrainingInfo {
     
     // stats
     bool in_progress;
-    double train_accuracy;
-    double test_accuracy;
-    double avg_train_error;
-    double avg_test_error;
+    float train_accuracy;
+    float test_accuracy;
+    float avg_train_error;
+    float avg_test_error;
     unsigned int epoch;
     unsigned int train_index;
     unsigned int test_index;
@@ -161,7 +161,7 @@ typedef struct TrainingInfo {
 mymatrix_t input_feed_forward(layer_t *this, mymatrix_t input); 
 
 mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input);
-mymatrix_t dense_back_propagation(layer_t *this, mymatrix_t d_error_wrt_output, double learning_rate);
+mymatrix_t dense_back_propagation(layer_t *this, mymatrix_t d_error_wrt_output, float learning_rate);
 
 mymatrix_t activation_feed_forward_sigmoid(layer_t *this, mymatrix_t input);
 mymatrix_t activation_feed_forward_relu(layer_t *this, mymatrix_t input);
@@ -179,8 +179,8 @@ mymatrix_t output_make_guess_softmax(layer_t *this, mymatrix_t output);
 mymatrix_t output_back_propagation_mean_squared(layer_t *this, mymatrix_t expected_output);
 mymatrix_t output_back_propagation_cross_entropy(layer_t *this, mymatrix_t expected_output);
 
-double output_cost_mean_squared(layer_t *this, mymatrix_t expected_output);
-double output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output);
+float output_cost_mean_squared(layer_t *this, mymatrix_t expected_output);
+float output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output);
 
 // frees allocated memory for the layer
 void layer_free(layer_t *layer);
@@ -204,9 +204,9 @@ mymatrix_t layer_get_neurons(layer_t *layer);
 mymatrix_t model_predict(neural_network_model_t *model, mymatrix_t input, 
                mymatrix_t output);
 
-void model_initialize_matrix_normal_distribution(mymatrix_t model, double mean, double standard_deviation);
-void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_output, double learning_rate);
-double model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, double learning_rate);
+void model_initialize_matrix_normal_distribution(mymatrix_t model, float mean, float standard_deviation);
+void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_output, float learning_rate);
+float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, float learning_rate);
 void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_tests);
 
 

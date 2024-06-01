@@ -120,9 +120,9 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
         for (int r2 = 0; r2 < this_neurons.r; r2++) {
             // so we can color each weight based on its respective value to other weights
             // connecting to the same output neuron
-            double max_weight = -1;
+            float max_weight = -1;
             for (int r1 = 0; r1 < prev_neurons.r; r1++) {
-                double value = fabs(weights.matrix[r2][r1]);
+                float value = fabs(weights.matrix[r2][r1]);
                 max_weight = max_weight < value ? value : max_weight;
             }
             
@@ -132,7 +132,7 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
 
                 this_pos.x -= node_radius;
                 prev_pos.x += node_radius;
-                double ratio = 0.5;
+                float ratio = 0.5;
                 if (max_weight != 0) {
                     ratio = fabs(weights.matrix[r2][r1]) / max_weight;
                 }
@@ -185,10 +185,11 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
 void DrawLayer(int layer_index, layer_t *layer) {
     mymatrix_t nodes = layer_get_neurons(layer);
 
-    double max_node_value = -1;
-    double min_node_value = -1;
+    // calculate values for color scaling
+    float max_node_value = -1;
+    float min_node_value = -1;
     for (int r = 0; r < nodes.r; r++) {
-        double value = fabs(tanh(nodes.matrix[r][0]));
+        float value = fabs(tanh(nodes.matrix[r][0]));
         if (max_node_value < 0 || min_node_value < 0) {
             max_node_value = value;
             min_node_value = value;
@@ -198,28 +199,29 @@ void DrawLayer(int layer_index, layer_t *layer) {
         }
     }
 
-    // center
-    for (int i = 0; i < nodes.r; i++) {
+    // draw each neuron
+    for (int r = 0; r < nodes.r; r++) {
         // draw node with color respective to its value
-        double ratio = .5;
+        float ratio = .5;
         if (max_node_value != min_node_value) {
-            ratio = (fabs(tanh(nodes.matrix[i][0])) - min_node_value) / (max_node_value - min_node_value);
+            ratio = (fabs(tanh(nodes.matrix[r][0])) - min_node_value) / (max_node_value - min_node_value);
         }
-        Color target = nodes.matrix[i][0] < 0 ? node_negative_color : node_positive_color;        
+        Color target = nodes.matrix[r][0] < 0 ? node_negative_color : node_positive_color;        
         Color shade = {
             .a = (char) round(255 * ratio),
             .r = target.r,
             .g = target.g,
             .b = target.b
         };
-        Vector2 pos = get_node_position(layer_index, i, nodes);
+        Vector2 pos = get_node_position(layer_index, r, nodes);
         DrawCircleV(pos, node_radius, WHITE);
         DrawCircleV(pos, node_radius, shade);
         DrawCircleLinesV(pos, node_radius, BLACK); // outline
         
         // edit input node values
         if (playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, node_radius + 4)) {
-            // GuiSlider() // todo
+            GuiSlider((Rectangle) {.x = pos.x - 3 * node_radius / 4, .y = pos.y + node_value_font_size + 5, .width = 3 * node_radius / 2, .height = node_value_font_size},
+                    "0", "1", &nodes.matrix[r][0], 0, 1);
         }
 
         // todo maybe in future allow user to alter value in node maybe
@@ -227,7 +229,7 @@ void DrawLayer(int layer_index, layer_t *layer) {
         
         // draw value of node
         char node_value[node_value_precision];
-        snprintf(node_value, node_value_precision, "%f", (float) nodes.matrix[i][0]);
+        snprintf(node_value, node_value_precision, "%f", (float) nodes.matrix[r][0]);
         DrawCenteredText(node_value, pos.x, pos.y, node_value_font_size, BLACK);
     }
 
@@ -237,13 +239,14 @@ void DrawLayer(int layer_index, layer_t *layer) {
     int layer_name_y = layer_start_y + layer_height + layer_name_offset_y + layer_font_size / 2;
     int layer_function_name_y = layer_name_y - layer_font_size / 2 + layer_font_size * 2;
     int layer_x = model_start_x + layer_index * (layer_gap + 2 * node_radius) + node_radius;
+    int layer_info_font_size = layer_font_size - 4;
     DrawOutlinedCenteredText(get_layer_name(layer), layer_x, layer_name_y, layer_font_size, WHITE, 1, BLACK);
     if (layer->type == ACTIVATION) {
         DrawOutlinedCenteredText(get_activation_function_name(&layer->layer.activation), layer_x, 
-                layer_function_name_y, layer_font_size-4, WHITE, 1, BLACK);
+                layer_function_name_y, layer_info_font_size, WHITE, 1, BLACK);
     } else if (layer->type == OUTPUT) {
         DrawOutlinedCenteredText(get_output_function_name(&layer->layer.output), layer_x, 
-                layer_function_name_y, layer_font_size-4, WHITE, 1, BLACK);
+                layer_function_name_y, layer_info_font_size, WHITE, 1, BLACK);
     }
 }
 

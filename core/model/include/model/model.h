@@ -43,12 +43,12 @@ typedef struct Layer_Function {
     mymatrix_t (*back_propagation)(layer_t *this, mymatrix_t input_gradient, float learning_rate);
 } layer_function_t;
 
-extern layer_function_t input_functions;
-extern layer_function_t dense_functions;
-extern layer_function_t activation_functions_sigmoid;
-extern layer_function_t activation_functions_relu;
-extern layer_function_t output_functions_meansquared;
-extern layer_function_t output_functions_crossentropy;
+extern const layer_function_t input_functions;
+extern const layer_function_t dense_functions;
+extern const layer_function_t activation_functions_sigmoid;
+extern const layer_function_t activation_functions_relu;
+extern const layer_function_t output_functions_meansquared;
+extern const layer_function_t output_functions_crossentropy;
 
 // first layer of the model
 typedef struct Input_Layer {

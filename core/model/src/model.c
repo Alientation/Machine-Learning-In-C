@@ -20,7 +20,7 @@ mymatrix_t input_feed_forward(layer_t *this, mymatrix_t input) {
     matrix_memcpy(this->layer.input.input_values, input);
     return this->layer.input.input_values;
 }
-layer_function_t input_functions = {
+const layer_function_t input_functions = {
     .back_propagation = backpropagation_donothing,
     .feed_forward = input_feed_forward
 };
@@ -56,7 +56,7 @@ mymatrix_t dense_back_propagation(layer_t *this, mymatrix_t d_error_wrt_output, 
     return this->layer.dense.d_cost_wrt_input;
 }
 
-layer_function_t dense_functions = {
+const layer_function_t dense_functions = {
     .feed_forward = dense_feed_forward,
     .back_propagation = dense_back_propagation,
 };
@@ -87,12 +87,12 @@ mymatrix_t activation_back_propagation_relu(layer_t *this, mymatrix_t d_cost_wrt
     return this->layer.activation.activated_values;
 }
 
-layer_function_t activation_functions_sigmoid = {
+const layer_function_t activation_functions_sigmoid = {
     .feed_forward = activation_feed_forward_sigmoid,
     .back_propagation = activation_back_propagation_sigmoid,
 };
 
-layer_function_t activation_functions_relu = {
+const layer_function_t activation_functions_relu = {
     .feed_forward = activation_feed_forward_relu,
     .back_propagation = activation_back_propagation_relu,
 };
@@ -177,11 +177,11 @@ float output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output) {
     return -1.0;
 }
 
-layer_function_t output_functions_meansquared = {
+const layer_function_t output_functions_meansquared = {
     .feed_forward = feedforward_donothing,
     .back_propagation = output_back_propagation_mean_squared,
 };
-layer_function_t output_functions_crossentropy = {
+const layer_function_t output_functions_crossentropy = {
     .feed_forward = feedforward_donothing,
     .back_propagation = output_back_propagation_cross_entropy
 };

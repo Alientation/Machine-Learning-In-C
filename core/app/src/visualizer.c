@@ -48,16 +48,24 @@ static const Color node_negative_color = {
     .r = 255, .g = 178, .b = 150
 };
 
-static const int weight_value_precision = 9;
-static const int node_value_precision = 7;
-static const int node_value_font_size = 15;
-static const int node_radius = 35;
-static const int node_gap = 20;
-static const int layer_font_size = 16;
-static const int layer_name_offset_y = 20;
-static const int layer_gap = 60;
+#define SCALING_FACTOR 0.7
 
-static const int mouse_hover_distance_threshold = 5;
+static const int weight_value_precision = ceil(9 * SCALING_FACTOR);
+static const int node_value_precision = ceil(7 * SCALING_FACTOR);
+static const int weight_dotted_line_num_dots = ceil(11 * SCALING_FACTOR);
+
+static const int node_value_font_size = 15 * SCALING_FACTOR;
+static const int node_radius = 35 * SCALING_FACTOR;
+static const int node_gap = 20 * SCALING_FACTOR;
+static const int layer_font_size = 16 * SCALING_FACTOR;
+static const int layer_name_offset_y = 20 * SCALING_FACTOR;
+static const int layer_gap = 60 * SCALING_FACTOR;
+static const int max_layer_nodes = 3 / SCALING_FACTOR;
+
+static const int min_node_radius_for_slider_bar = 20;
+
+static const int mouse_hover_distance_to_node = node_radius + node_gap/2;
+static const int mouse_hover_distance_to_weight = 5 * SCALING_FACTOR;
 
 static const int tooltip_border = 10;
 static const int tooltip_height = 30;
@@ -145,7 +153,7 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                     .b = cval,
                 };
                 DrawLineV(this_pos, prev_pos, color);
-                if (CheckCollisionPointLine(GetMousePosition(), prev_pos, this_pos, mouse_hover_distance_threshold)) { 
+                if (CheckCollisionPointLine(GetMousePosition(), prev_pos, this_pos, mouse_hover_distance_to_weight)) { 
                     // display information about the weight
                     char weight[weight_value_precision];
                     snprintf(weight, weight_value_precision, "%f", weights.matrix[r2][r1]);
@@ -162,18 +170,17 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
             this_pos.x -= node_radius;
             prev_pos.x += node_radius;
             
-            const int num_dots = 11;
-            for (int dot = 1; dot <= num_dots; dot++) {
+            for (int dot = 1; dot <= weight_dotted_line_num_dots; dot++) {
                 if (dot % 2 == 0) {
                     continue;
                 }
 
                 Vector2 draw_end;
-                draw_end.x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * (dot / (float) num_dots));
-                draw_end.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * (dot / (float) num_dots));
+                draw_end.x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * (dot / (float) weight_dotted_line_num_dots));
+                draw_end.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * (dot / (float) weight_dotted_line_num_dots));
                 Vector2 draw_start;
-                draw_start.x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * ((dot-1) / (float) num_dots));
-                draw_start.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * ((dot-1) / (float) num_dots));
+                draw_start.x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * ((dot-1) / (float) weight_dotted_line_num_dots));
+                draw_start.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * ((dot-1) / (float) weight_dotted_line_num_dots));
                 DrawLineV(draw_start, draw_end, BLACK);
             }
 
@@ -219,15 +226,27 @@ void DrawLayer(int layer_index, layer_t *layer) {
         DrawCircleLinesV(pos, node_radius, BLACK); // outline
         
         // edit input node values
-        if (playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, node_radius + node_gap/2)) {
-            DrawRectangle(pos.x - node_radius - 6, pos.y + node_value_font_size - 4, node_radius * 2 + 12, node_value_font_size + 8, tooltip_background_color);
-            DrawRectangleLines(pos.x - node_radius - 6, pos.y + node_value_font_size - 4, node_radius * 2 + 12, node_value_font_size + 8, BLACK);
-            GuiSlider((Rectangle) {.x = pos.x - 3 * node_radius / 4, .y = pos.y + node_value_font_size, .width = 3 * node_radius / 2, .height = node_value_font_size},
-                    "0", "1", &nodes.matrix[r][0], 0, 1);
+        if (playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, mouse_hover_distance_to_node)) {
+            // check if too small
+            if (node_radius < min_node_radius_for_slider_bar) {
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    // show node's details in a pop up window with a slider
+                }
+            } else {
+                int rec_x = pos.x - node_radius - 6;
+                int rec_y = pos.y + node_value_font_size - 4;
+                int rec_width = node_radius * 2 + 12;
+                int rec_height = node_value_font_size + 8;
 
-            // todo this should most likely be ran on a separate thread, perhaps just have one thread always running
-            // that detects changes to the model's inputs when not currently training or testing and recalculates the corresponding output
-            mymatrix_t output = model_calculate(training_info.model);
+                DrawRectangle(rec_x, rec_y, rec_width, rec_height, tooltip_background_color);
+                DrawRectangleLines(rec_x, rec_y, rec_width, rec_height, BLACK);
+                GuiSlider((Rectangle) {.x = pos.x - 3 * node_radius / 4, .y = pos.y + node_value_font_size, .width = 3 * node_radius / 2, .height = node_value_font_size},
+                        "0", "1", &nodes.matrix[r][0], 0, 1);
+
+                // todo this should most likely be ran on a separate thread, perhaps just have one thread always running
+                // that detects changes to the model's inputs when not currently training or testing and recalculates the corresponding output
+                mymatrix_t output = model_calculate(training_info.model);
+            }
         }
 
         // todo maybe in future allow user to alter value in node maybe
@@ -341,9 +360,10 @@ void DrawWindow(neural_network_model_t *model) {
         // draw tooltip
         if (show_tooltip) {
             Vector2 mouse_pos = GetMousePosition();
-            int inner_width = tooltip_width - tooltip_border * 2;
-            DrawRectangleLines(mouse_pos.x - 1, mouse_pos.y - tooltip_height - 1, tooltip_width + 2, tooltip_height+2, BLACK);
-            DrawRectangle(mouse_pos.x, mouse_pos.y - tooltip_height, tooltip_width, tooltip_height, tooltip_background_color);
+            int rec_x = mouse_pos.x;
+            int rec_y = mouse_pos.y - tooltip_height;
+            DrawRectangleLines(rec_x, rec_y, tooltip_width, tooltip_height, BLACK);
+            DrawRectangle(rec_x, rec_y, tooltip_width, tooltip_height, tooltip_background_color);
             DrawCenteredText(tooltip_msg, mouse_pos.x + tooltip_width / 2, mouse_pos.y - tooltip_height / 2, tooltip_fontsize, tooltip_fontcolor);
         }
     }

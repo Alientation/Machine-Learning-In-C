@@ -65,10 +65,10 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
 
     layer_t *input_layer = layer_input(model_xor, input);
     layer_t *dense_layer_1 = layer_dense(model_xor, dense_1);
-    layer_t *activation_layer_1 = layer_activation(model_xor, activation_feed_forward_sigmoid, activation_back_propagation_sigmoid);
+    layer_t *activation_layer_1 = layer_activation(model_xor, activation_functions_sigmoid);
     layer_t *dense_layer_2 = layer_dense(model_xor, dense_2);
-    layer_t *activation_layer_2 = layer_activation(model_xor, activation_feed_forward_sigmoid, activation_back_propagation_sigmoid);
-    layer_t *output_layer = layer_output(model_xor, output_make_guess_round, output_back_propagation_mean_squared);
+    layer_t *activation_layer_2 = layer_activation(model_xor, activation_functions_sigmoid);
+    layer_t *output_layer = layer_output(model_xor, output_make_guess_round, output_functions_meansquared);
 
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);    
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);
@@ -133,10 +133,10 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
 
     layer_t *input_layer = layer_input(model_and, input);
     layer_t *dense_layer_1 = layer_dense(model_and, dense_1);
-    layer_t *activation_layer_1 = layer_activation(model_and, activation_feed_forward_sigmoid, activation_back_propagation_sigmoid);
+    layer_t *activation_layer_1 = layer_activation(model_and, activation_functions_sigmoid);
     layer_t *dense_layer_2 = layer_dense(model_and, dense_2);
-    layer_t *activation_layer_2 = layer_activation(model_and, activation_feed_forward_sigmoid, activation_back_propagation_sigmoid);
-    layer_t *output_layer = layer_output(model_and, output_make_guess_round, output_back_propagation_mean_squared);
+    layer_t *activation_layer_2 = layer_activation(model_and, activation_functions_sigmoid);
+    layer_t *output_layer = layer_output(model_and, output_make_guess_round, output_functions_meansquared);
 
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);    
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);

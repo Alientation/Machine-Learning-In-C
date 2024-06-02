@@ -38,9 +38,21 @@ typedef struct Dense_Layer dense_layer_t;
 typedef struct Activation_Layer activation_layer_t;
 typedef struct Output_Layer output_layer_t;
 
+typedef struct Layer_Function {
+    mymatrix_t (*feed_forward)(layer_t *this, mymatrix_t input);
+    mymatrix_t (*back_propagation)(layer_t *this, mymatrix_t input_gradient, float learning_rate);
+} layer_function_t;
+
+extern layer_function_t input_functions;
+extern layer_function_t dense_functions;
+extern layer_function_t activation_functions_sigmoid;
+extern layer_function_t activation_functions_relu;
+extern layer_function_t output_functions_meansquared;
+extern layer_function_t output_functions_crossentropy;
+
 // first layer of the model
 typedef struct Input_Layer {
-    mymatrix_t (*feed_forward)(layer_t *this, mymatrix_t input);
+    layer_function_t functions;
     mymatrix_t input_values;
 } input_layer_t;
 
@@ -48,8 +60,7 @@ typedef struct Input_Layer {
 // n: number of neurons in this layer
 // m: number of neurons in the previous layer
 typedef struct Dense_Layer {
-    mymatrix_t (*feed_forward)(layer_t *this, mymatrix_t input);
-    mymatrix_t (*back_propagation)(layer_t *this, mymatrix_t input_gradient, float learning_rate);
+    layer_function_t functions;
     // n x 1, this layer's neurons which contain the "output" values
     mymatrix_t activation_values;
 
@@ -74,8 +85,7 @@ typedef struct Dense_Layer {
 
 // passes in the activation values of the previous layer into the activation function
 typedef struct Activation_Layer {
-    mymatrix_t (*feed_forward)(layer_t *this, mymatrix_t input);
-    mymatrix_t (*back_propagation)(layer_t *this, mymatrix_t input_gradient);
+    layer_function_t functions;
     mymatrix_t activated_values;
     // dE/dX = W.T * dE/dY
     // m x 1
@@ -84,9 +94,8 @@ typedef struct Activation_Layer {
 
 // final layer, compute the cost and derivatives to initiate backprop
 typedef struct Output_Layer {
-    // void (*feed_forward)(void); // dummy variable to pad the back_prop function to the same location as other layer structs
+    layer_function_t functions;
     mymatrix_t (*make_guess)(layer_t *this, mymatrix_t output);
-    mymatrix_t (*back_propagation)(layer_t *this, mymatrix_t expected_output);
     mymatrix_t output_values;
     // dE/dX = W.T * dE/dY
     // m x 1
@@ -158,26 +167,10 @@ typedef struct TrainingInfo {
     // for data viz
 } training_info_t;
 
-mymatrix_t input_feed_forward(layer_t *this, mymatrix_t input); 
-
-mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input);
-mymatrix_t dense_back_propagation(layer_t *this, mymatrix_t d_error_wrt_output, float learning_rate);
-
-mymatrix_t activation_feed_forward_sigmoid(layer_t *this, mymatrix_t input);
-mymatrix_t activation_feed_forward_relu(layer_t *this, mymatrix_t input);
-// matrix_t activation_feed_forward_softmax(layer_t *this, matrix_t input); //todo
-// todo tanh
-mymatrix_t activation_back_propagation_sigmoid(layer_t *this, mymatrix_t d_cost_wrt_output);
-mymatrix_t activation_back_propagation_relu(layer_t *this, mymatrix_t d_cost_wrt_output);
-// matrix_t activation_back_propagation_softmax(layer_t *this, matrix_t input); //todo
-// todo tanh back prop
-
 mymatrix_t output_make_guess_one_hot_encoded(layer_t *this, mymatrix_t output);
 mymatrix_t output_make_guess_passforward(layer_t *this, mymatrix_t output);
 mymatrix_t output_make_guess_round(layer_t *this, mymatrix_t output);
 mymatrix_t output_make_guess_softmax(layer_t *this, mymatrix_t output);
-mymatrix_t output_back_propagation_mean_squared(layer_t *this, mymatrix_t expected_output);
-mymatrix_t output_back_propagation_cross_entropy(layer_t *this, mymatrix_t expected_output);
 
 float output_cost_mean_squared(layer_t *this, mymatrix_t expected_output);
 float output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output);
@@ -193,8 +186,8 @@ void model_add_layer(neural_network_model_t *model, layer_t *layer);
 // todo in future, specify dimensions instead of supply matrix to be then copied
 layer_t* layer_input(neural_network_model_t *model, mymatrix_t input);
 layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons);
-layer_t* layer_activation(neural_network_model_t *model, mymatrix_t (*feed_forward)(layer_t*, mymatrix_t), mymatrix_t (*back_propagation)(layer_t*, mymatrix_t));
-layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), mymatrix_t (*back_propagation)(layer_t*, mymatrix_t));
+layer_t* layer_activation(neural_network_model_t *model, layer_function_t functions);
+layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions);
 
 char* get_layer_name(layer_t *layer);
 char* get_activation_function_name(activation_layer_t *layer);

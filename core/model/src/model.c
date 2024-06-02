@@ -6,45 +6,24 @@
 
 #include <util/debug_memory.h>
 
-char* get_layer_name(layer_t *layer) {
-    switch (layer->type) {
-        case INPUT:
-            return "Input";
-        case DENSE:
-            return "Dense";
-        case ACTIVATION:
-            return "Activation";
-        case OUTPUT:
-            return "Output";
-        default:
-            assert(0);
-    }
+mymatrix_t feedforward_donothing(layer_t *this, mymatrix_t input) {
+    assert(0);
+    return input;
 }
 
-char* get_activation_function_name(activation_layer_t *layer) {
-    if (layer->feed_forward == activation_feed_forward_sigmoid) {
-        return "Sigmoid";
-    } else if (layer->feed_forward == activation_feed_forward_relu) {
-        return "RELU";
-    } else {
-        assert(0);
-    }
-}
-
-char* get_output_function_name(output_layer_t *layer) {
-    if (layer->back_propagation == output_back_propagation_mean_squared) {
-        return "Mean Squared Loss";
-    } else if (layer->back_propagation == output_back_propagation_cross_entropy) {
-        return "Cross Entropy Loss";
-    } else {
-        assert(0);
-    }
+mymatrix_t backpropagation_donothing(layer_t *this, mymatrix_t d_error_wrt_output, float learning_rate) {
+    assert(0);
+    return d_error_wrt_output;
 }
 
 mymatrix_t input_feed_forward(layer_t *this, mymatrix_t input) {
     matrix_memcpy(this->layer.input.input_values, input);
     return this->layer.input.input_values;
 }
+layer_function_t input_functions = {
+    .back_propagation = backpropagation_donothing,
+    .feed_forward = input_feed_forward
+};
 
 mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input) {
     matrix_multiply(this->layer.dense.weights, input, this->layer.dense.activation_values);
@@ -77,6 +56,11 @@ mymatrix_t dense_back_propagation(layer_t *this, mymatrix_t d_error_wrt_output, 
     return this->layer.dense.d_cost_wrt_input;
 }
 
+layer_function_t dense_functions = {
+    .feed_forward = dense_feed_forward,
+    .back_propagation = dense_back_propagation,
+};
+
 mymatrix_t activation_feed_forward_sigmoid(layer_t *this, mymatrix_t input) {
     matrix_for_each_operator(input, sigmoid, this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
@@ -87,7 +71,7 @@ mymatrix_t activation_feed_forward_relu(layer_t *this, mymatrix_t input) {
     return this->layer.activation.activated_values;
 }
 
-mymatrix_t activation_back_propagation_sigmoid(layer_t *this, mymatrix_t d_cost_wrt_output) {
+mymatrix_t activation_back_propagation_sigmoid(layer_t *this, mymatrix_t d_cost_wrt_output, float learning_rate) {
     mymatrix_t X = layer_get_neurons(this->prev);
 
     matrix_for_each_operator(X, sigmoid_prime, this->layer.activation.activated_values);
@@ -95,13 +79,25 @@ mymatrix_t activation_back_propagation_sigmoid(layer_t *this, mymatrix_t d_cost_
     return this->layer.activation.activated_values;
 }
 
-mymatrix_t activation_back_propagation_relu(layer_t *this, mymatrix_t d_cost_wrt_output) {
+mymatrix_t activation_back_propagation_relu(layer_t *this, mymatrix_t d_cost_wrt_output, float learning_rate) {
     mymatrix_t X = layer_get_neurons(this->prev);
 
     matrix_for_each_operator(X, relu_prime, this->layer.activation.activated_values);
     matrix_elementwise_multiply(d_cost_wrt_output, this->layer.activation.activated_values, this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
 }
+
+layer_function_t activation_functions_sigmoid = {
+    .feed_forward = activation_feed_forward_sigmoid,
+    .back_propagation = activation_back_propagation_sigmoid,
+};
+
+layer_function_t activation_functions_relu = {
+    .feed_forward = activation_feed_forward_relu,
+    .back_propagation = activation_back_propagation_relu,
+};
+
+// todo TANH
 
 mymatrix_t output_make_guess_one_hot_encoded(layer_t *this, mymatrix_t output) {
     float max = -INFINITY;
@@ -149,14 +145,14 @@ mymatrix_t output_make_guess_softmax(layer_t *this, mymatrix_t output) {
     return this->layer.output.guess;
 }
 
-mymatrix_t output_back_propagation_mean_squared(layer_t *this, mymatrix_t expected_output) {
+mymatrix_t output_back_propagation_mean_squared(layer_t *this, mymatrix_t expected_output, float learning_rate) {
     mymatrix_t output = this->layer.output.output_values;
     matrix_sub(output, expected_output, this->layer.output.d_cost_wrt_input);
     matrix_multiply_scalar(this->layer.output.d_cost_wrt_input, 2.0 / (float) output.r, this->layer.output.d_cost_wrt_input);
     return this->layer.output.d_cost_wrt_input;
 }
 
-mymatrix_t output_back_propagation_cross_entropy(layer_t *this, mymatrix_t expected_output) {
+mymatrix_t output_back_propagation_cross_entropy(layer_t *this, mymatrix_t expected_output, float learning_rate) {
     // todo
     assert(0);
     mymatrix_t output;
@@ -179,6 +175,52 @@ float output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output) {
     // TODO
     assert(0);
     return -1.0;
+}
+
+layer_function_t output_functions_meansquared = {
+    .feed_forward = feedforward_donothing,
+    .back_propagation = output_back_propagation_mean_squared,
+};
+layer_function_t output_functions_crossentropy = {
+    .feed_forward = feedforward_donothing,
+    .back_propagation = output_back_propagation_cross_entropy
+};
+
+
+
+char* get_layer_name(layer_t *layer) {
+    switch (layer->type) {
+        case INPUT:
+            return "Input";
+        case DENSE:
+            return "Dense";
+        case ACTIVATION:
+            return "Activation";
+        case OUTPUT:
+            return "Output";
+        default:
+            assert(0);
+    }
+}
+
+char* get_activation_function_name(activation_layer_t *layer) {
+    if (layer->functions.feed_forward == activation_feed_forward_sigmoid) {
+        return "Sigmoid";
+    } else if (layer->functions.feed_forward == activation_feed_forward_relu) {
+        return "RELU";
+    } else {
+        assert(0);
+    }
+}
+
+char* get_output_function_name(output_layer_t *layer) {
+    if (layer->functions.back_propagation == output_back_propagation_mean_squared) {
+        return "Mean Squared Loss";
+    } else if (layer->functions.back_propagation == output_back_propagation_cross_entropy) {
+        return "Cross Entropy Loss";
+    } else {
+        assert(0);
+    }
 }
 
 void layer_free(layer_t *layer) {
@@ -260,7 +302,7 @@ layer_t* layer_input(neural_network_model_t *model, mymatrix_t input) {
     layer->type = INPUT;
     input_layer_t *input_layer = &layer->layer.input;
     input_layer->input_values = matrix_copy(input);
-    input_layer->feed_forward = input_feed_forward;
+    input_layer->functions = input_functions;
 
     model_add_layer(model, layer);
     return layer;
@@ -285,14 +327,13 @@ layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons) {
     dense->d_cost_wrt_weight = matrix_allocator(dense->weights.r, dense->weights.c);
     dense->d_cost_wrt_bias = matrix_allocator(dense->bias.r, dense->bias.c);
 
-    dense->back_propagation = dense_back_propagation;
-    dense->feed_forward = dense_feed_forward;
+    dense->functions = dense_functions;
 
     model_add_layer(model, layer);
     return layer;
 }
 
-layer_t* layer_activation(neural_network_model_t *model, mymatrix_t (*feed_forward)(layer_t*, mymatrix_t), mymatrix_t (*back_propagation)(layer_t*, mymatrix_t)) {
+layer_t* layer_activation(neural_network_model_t *model, layer_function_t functions) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     
     layer_t *layer = malloc(sizeof(layer_t));
@@ -300,15 +341,14 @@ layer_t* layer_activation(neural_network_model_t *model, mymatrix_t (*feed_forwa
     activation_layer_t *activation = &layer->layer.activation;
     mymatrix_t prev_output = layer_get_neurons(model->output_layer);
     activation->activated_values = matrix_allocator(prev_output.r, prev_output.c);
-    activation->feed_forward = feed_forward;
-    activation->back_propagation = back_propagation;
+    activation->functions = functions;
     activation->d_cost_wrt_input = matrix_allocator(prev_output.r, 1);
 
     model_add_layer(model, layer);
     return layer;
 }
 
-layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), mymatrix_t (*back_propagation)(layer_t*, mymatrix_t)) {
+layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     
     layer_t *layer = malloc(sizeof(layer_t));
@@ -317,7 +357,7 @@ layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(la
     mymatrix_t prev_output = layer_get_neurons(model->output_layer);
     output->output_values = matrix_allocator(prev_output.r, prev_output.c);
     output->make_guess = make_guess;
-    output->back_propagation = back_propagation;
+    output->functions = functions;
     output->d_cost_wrt_input = matrix_allocator(prev_output.r, 1);
     output->guess = matrix_allocator(prev_output.r, 1);
 
@@ -343,7 +383,7 @@ mymatrix_t model_predict(neural_network_model_t *model, mymatrix_t input,
         
         // since the different layer structs are arranged in a way that the function pointers are in the same "locations"
         // this should work for all layers without having to use a switch
-        prev_output = current->layer.input.feed_forward(current, prev_output);
+        prev_output = current->layer.input.functions.feed_forward(current, prev_output);
         current = current->next;
     }
 
@@ -359,16 +399,9 @@ void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_out
     for (int layer_i = model->num_layers; layer_i > 1; layer_i--) {
         assert(current->type != INPUT);
 
-        switch (current->type) {
-            case DENSE:
-                d_cost_wrt_Y = current->layer.dense.back_propagation(current, d_cost_wrt_Y, learning_rate);
-                break;
-            case ACTIVATION:
-                d_cost_wrt_Y = current->layer.activation.back_propagation(current, d_cost_wrt_Y);
-                break;
-            case OUTPUT:
-                d_cost_wrt_Y = current->layer.output.back_propagation(current, d_cost_wrt_Y);
-        }
+        // works for all layers since the member variables align.
+        // TODO in future, move "functions" outside and into the actual generic layer struct, not the union
+        d_cost_wrt_Y = current->layer.dense.functions.back_propagation(current, d_cost_wrt_Y, learning_rate);
         current = current->prev;
 
         // printf("\n%s: de/dy: \n", get_layer_name(current->next));
@@ -423,7 +456,7 @@ mymatrix_t model_calculate(neural_network_model_t *model) {
         
         // since the different layer structs are arranged in a way that the function pointers are in the same "locations"
         // this should work for all layers without having to use a switch
-        prev_output = current->layer.input.feed_forward(current, prev_output);
+        prev_output = current->layer.input.functions.feed_forward(current, prev_output);
         current = current->next;
     }
 

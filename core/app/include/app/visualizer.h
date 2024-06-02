@@ -7,7 +7,6 @@
 typedef struct VisualizerArgument {
     neural_network_model_t *model;
     char *model_name;
-    
 } visualizer_argument_t;
 
 

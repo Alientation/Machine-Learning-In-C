@@ -52,7 +52,7 @@ static const Color NODE_NEG_COLOR = {
 
 static const int WEIGHT_DISPLAY_PRECISION = ceil(9 * SCALING_FACTOR);
 static const int NODE_DISPLAY_PRECISION = ceil(7 * SCALING_FACTOR);
-static const int WEIGHT_DOTTED_LINES = ceil(11 * SCALING_FACTOR);
+static const int WEIGHT_DOTTED_LINES = 2 * (((int)ceil((11 * SCALING_FACTOR))) / 2) + 1;
 
 static const int NODE_DISPLAY_FONTSIZE = 15 * SCALING_FACTOR;
 static const int NODE_RADIUS = 35 * SCALING_FACTOR;
@@ -67,7 +67,7 @@ static const int HIDDEN_LAYER_HEIGHT = MAX_LAYER_NODES * (NODE_GAP + NODE_RADIUS
 static const int MIN_NODE_RADIUS_FOR_SLIDER_BAR = 20;
 
 static const int MOUSE_HOVER_DISTANCE_TO_NODE = NODE_RADIUS + NODE_GAP/2;
-static const int MOUSE_HOVER_DISTANCE_TO_WEIGHT = 5 * SCALING_FACTOR;
+static const int MOUSE_HOVER_DISTANCE_TO_WEIGHT = ceil(10 * SCALING_FACTOR);
 
 static const int TOOLTIP_BORDER = 10;
 static const int TOOLTIP_HEIGHT = 30;
@@ -88,6 +88,22 @@ static float tooltip_priority = 0;
 static float *tooltip_weight_value = NULL;
 static float TOOLTIP_WEIGHT_VALUE_SCALE = 0.05;
 
+struct DrawingPanelArgs {
+    bool isOpen;
+    int x;
+    int y;
+    int width;
+    int height;
+    bool updated;
+
+    // scaled down
+    int buffer_width;
+    int buffer_height;
+    float* output_buffer;
+} drawing_panel_args; 
+
+//===========================================================================
+
 void* window_run(void *vargp) {
     assert(!is_window_open);
 
@@ -95,10 +111,58 @@ void* window_run(void *vargp) {
     vis_args = *args;    
     is_window_open = true;
 
+    drawing_panel_args = (struct DrawingPanelArgs) {
+        .isOpen = false,
+        .x = 50,
+        .y = 50,
+        .width = SCREEN_WIDTH - 100,
+        .height = SCREEN_HEIGHT - 100,
+        .updated = false,
+        .buffer_width = 10,
+        .buffer_height = 10,
+        .output_buffer = malloc(sizeof(float) * 100)
+    };
+
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, TextFormat("%s Visualizer", args->model_name));
     SetTargetFPS(60);
 
     window_keep_open(args->model, 0);
+}
+
+void* train_run(void *vargp) {
+    if (!is_training && !is_testing) {
+        is_training = true;
+        CLOCK_MARK
+        model_train_info((training_info_t*) vargp);
+        CLOCK_MARK_ENTRY("TRAINING")
+        is_training = false;
+    }
+}
+
+void* test_run(void *vargp) {
+    if (!is_testing && !is_training) {
+        is_testing = true;
+        CLOCK_MARK
+        // model_test_info((training_info_t*) vargp); // TODO
+        CLOCK_MARK_ENTRY("TESTING")
+        is_testing = false;
+    }
+}
+
+
+//===================================================================
+
+void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
+    if (!args->isOpen) {
+        return;
+    }
+    
+    // darken background
+    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ColorAlpha(BLACK, 0.5));
+
+    // drawing panel
+    args->isOpen = !GuiWindowBox((Rectangle) {.x = 50, .y = 50, .width = args->width, .height = args->height}, "Drawing Panel");
+    DrawRectangleRoundedLines((Rectangle) {.x = 50 + args->width/2 - 200, .y = 50 + args->height/2 - 200, .width = 400, .height = 400}, .02, 10, 5, BLACK);
 }
 
 Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
@@ -153,7 +217,7 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 prev_pos.x += NODE_RADIUS;
                 float ratio = 0.5;
                 if (max_weight != 0) {
-                    ratio = fabs(weights.matrix[r2][r1]) / max_weight;
+                    ratio = 1 - fabs(weights.matrix[r2][r1]) / max_weight;
                 }
                 
                 int cval = (int) (255 * ratio);
@@ -163,6 +227,7 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                     .g = cval,
                     .b = cval,
                 };
+                DrawLineEx(this_pos, prev_pos, 3, BLACK);
                 DrawLineV(this_pos, prev_pos, color);
                 if (CheckCollisionPointLine(GetMousePosition(), prev_pos, this_pos, MOUSE_HOVER_DISTANCE_TO_WEIGHT)) { 
                     // display information about the weight
@@ -265,7 +330,8 @@ void DrawLayer(int layer_index, layer_t *layer) {
         DrawCircleLinesV(pos, NODE_RADIUS, BLACK); // outline
         
         // edit input node values
-        if (playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, MOUSE_HOVER_DISTANCE_TO_NODE)) {
+        if (playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, MOUSE_HOVER_DISTANCE_TO_NODE)
+                && !drawing_panel_args.isOpen) {
             // check if too small
             if (NODE_RADIUS < MIN_NODE_RADIUS_FOR_SLIDER_BAR) {
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -323,32 +389,6 @@ void DrawNeuralNetwork(neural_network_model_t *model) {
     }
 }
 
-/**
- * Ran as a separate thread
- */
-void* train_run(void *vargp) {
-    if (!is_training && !is_testing) {
-        is_training = true;
-        CLOCK_MARK
-        model_train_info((training_info_t*) vargp);
-        CLOCK_MARK_ENTRY("TRAINING")
-        is_training = false;
-    }
-}
-
-/**
- * Ran as a separate thread
- */
-void* test_run(void *vargp) {
-    if (!is_testing && !is_training) {
-        is_testing = true;
-        CLOCK_MARK
-        // model_test_info((training_info_t*) vargp); // TODO
-        CLOCK_MARK_ENTRY("TESTING")
-        is_testing = false;
-    }
-}
-
 void DrawWindow(neural_network_model_t *model) {
     BeginDrawing();
     {
@@ -365,13 +405,13 @@ void DrawWindow(neural_network_model_t *model) {
         // TODO
 
         // some model control buttons
-        if (GuiButton((Rectangle) {.x = 50, .y = 60, .height = 30, .width = 130}, "Start Training")) {
+        if (GuiButton((Rectangle) {.x = 50, .y = 60, .height = 30, .width = 130}, "Start Training") && !drawing_panel_args.isOpen) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, train_run, &training_info);
             pthread_detach(thread_id);
         }
 
-        if (GuiButton((Rectangle) {.x = 190, .y = 60, .height = 30, .width = 100}, "Start Test")) {
+        if (GuiButton((Rectangle) {.x = 190, .y = 60, .height = 30, .width = 100}, "Start Test") && !drawing_panel_args.isOpen) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, test_run, &training_info);
             pthread_detach(thread_id);
@@ -382,8 +422,13 @@ void DrawWindow(neural_network_model_t *model) {
             playground_state = false;
         }
 
+        if (GuiButton((Rectangle) {.x = 410, .y = 60, .height = 30, .width = 120}, "Drawing Panel") && !drawing_panel_args.isOpen) {
+            drawing_panel_args.isOpen = true;
+        }
+        GuiDrawingPanelPopup(&drawing_panel_args);
+
         // draw tooltip
-        if (show_tooltip) {
+        if (show_tooltip && !drawing_panel_args.isOpen) {
             Vector2 mouse_pos = GetMousePosition();
             int rec_x = mouse_pos.x;
             int rec_y = mouse_pos.y - TOOLTIP_HEIGHT;
@@ -391,7 +436,7 @@ void DrawWindow(neural_network_model_t *model) {
             DrawRectangle(rec_x, rec_y, TOOLTIP_WIDTH, TOOLTIP_HEIGHT, TOOLTIP_BACKGROUND_COLOR);
             DrawCenteredText(tooltip_msg, mouse_pos.x + TOOLTIP_WIDTH / 2, mouse_pos.y - TOOLTIP_HEIGHT / 2, TOOLTIP_FONTSIZE, TOOLTIP_FONTCOLOR);
 
-            if (tooltip_weight_value) {
+            if (tooltip_weight_value && !is_testing && !is_training) { // todo replace with model.isLocked instead
                 *tooltip_weight_value += TOOLTIP_WEIGHT_VALUE_SCALE * GetMouseWheelMove();
                 mymatrix_t output = model_calculate(training_info.model); // todo preferrably run on separate thread
             }

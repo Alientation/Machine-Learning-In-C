@@ -14,10 +14,12 @@ XOR trained model
 Basic visualizer in raylib
 
 ## Goals
-Train a model on MNIST
-Optimize, currently sitting at 16 million examples a second for a model (2 -> 2 -> 1)
-Improve UI of visualizer and add more features like manually tuning weights or giving inputs to the model
-Add momentum, regularization, dropout, and warmup training
-Download and use pretrained model
-Support mini batching
-..possibly use third party linear algebra libraries, but hopefully won't have to.. don't want to use any for this project other than raylib
+- Train a model on MNIST
+- Optimize, currently sitting at 1.6 million examples a second for a model (2 -> 2 -> 1)
+     - though it appears that after having the model run all the tests after each training epoch, the total time went up
+     marginally by a couple hundred ms
+- Improve UI of visualizer and add more features like manually tuning weights or giving inputs to the model
+- Add momentum, regularization, dropout, and warmup training
+- Download and use pretrained model
+- Support mini batching
+- ..possibly use third party linear algebra libraries, but trying not to.. don't want to use any for this project other than raylib

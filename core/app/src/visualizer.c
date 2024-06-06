@@ -88,18 +88,19 @@ static float tooltip_priority = 0;
 static float *tooltip_weight_value = NULL;
 static float TOOLTIP_WEIGHT_VALUE_SCALE = 0.05;
 
+
 struct DrawingPanelArgs {
     bool isOpen;
-    int x;
-    int y;
-    int width;
-    int height;
-    bool updated;
+    float brush_size;
+    Vector2 prev_draw_pos;
+
+    RenderTexture2D *drawnImage;
 
     // scaled down
     int buffer_width;
     int buffer_height;
-    float* output_buffer;
+    float *output_buffer;
+    bool updated;
 } drawing_panel_args; 
 
 //===========================================================================
@@ -111,22 +112,33 @@ void* window_run(void *vargp) {
     vis_args = *args;    
     is_window_open = true;
 
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, TextFormat("%s Visualizer", args->model_name));
+    SetTargetFPS(60);    
+
     drawing_panel_args = (struct DrawingPanelArgs) {
         .isOpen = false,
-        .x = 50,
-        .y = 50,
-        .width = SCREEN_WIDTH - 100,
-        .height = SCREEN_HEIGHT - 100,
+        .brush_size = 4,
+        .prev_draw_pos = (Vector2) {.x = -1, .y = -1},
+        .drawnImage = malloc(sizeof(RenderTexture2D)),
         .updated = false,
         .buffer_width = 10,
         .buffer_height = 10,
         .output_buffer = malloc(sizeof(float) * 100)
     };
+    *drawing_panel_args.drawnImage = LoadRenderTexture(400, 400);
 
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, TextFormat("%s Visualizer", args->model_name));
-    SetTargetFPS(60);
+    BeginTextureMode(*drawing_panel_args.drawnImage);
+    {
+        ClearBackground(WHITE);
+    }
+    EndTextureMode();
+
 
     window_keep_open(args->model, 0);
+
+    UnloadRenderTexture(*drawing_panel_args.drawnImage);
+    free(drawing_panel_args.drawnImage);
+    free(drawing_panel_args.output_buffer);
 }
 
 void* train_run(void *vargp) {
@@ -161,8 +173,67 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
     DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ColorAlpha(BLACK, 0.5));
 
     // drawing panel
-    args->isOpen = !GuiWindowBox((Rectangle) {.x = 50, .y = 50, .width = args->width, .height = args->height}, "Drawing Panel");
-    DrawRectangleRoundedLines((Rectangle) {.x = 50 + args->width/2 - 200, .y = 50 + args->height/2 - 200, .width = 400, .height = 400}, .02, 10, 5, BLACK);
+    RenderTexture2D *draw_image = args->drawnImage;
+    
+    int draw_window_x = 50;
+    int draw_window_y = 50;
+    int draw_window_width = SCREEN_WIDTH - 2 * draw_window_x;
+    int draw_window_height = SCREEN_HEIGHT - 2 * draw_window_y;
+
+    int draw_panel_x = draw_window_x + draw_window_width/2 - draw_image->texture.width/2;
+    int draw_panel_y = draw_window_y + draw_window_height/2 - draw_image->texture.height/2;
+
+    args->isOpen = !GuiWindowBox((Rectangle) {.x = draw_window_x, .y = draw_window_y, .width = draw_window_width, .height = draw_window_height}, "Drawing Panel");
+    
+    Rectangle draw_panel_rec = {.x = draw_panel_x, .y = draw_panel_y, .width = draw_image->texture.width, .height = draw_image->texture.height};
+    DrawRectangleRoundedLines(draw_panel_rec, .02, 10, 5, BLACK);
+
+    bool is_draw = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsGestureDetected(GESTURE_DRAG);
+    bool is_erase = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
+    if ((is_draw || is_erase) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec)) {
+        Color draw_color = {
+            .a = 255,
+            .r = is_erase * 255,
+            .g = is_erase * 255,
+            .b = is_erase * 255,
+        };
+
+        Vector2 size = {
+            .x = args->brush_size,
+            .y = args->brush_size,
+        };
+        Vector2 pos = GetMousePosition();
+        pos.x -= size.x / 2.0;
+        pos.y -= size.y / 2.0;
+
+        pos.x -= draw_panel_x;
+        pos.y -= draw_panel_y;
+
+        pos.y = draw_image->texture.height - pos.y; // texture drawing flips vertically because of opengl or smthn
+
+        BeginTextureMode(*draw_image);
+        {
+            DrawCircleV(pos, args->brush_size, draw_color);
+            
+            // to connect points since the refresh rate is 60 fps which causes gaps
+            if (args->prev_draw_pos.x != -1 && args->prev_draw_pos.y != -1) {
+                DrawLineEx(args->prev_draw_pos, pos, args->brush_size * 2, draw_color);
+            }
+
+            // TODO try to fix
+            // when dragging mouse past border of draw panel, there is a small gap between the border and the last drawn
+            // position. Perhaps track whenever the mouse drag JUST leaves the area, and still draw that line segment
+            
+            args->prev_draw_pos = pos;
+        }
+        EndTextureMode();
+
+    } else {
+        args->prev_draw_pos = (Vector2) {.x = GetMousePosition().x - (args->brush_size/2) - draw_panel_x, 
+                .y = draw_image->texture.height - (GetMousePosition().y - (args->brush_size/2) - draw_panel_y)};
+    }
+
+    DrawTexture(draw_image->texture, draw_panel_x, draw_panel_y, WHITE);
 }
 
 Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
@@ -436,7 +507,7 @@ void DrawWindow(neural_network_model_t *model) {
             DrawRectangle(rec_x, rec_y, TOOLTIP_WIDTH, TOOLTIP_HEIGHT, TOOLTIP_BACKGROUND_COLOR);
             DrawCenteredText(tooltip_msg, mouse_pos.x + TOOLTIP_WIDTH / 2, mouse_pos.y - TOOLTIP_HEIGHT / 2, TOOLTIP_FONTSIZE, TOOLTIP_FONTCOLOR);
 
-            if (tooltip_weight_value && !is_testing && !is_training) { // todo replace with model.isLocked instead
+            if (tooltip_weight_value && playground_state && !is_testing && !is_training) { // todo replace with model.isLocked instead
                 *tooltip_weight_value += TOOLTIP_WEIGHT_VALUE_SCALE * GetMouseWheelMove();
                 mymatrix_t output = model_calculate(training_info.model); // todo preferrably run on separate thread
             }

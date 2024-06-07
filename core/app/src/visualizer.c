@@ -93,6 +93,12 @@ static float *tooltip_weight_value = NULL;
 static float TOOLTIP_WEIGHT_VALUE_SCALE = 0.05;
 
 
+typedef struct SegmentListNode {
+    RenderTexture2D saved_image;
+    struct SegmentListNode *next;
+    struct SegmentListNode *prev;
+} segment_list_node_t;
+
 struct DrawingPanelArgs {
     bool isOpen;
     float brush_size;
@@ -103,9 +109,9 @@ struct DrawingPanelArgs {
 
     RenderTexture2D *drawn_image;
 
-    RenderTexture2D *segments_queue;
+    segment_list_node_t *segments_list_head;
+    segment_list_node_t *segments_list_cur;
     int segments_queue_size;
-    int segments_queue_pos;
 
     // scaled down
     int buffer_width;
@@ -113,6 +119,9 @@ struct DrawingPanelArgs {
     float *output_buffer;
     bool updated;
 } drawing_panel_args; 
+
+void DrawingPanelFreeHistory(struct DrawingPanelArgs *args);
+void DrawingPanelAdd(struct DrawingPanelArgs *args);
 
 //===========================================================================
 
@@ -134,9 +143,9 @@ void* window_run(void *vargp) {
         .is_dragged = false,
         .is_drawing = false,
         .drawn_image = malloc(sizeof(RenderTexture2D)),
-        .segments_queue = malloc(sizeof(RenderTexture2D*) * 10),
-        .segments_queue_size = 10,
-        .segments_queue_pos = 0,
+        .segments_list_head = NULL,
+        .segments_list_cur = NULL,
+        .segments_queue_size = 0,
         .updated = false,
         .buffer_width = 10,
         .buffer_height = 10,
@@ -149,10 +158,11 @@ void* window_run(void *vargp) {
         ClearBackground(WHITE);
     }
     EndTextureMode();
-
+    DrawingPanelAdd(&drawing_panel_args);
 
     window_keep_open(args->model, 0);
 
+    DrawingPanelFreeHistory(&drawing_panel_args);
     UnloadRenderTexture(*drawing_panel_args.drawn_image);
     free(drawing_panel_args.drawn_image);
     free(drawing_panel_args.output_buffer);
@@ -180,6 +190,94 @@ void* test_run(void *vargp) {
 
 
 //===================================================================
+
+// TODO perhaps for optimization, but not really critical, instead of storing these saved
+// drawing panel images as render textures which would be put in VRAM, store as images on RAM and
+// write to the drawing panel's render texture when needed (saves VRAM space and time spent sending these textures to it after each draw segment)
+void DrawingPanelFreeHistory(struct DrawingPanelArgs *args) {
+    segment_list_node_t *cur = args->segments_list_head;
+    while (cur != NULL) {
+        segment_list_node_t *prev = cur;
+        cur = cur->next;
+        UnloadRenderTexture(prev->saved_image);
+        free(prev);
+    }
+    args->segments_list_cur = NULL;
+    args->segments_list_head = NULL;
+    args->segments_queue_size = 0;
+}
+
+void DrawingPanelUndo(struct DrawingPanelArgs *args) {
+    if (args->segments_list_cur == NULL || args->segments_list_cur->prev == NULL) {
+        return;
+    }
+
+    args->segments_list_cur = args->segments_list_cur->prev;
+    BeginTextureMode(*args->drawn_image);
+    {
+        DrawTexture(args->segments_list_cur->saved_image.texture, 0, 0, WHITE);
+    }
+    EndTextureMode();
+}
+
+void DrawingPanelRedo(struct DrawingPanelArgs *args) {
+    if (args->segments_list_cur == NULL || args->segments_list_cur->next == NULL) {
+        return;
+    }
+
+    args->segments_list_cur = args->segments_list_cur->next;
+    BeginTextureMode(*args->drawn_image);
+    {
+        DrawTexture(args->segments_list_cur->saved_image.texture, 0, 0, WHITE);
+    }
+    EndTextureMode();
+}
+
+void DrawingPanelAdd(struct DrawingPanelArgs *args) {
+    segment_list_node_t *new_node = malloc(sizeof(segment_list_node_t));
+    new_node->prev = NULL;
+    new_node->next = NULL;
+    new_node->saved_image = LoadRenderTexture(args->drawn_image->texture.width, args->drawn_image->texture.height);
+    BeginTextureMode(new_node->saved_image);
+    {
+        ClearBackground(WHITE);
+        DrawTexture(args->drawn_image->texture, 0, 0, WHITE);
+    }
+    EndTextureMode();
+
+    if (args->segments_list_cur == NULL) {
+        args->segments_list_cur = new_node;
+        args->segments_list_head = new_node;
+        args->segments_queue_size = 1;
+    } else {
+        segment_list_node_t *delete = args->segments_list_cur->next;
+        while (delete != NULL) {
+            segment_list_node_t *prev = delete;
+            delete = delete->next;
+            args->segments_queue_size--;
+            
+            UnloadRenderTexture(prev->saved_image);
+            free(prev);
+        }
+
+        new_node->prev = args->segments_list_cur;
+        args->segments_list_cur->next = new_node;
+        args->segments_queue_size++;
+        args->segments_list_cur = new_node;
+    }
+}
+
+void DrawingPanelClear(struct DrawingPanelArgs *args) {
+    BeginTextureMode(*args->drawn_image);
+    {
+        ClearBackground(WHITE);
+    }
+    EndTextureMode();
+
+    DrawingPanelAdd(args);
+}
+
+
 
 // GOALS
 // Set Brush Size
@@ -209,14 +307,15 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
 
     
     Rectangle draw_panel_rec = {
-        .x = draw_window_rec.x + draw_window_rec.width/2 - draw_image->texture.width/2,
-        .y = draw_window_rec.y + draw_window_rec.height/2 - draw_image->texture.height/2,
-        .width = draw_image->texture.width,
-        .height = draw_image->texture.height,
+        .x = draw_window_rec.x + draw_window_rec.width/2 - draw_image->texture.width/2 - 3,
+        .y = draw_window_rec.y + draw_window_rec.height/2 - draw_image->texture.height/2 - 3,
+        .width = draw_image->texture.width + 6,
+        .height = draw_image->texture.height + 6,
     };
 
     args->isOpen = !GuiWindowBox(draw_window_rec, "Drawing Panel");
     
+    DrawRectangleRec(draw_panel_rec, WHITE);
     DrawRectangleRoundedLines(draw_panel_rec, .02, 10, 5, BLACK);
 
 
@@ -266,11 +365,27 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
         .height = 20,
     };
     if (GuiButton(draw_panel_clear_rec, "Clear")) {
-        BeginTextureMode(*drawing_panel_args.drawn_image);
-        {
-            ClearBackground(WHITE);
-        }
-        EndTextureMode();
+        DrawingPanelClear(args);
+    }
+
+    Rectangle draw_panel_undo_rec = {
+        .x = draw_panel_clear_rec.x + draw_panel_clear_rec.width + 10,
+        .y = draw_panel_clear_rec.y,
+        .width = 40,
+        .height = 20,
+    };
+    if (GuiButton(draw_panel_undo_rec, "Undo")) {
+        DrawingPanelUndo(args);
+    }
+
+    Rectangle draw_panel_redo_rec = {
+        .x = draw_panel_undo_rec.x + draw_panel_undo_rec.width + 10,
+        .y = draw_panel_undo_rec.y,
+        .width = 40,
+        .height = 20,
+    };
+    if (GuiButton(draw_panel_redo_rec, "Redo")) {
+        DrawingPanelRedo(args);
     }
 
 
@@ -325,6 +440,7 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
         // check if just stopped drawing, register segment
         if (args->is_drawing) {
             printf("DETECTED Line Segment !!\n");
+            DrawingPanelAdd(args);
         }
         args->is_drawing = false;     
     }

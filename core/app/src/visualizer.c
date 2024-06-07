@@ -173,7 +173,6 @@ void* test_run(void *vargp) {
 //===================================================================
 
 // GOALS
-// Set color
 // Set Brush Size
 // Set Brush Mode
 // Eraser
@@ -211,7 +210,8 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
     
     DrawRectangleRoundedLines(draw_panel_rec, .02, 10, 5, BLACK);
 
-    
+
+    // Brush color picker
     Rectangle color_picker_rec = {
         .x = draw_panel_rec.x + draw_panel_rec.width + 20,
         .y = draw_window_rec.y + draw_window_rec.height/2 - 120/2,
@@ -228,6 +228,22 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
     };
     DrawRectangleRounded(brush_color_rec, .05, 10, ColorFromHSV(args->brush_color.x, args->brush_color.y, args->brush_color.z));
     DrawRectangleRoundedLines(brush_color_rec, .05, 10, 2, BLACK);
+
+
+    // Brush size picker
+    Rectangle brush_size_picker_rec = {
+        .x = draw_panel_rec.x + draw_panel_rec.width + 20,
+        .y = brush_color_rec.y - 40,
+        .width = 100,
+        .height = 30,
+    };
+
+    GuiSliderBar(brush_size_picker_rec, "0.5", "10", &args->brush_size, 0.5, 10);
+    DrawText("Brush Size", brush_size_picker_rec.x, brush_size_picker_rec.y - 20, 12, BLACK);
+
+    DrawCircle(brush_size_picker_rec.x + brush_size_picker_rec.width + 30, brush_size_picker_rec.y + brush_size_picker_rec.height/2, args->brush_size, 
+            ColorFromHSV(args->brush_color.x, args->brush_color.y, args->brush_color.z));
+
 
     bool is_draw = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsGestureDetected(GESTURE_DRAG);
     bool is_erase = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);

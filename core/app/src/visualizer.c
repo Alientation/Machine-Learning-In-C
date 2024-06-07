@@ -21,6 +21,10 @@ GOALS
 modify input node values to see what the model will output
 weights lines coloring based on the strength
 button to start training, selection of train/test data, graph of train/test accuracy and output loss
+
+MAYBE BUT NOT NECESSARY
+
+split rendering from logic (like the draw panel) so we can run each on its own thread and mouse inputs are registered faster
 */
 visualizer_argument_t vis_args;
 extern training_info_t training_info;
@@ -93,8 +97,10 @@ struct DrawingPanelArgs {
     bool isOpen;
     float brush_size;
     Vector2 prev_draw_pos;
+    bool is_dragged;
+    Vector3 brush_color; // in HSV
 
-    RenderTexture2D *drawnImage;
+    RenderTexture2D *drawn_image;
 
     // scaled down
     int buffer_width;
@@ -118,16 +124,18 @@ void* window_run(void *vargp) {
     drawing_panel_args = (struct DrawingPanelArgs) {
         .isOpen = false,
         .brush_size = 4,
+        .brush_color = ColorToHSV(BLACK),
         .prev_draw_pos = (Vector2) {.x = -1, .y = -1},
-        .drawnImage = malloc(sizeof(RenderTexture2D)),
+        .is_dragged = false,
+        .drawn_image = malloc(sizeof(RenderTexture2D)),
         .updated = false,
         .buffer_width = 10,
         .buffer_height = 10,
         .output_buffer = malloc(sizeof(float) * 100)
     };
-    *drawing_panel_args.drawnImage = LoadRenderTexture(400, 400);
+    *drawing_panel_args.drawn_image = LoadRenderTexture(400, 400);
 
-    BeginTextureMode(*drawing_panel_args.drawnImage);
+    BeginTextureMode(*drawing_panel_args.drawn_image);
     {
         ClearBackground(WHITE);
     }
@@ -136,8 +144,8 @@ void* window_run(void *vargp) {
 
     window_keep_open(args->model, 0);
 
-    UnloadRenderTexture(*drawing_panel_args.drawnImage);
-    free(drawing_panel_args.drawnImage);
+    UnloadRenderTexture(*drawing_panel_args.drawn_image);
+    free(drawing_panel_args.drawn_image);
     free(drawing_panel_args.output_buffer);
 }
 
@@ -164,6 +172,15 @@ void* test_run(void *vargp) {
 
 //===================================================================
 
+// GOALS
+// Set color
+// Set Brush Size
+// Set Brush Mode
+// Eraser
+// Undo/Redo (prolly just fixed size buffer of drawn segments)
+// Save image
+// Load image
+// Show Buffered view that will be sent to the model
 void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
     if (!args->isOpen) {
         return;
@@ -173,30 +190,53 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
     DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ColorAlpha(BLACK, 0.5));
 
     // drawing panel
-    RenderTexture2D *draw_image = args->drawnImage;
+    RenderTexture2D *draw_image = args->drawn_image;
     
-    int draw_window_x = 50;
-    int draw_window_y = 50;
-    int draw_window_width = SCREEN_WIDTH - 2 * draw_window_x;
-    int draw_window_height = SCREEN_HEIGHT - 2 * draw_window_y;
+    Rectangle draw_window_rec = {
+        .x = 50,
+        .y = 50,
+        .width = SCREEN_WIDTH - 2 * 50,
+        .height = SCREEN_HEIGHT - 2 * 50,
+    };    
 
-    int draw_panel_x = draw_window_x + draw_window_width/2 - draw_image->texture.width/2;
-    int draw_panel_y = draw_window_y + draw_window_height/2 - draw_image->texture.height/2;
-
-    args->isOpen = !GuiWindowBox((Rectangle) {.x = draw_window_x, .y = draw_window_y, .width = draw_window_width, .height = draw_window_height}, "Drawing Panel");
     
-    Rectangle draw_panel_rec = {.x = draw_panel_x, .y = draw_panel_y, .width = draw_image->texture.width, .height = draw_image->texture.height};
+    Rectangle draw_panel_rec = {
+        .x = draw_window_rec.x + draw_window_rec.width/2 - draw_image->texture.width/2,
+        .y = draw_window_rec.y + draw_window_rec.height/2 - draw_image->texture.height/2,
+        .width = draw_image->texture.width,
+        .height = draw_image->texture.height,
+    };
+
+    args->isOpen = !GuiWindowBox(draw_window_rec, "Drawing Panel");
+    
     DrawRectangleRoundedLines(draw_panel_rec, .02, 10, 5, BLACK);
+
+    
+    Rectangle color_picker_rec = {
+        .x = draw_panel_rec.x + draw_panel_rec.width + 20,
+        .y = draw_window_rec.y + draw_window_rec.height/2 - 120/2,
+        .width = 120,
+        .height = 120,
+    };
+    GuiColorPickerHSV(color_picker_rec, "Brush Color", &args->brush_color);
+
+    Rectangle brush_color_rec = {
+        .x = color_picker_rec.x,
+        .y = color_picker_rec.y - 40,
+        .width = 30,
+        .height = 30, 
+    };
+    DrawRectangleRounded(brush_color_rec, .05, 10, ColorFromHSV(args->brush_color.x, args->brush_color.y, args->brush_color.z));
+    DrawRectangleRoundedLines(brush_color_rec, .05, 10, 2, BLACK);
 
     bool is_draw = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsGestureDetected(GESTURE_DRAG);
     bool is_erase = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
-    if ((is_draw || is_erase) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec)) {
-        Color draw_color = {
-            .a = 255,
-            .r = is_erase * 255,
-            .g = is_erase * 255,
-            .b = is_erase * 255,
-        };
+    bool just_off_panel = IsGestureDetected(GESTURE_DRAG) && !CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
+    if (((is_draw || is_erase) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec)) || just_off_panel) {
+        Color draw_color = ColorFromHSV(args->brush_color.x, args->brush_color.y, args->brush_color.z);
+        if (is_erase) {
+            draw_color = WHITE;
+        }
 
         Vector2 size = {
             .x = args->brush_size,
@@ -206,8 +246,8 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
         pos.x -= size.x / 2.0;
         pos.y -= size.y / 2.0;
 
-        pos.x -= draw_panel_x;
-        pos.y -= draw_panel_y;
+        pos.x -= draw_panel_rec.x;
+        pos.y -= draw_panel_rec.y;
 
         pos.y = draw_image->texture.height - pos.y; // texture drawing flips vertically because of opengl or smthn
 
@@ -229,11 +269,13 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
         EndTextureMode();
 
     } else {
-        args->prev_draw_pos = (Vector2) {.x = GetMousePosition().x - (args->brush_size/2) - draw_panel_x, 
-                .y = draw_image->texture.height - (GetMousePosition().y - (args->brush_size/2) - draw_panel_y)};
+        args->prev_draw_pos = (Vector2) {.x = GetMousePosition().x - (args->brush_size/2) - draw_panel_rec.x, 
+                .y = draw_image->texture.height - (GetMousePosition().y - (args->brush_size/2) - draw_panel_rec.y)};
     }
 
-    DrawTexture(draw_image->texture, draw_panel_x, draw_panel_y, WHITE);
+    args->is_dragged = IsGestureDetected(GESTURE_DRAG) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
+
+    DrawTexture(draw_image->texture, draw_panel_rec.x, draw_panel_rec.y, WHITE);
 }
 
 Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
@@ -291,6 +333,8 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                     ratio = 1 - fabs(weights.matrix[r2][r1]) / max_weight;
                 }
                 
+                // todo future, draw lines with thickness relative to its weight instead of color
+                // it is kind of hard to distinguish between colors especially when weight lines are extremely thin
                 int cval = (int) (255 * ratio);
                 Color color = {
                     .a = 255,

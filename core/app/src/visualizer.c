@@ -98,9 +98,14 @@ struct DrawingPanelArgs {
     float brush_size;
     Vector2 prev_draw_pos;
     bool is_dragged;
+    bool is_drawing;
     Vector3 brush_color; // in HSV
 
     RenderTexture2D *drawn_image;
+
+    RenderTexture2D *segments_queue;
+    int segments_queue_size;
+    int segments_queue_pos;
 
     // scaled down
     int buffer_width;
@@ -127,7 +132,11 @@ void* window_run(void *vargp) {
         .brush_color = ColorToHSV(BLACK),
         .prev_draw_pos = (Vector2) {.x = -1, .y = -1},
         .is_dragged = false,
+        .is_drawing = false,
         .drawn_image = malloc(sizeof(RenderTexture2D)),
+        .segments_queue = malloc(sizeof(RenderTexture2D*) * 10),
+        .segments_queue_size = 10,
+        .segments_queue_pos = 0,
         .updated = false,
         .buffer_width = 10,
         .buffer_height = 10,
@@ -226,28 +235,48 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
         .width = 30,
         .height = 30, 
     };
-    DrawRectangleRounded(brush_color_rec, .05, 10, ColorFromHSV(args->brush_color.x, args->brush_color.y, args->brush_color.z));
-    DrawRectangleRoundedLines(brush_color_rec, .05, 10, 2, BLACK);
-
 
     // Brush size picker
     Rectangle brush_size_picker_rec = {
-        .x = draw_panel_rec.x + draw_panel_rec.width + 20,
+        .x = draw_panel_rec.x + draw_panel_rec.width + 30,
         .y = brush_color_rec.y - 40,
         .width = 100,
         .height = 30,
     };
 
-    GuiSliderBar(brush_size_picker_rec, "0.5", "10", &args->brush_size, 0.5, 10);
+    float max_brush_size = 10;
+    float min_brush_size = 0.5;
+    GuiSliderBar(brush_size_picker_rec, TextFormat("%.2f", min_brush_size), TextFormat("%.2f", max_brush_size), &args->brush_size, min_brush_size, max_brush_size);
     DrawText("Brush Size", brush_size_picker_rec.x, brush_size_picker_rec.y - 20, 12, BLACK);
 
-    DrawCircle(brush_size_picker_rec.x + brush_size_picker_rec.width + 30, brush_size_picker_rec.y + brush_size_picker_rec.height/2, args->brush_size, 
-            ColorFromHSV(args->brush_color.x, args->brush_color.y, args->brush_color.z));
+    Vector2 brush_size_display_rec = {
+        .x = brush_size_picker_rec.x + brush_size_picker_rec.width + 45,
+        .y = brush_size_picker_rec.y + brush_size_picker_rec.height/2
+    };
+    DrawRectangleRoundedLines((Rectangle) {.x = brush_size_display_rec.x - max_brush_size, .y = brush_size_display_rec.y - max_brush_size, .width = max_brush_size*2, .height = max_brush_size*2}, 
+            0.02, 4, 2, BLACK);
+    DrawCircleV(brush_size_display_rec , args->brush_size, ColorFromHSV(args->brush_color.x, args->brush_color.y, args->brush_color.z));
+
+
+    // Drawing Panel Options
+    Rectangle draw_panel_clear_rec = {
+        .x = draw_panel_rec.x,
+        .y = draw_panel_rec.y + draw_panel_rec.height + 10,
+        .width = 40,
+        .height = 20,
+    };
+    if (GuiButton(draw_panel_clear_rec, "Clear")) {
+        BeginTextureMode(*drawing_panel_args.drawn_image);
+        {
+            ClearBackground(WHITE);
+        }
+        EndTextureMode();
+    }
 
 
     bool is_draw = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsGestureDetected(GESTURE_DRAG);
     bool is_erase = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
-    bool just_off_panel = IsGestureDetected(GESTURE_DRAG) && !CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
+    bool just_off_panel = args->is_dragged && !CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
     if (((is_draw || is_erase) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec)) || just_off_panel) {
         Color draw_color = ColorFromHSV(args->brush_color.x, args->brush_color.y, args->brush_color.z);
         if (is_erase) {
@@ -269,11 +298,13 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
 
         BeginTextureMode(*draw_image);
         {
+            
             DrawCircleV(pos, args->brush_size, draw_color);
             
             // to connect points since the refresh rate is 60 fps which causes gaps
             if (args->prev_draw_pos.x != -1 && args->prev_draw_pos.y != -1) {
                 DrawLineEx(args->prev_draw_pos, pos, args->brush_size * 2, draw_color);
+                DrawCircleV(args->prev_draw_pos, args->brush_size, draw_color);
             }
 
             // TODO try to fix
@@ -284,9 +315,18 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
         }
         EndTextureMode();
 
+        args->is_drawing = true;
     } else {
+        // is not drawing
         args->prev_draw_pos = (Vector2) {.x = GetMousePosition().x - (args->brush_size/2) - draw_panel_rec.x, 
                 .y = draw_image->texture.height - (GetMousePosition().y - (args->brush_size/2) - draw_panel_rec.y)};
+        
+
+        // check if just stopped drawing, register segment
+        if (args->is_drawing) {
+            printf("DETECTED Line Segment !!\n");
+        }
+        args->is_drawing = false;     
     }
 
     args->is_dragged = IsGestureDetected(GESTURE_DRAG) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);

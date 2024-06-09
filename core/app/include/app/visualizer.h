@@ -4,6 +4,7 @@
 
 #include <model/model.h>
 
+#include <raylib.h>
 #include <math.h>
 
 static const int SCREEN_WIDTH = 1200;
@@ -12,8 +13,6 @@ static const int MODEL_WIDTH = 1160;
 static const int MODEL_HEIGHT = 450;
 static const int MODEL_X = 20;
 static const int MODEL_Y = 20;
-
-
 
 #define SCALING_FACTOR 0.7
 
@@ -53,8 +52,39 @@ typedef struct VisualizerArgument {
     char** (*label_guess)(mymatrix_t model_guess);
 } visualizer_argument_t;
 
+typedef struct SegmentListNode {
+    RenderTexture2D saved_image;
+    struct SegmentListNode *next;
+    struct SegmentListNode *prev;
+} segment_list_node_t;
+
+typedef struct DrawingPanelArgs {
+    bool isOpen;
+    float brush_size;
+    Vector3 brush_color; // in HSV
+
+    Vector2 prev_draw_pos;
+    bool is_dragged;
+    bool is_drawing;
+    RenderTexture2D drawn_image;
+
+    segment_list_node_t *segments_list_head;
+    segment_list_node_t *segments_list_cur;
+    int segments_queue_size;
+
+    // scaled down
+    bool updated;
+    int update_frames; // how many frames before each update
+    int cur_frames;
+    RenderTexture2D model_input_image;
+    int buffer_width;
+    int buffer_height;
+    float *output_buffer;
+} drawing_panel_args_t; 
+
 typedef struct VisualizerState {
     visualizer_argument_t vis_args;
+    drawing_panel_args_t draw_args;
     bool is_training;
     bool is_testing;
     bool playground_state;

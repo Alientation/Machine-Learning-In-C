@@ -119,17 +119,18 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *args) {
     };    
 
     
+    const int line_thickness = 4;
     Rectangle draw_panel_rec = {
-        .x = draw_window_rec.x + draw_window_rec.width/2 - draw_image.texture.width/2 - 3,
-        .y = draw_window_rec.y + draw_window_rec.height/2 - draw_image.texture.height/2 - 3,
-        .width = draw_image.texture.width + 6,
-        .height = draw_image.texture.height + 6,
+        .x = draw_window_rec.x + draw_window_rec.width/2 - draw_image.texture.width/2 - line_thickness/4,
+        .y = draw_window_rec.y + draw_window_rec.height/2 - draw_image.texture.height/2 - line_thickness/4,
+        .width = draw_image.texture.width + line_thickness/2,
+        .height = draw_image.texture.height + line_thickness/2,
     };
 
     args->isOpen = !GuiWindowBox(draw_window_rec, "Drawing Panel");
     
     DrawRectangleRec(draw_panel_rec, WHITE);
-    DrawRectangleRoundedLines(draw_panel_rec, .02, 10, 5, BLACK);
+    DrawRectangleRoundedLines(draw_panel_rec, .02, 10, line_thickness, BLACK);
 
 
     // Brush color picker
@@ -260,7 +261,7 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *args) {
 
     args->is_dragged = IsGestureDetected(GESTURE_DRAG) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
 
-    DrawTexture(draw_image.texture, draw_panel_rec.x, draw_panel_rec.y, WHITE);
+    DrawTexture(draw_image.texture, draw_panel_rec.x + line_thickness/2, draw_panel_rec.y + line_thickness/2, WHITE);
 
 
     // Draw what the model will see

@@ -15,7 +15,8 @@
         "ios": "cpp",
         "raylib.h": "c",
         "pthread.h": "c",
-        "random": "c"
+        "random": "c",
+        "cmath": "c"
     },
     "C_Cpp.default.includePath": [
         "core/app/include",

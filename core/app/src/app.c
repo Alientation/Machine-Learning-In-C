@@ -27,9 +27,12 @@ int main(void) {
     model_calculate(&nnmodel);
 
     pthread_t thread_id;
-    visualizer_argument_t vis_args;
-    vis_args.model = &nnmodel;
-    vis_args.model_name = "XOR Model";
+    visualizer_argument_t vis_args = {
+        .model = &nnmodel,
+        .model_name = "XOR Model",
+        .allow_drawing_panel_as_model_input = false,
+        .label_guess = NULL,
+    };
     pthread_create(&thread_id, NULL, window_run, &vis_args);
 
     // clean up

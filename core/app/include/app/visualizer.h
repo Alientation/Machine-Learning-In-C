@@ -7,6 +7,9 @@
 typedef struct VisualizerArgument {
     neural_network_model_t *model;
     char *model_name;
+    bool allow_drawing_panel_as_model_input;
+
+    char** (*label_guess)(mymatrix_t model_guess);
 } visualizer_argument_t;
 
 

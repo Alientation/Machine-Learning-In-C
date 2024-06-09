@@ -18,12 +18,9 @@
 /*
 GOALS
 
-modify input node values to see what the model will output
-weights lines coloring based on the strength
-button to start training, selection of train/test data, graph of train/test accuracy and output loss
+selection of train/test data, graph of train/test accuracy and output loss
 
 MAYBE BUT NOT NECESSARY
-
 split rendering from logic (like the draw panel) so we can run each on its own thread and mouse inputs are registered faster
 */
 visualizer_argument_t vis_args;
@@ -102,22 +99,23 @@ typedef struct SegmentListNode {
 struct DrawingPanelArgs {
     bool isOpen;
     float brush_size;
+    Vector3 brush_color; // in HSV
+
     Vector2 prev_draw_pos;
     bool is_dragged;
     bool is_drawing;
-    Vector3 brush_color; // in HSV
-
-    RenderTexture2D *drawn_image;
+    RenderTexture2D drawn_image;
 
     segment_list_node_t *segments_list_head;
     segment_list_node_t *segments_list_cur;
     int segments_queue_size;
 
     // scaled down
+    bool updated;
+    RenderTexture2D model_input_image;
     int buffer_width;
     int buffer_height;
     float *output_buffer;
-    bool updated;
 } drawing_panel_args; 
 
 void DrawingPanelFreeHistory(struct DrawingPanelArgs *args);
@@ -139,21 +137,24 @@ void* window_run(void *vargp) {
         .isOpen = false,
         .brush_size = 4,
         .brush_color = ColorToHSV(BLACK),
+        
         .prev_draw_pos = (Vector2) {.x = -1, .y = -1},
         .is_dragged = false,
         .is_drawing = false,
-        .drawn_image = malloc(sizeof(RenderTexture2D)),
+        .drawn_image = LoadRenderTexture(400, 400),
+        
         .segments_list_head = NULL,
         .segments_list_cur = NULL,
         .segments_queue_size = 0,
+
         .updated = false,
+        .model_input_image = LoadRenderTexture(10, 10),
         .buffer_width = 10,
         .buffer_height = 10,
         .output_buffer = malloc(sizeof(float) * 100)
     };
-    *drawing_panel_args.drawn_image = LoadRenderTexture(400, 400);
 
-    BeginTextureMode(*drawing_panel_args.drawn_image);
+    BeginTextureMode(drawing_panel_args.drawn_image);
     {
         ClearBackground(WHITE);
     }
@@ -163,8 +164,7 @@ void* window_run(void *vargp) {
     window_keep_open(args->model, 0);
 
     DrawingPanelFreeHistory(&drawing_panel_args);
-    UnloadRenderTexture(*drawing_panel_args.drawn_image);
-    free(drawing_panel_args.drawn_image);
+    UnloadRenderTexture(drawing_panel_args.drawn_image);
     free(drawing_panel_args.output_buffer);
 }
 
@@ -213,11 +213,13 @@ void DrawingPanelUndo(struct DrawingPanelArgs *args) {
     }
 
     args->segments_list_cur = args->segments_list_cur->prev;
-    BeginTextureMode(*args->drawn_image);
+    BeginTextureMode(args->drawn_image);
     {
         DrawTexture(args->segments_list_cur->saved_image.texture, 0, 0, WHITE);
     }
     EndTextureMode();
+
+    args->updated = true;
 }
 
 void DrawingPanelRedo(struct DrawingPanelArgs *args) {
@@ -226,22 +228,24 @@ void DrawingPanelRedo(struct DrawingPanelArgs *args) {
     }
 
     args->segments_list_cur = args->segments_list_cur->next;
-    BeginTextureMode(*args->drawn_image);
+    BeginTextureMode(args->drawn_image);
     {
         DrawTexture(args->segments_list_cur->saved_image.texture, 0, 0, WHITE);
     }
     EndTextureMode();
+
+    args->updated = true;
 }
 
 void DrawingPanelAdd(struct DrawingPanelArgs *args) {
     segment_list_node_t *new_node = malloc(sizeof(segment_list_node_t));
     new_node->prev = NULL;
     new_node->next = NULL;
-    new_node->saved_image = LoadRenderTexture(args->drawn_image->texture.width, args->drawn_image->texture.height);
+    new_node->saved_image = LoadRenderTexture(args->drawn_image.texture.width, args->drawn_image.texture.height);
     BeginTextureMode(new_node->saved_image);
     {
         ClearBackground(WHITE);
-        DrawTexture(args->drawn_image->texture, 0, 0, WHITE);
+        DrawTexture(args->drawn_image.texture, 0, 0, WHITE);
     }
     EndTextureMode();
 
@@ -265,25 +269,26 @@ void DrawingPanelAdd(struct DrawingPanelArgs *args) {
         args->segments_queue_size++;
         args->segments_list_cur = new_node;
     }
+
+    args->updated = true;
 }
 
 void DrawingPanelClear(struct DrawingPanelArgs *args) {
-    BeginTextureMode(*args->drawn_image);
+    BeginTextureMode(args->drawn_image);
     {
         ClearBackground(WHITE);
     }
     EndTextureMode();
 
     DrawingPanelAdd(args);
+
+    args->updated = true;
 }
 
 
 
 // GOALS
-// Set Brush Size
 // Set Brush Mode
-// Eraser
-// Undo/Redo (prolly just fixed size buffer of drawn segments)
 // Save image
 // Load image
 // Show Buffered view that will be sent to the model
@@ -296,7 +301,7 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
     DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ColorAlpha(BLACK, 0.5));
 
     // drawing panel
-    RenderTexture2D *draw_image = args->drawn_image;
+    RenderTexture2D draw_image = args->drawn_image;
     
     Rectangle draw_window_rec = {
         .x = 50,
@@ -307,10 +312,10 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
 
     
     Rectangle draw_panel_rec = {
-        .x = draw_window_rec.x + draw_window_rec.width/2 - draw_image->texture.width/2 - 3,
-        .y = draw_window_rec.y + draw_window_rec.height/2 - draw_image->texture.height/2 - 3,
-        .width = draw_image->texture.width + 6,
-        .height = draw_image->texture.height + 6,
+        .x = draw_window_rec.x + draw_window_rec.width/2 - draw_image.texture.width/2 - 3,
+        .y = draw_window_rec.y + draw_window_rec.height/2 - draw_image.texture.height/2 - 3,
+        .width = draw_image.texture.width + 6,
+        .height = draw_image.texture.height + 6,
     };
 
     args->isOpen = !GuiWindowBox(draw_window_rec, "Drawing Panel");
@@ -321,7 +326,7 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
 
     // Brush color picker
     Rectangle color_picker_rec = {
-        .x = draw_panel_rec.x + draw_panel_rec.width + 20,
+        .x = draw_panel_rec.x + draw_panel_rec.width + 40,
         .y = draw_window_rec.y + draw_window_rec.height/2 - 120/2,
         .width = 120,
         .height = 120,
@@ -409,9 +414,9 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
         pos.x -= draw_panel_rec.x;
         pos.y -= draw_panel_rec.y;
 
-        pos.y = draw_image->texture.height - pos.y; // texture drawing flips vertically because of opengl or smthn
+        pos.y = draw_image.texture.height - pos.y; // texture drawing flips vertically because of opengl or smthn
 
-        BeginTextureMode(*draw_image);
+        BeginTextureMode(draw_image);
         {
             
             DrawCircleV(pos, args->brush_size, draw_color);
@@ -431,10 +436,11 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
         EndTextureMode();
 
         args->is_drawing = true;
+        args->updated = true;
     } else {
         // is not drawing
         args->prev_draw_pos = (Vector2) {.x = GetMousePosition().x - (args->brush_size/2) - draw_panel_rec.x, 
-                .y = draw_image->texture.height - (GetMousePosition().y - (args->brush_size/2) - draw_panel_rec.y)};
+                .y = draw_image.texture.height - (GetMousePosition().y - (args->brush_size/2) - draw_panel_rec.y)};
         
 
         // check if just stopped drawing, register segment
@@ -447,7 +453,72 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
 
     args->is_dragged = IsGestureDetected(GESTURE_DRAG) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
 
-    DrawTexture(draw_image->texture, draw_panel_rec.x, draw_panel_rec.y, WHITE);
+    DrawTexture(draw_image.texture, draw_panel_rec.x, draw_panel_rec.y, WHITE);
+
+
+    // Draw what the model will see
+    Rectangle model_input_rec = {
+        .x = draw_panel_rec.x - 10 - 50,
+        .y = draw_panel_rec.y,
+        .width = 50,
+        .height = 50
+    };
+
+    RenderTexture2D model_image = args->model_input_image;
+
+    // TODO THIS DEFINETLY NEEDS TO BE ON A SEPARATE THREAD FOR SURE!!!@!
+    if (args->updated) {
+        
+        // scale down drawn image
+        args->updated = false;
+        int scale_ceil = (draw_image.texture.height + model_image.texture.height - 1) / model_image.texture.height;
+        int scale_floor = draw_image.texture.height / model_image.texture.height;
+        Image draw_image_converted = LoadImageFromTexture(draw_image.texture);
+        Image new_model_input_image = GenImageColor(model_image.texture.width, model_image.texture.height, WHITE);
+        
+        for (int r = 0; r < model_image.texture.height; r++) {
+            for (int c = 0; c < model_image.texture.width; c++) {
+                int actualR = r * scale_floor;
+                int actualC = c * scale_floor;
+
+                int radius = (scale_ceil + 1) / 2 - 1;
+                double sum = 0;
+                double total_distance = 0;
+                int n_pixels = 0;
+                for (int d_r = -radius; d_r <= radius; d_r++) {
+                    for (int d_c = -radius; d_c <= radius; d_c++) {
+                        int new_r = actualR + d_r;
+                        int new_c = actualC + d_c;
+                        if (new_r < 0 || new_c < 0 || new_r >= draw_image.texture.height || new_c >= draw_image.texture.width) {
+                            continue;
+                        }
+                        double distance = sqrt(d_r * d_r + d_c * d_c);
+                        total_distance += distance;
+                        n_pixels++;
+                        Color pixel = GetImageColor(draw_image_converted, new_c, new_r);
+                        Color new_pixel = gray_scale(pixel.r, pixel.g, pixel.b);
+                        sum += new_pixel.r * distance;
+                    }
+                }
+
+                double new_color = sum / total_distance;
+                ImageDrawPixel(&new_model_input_image, c, r, (Color) {.a = 255, .r = new_color, .g = new_color, .b = new_color});
+
+                assert(r * args->buffer_width + c < args->buffer_width * args->buffer_height);
+                args->output_buffer[r * args->buffer_width + c] = new_color / 255.0;
+            }
+        }
+        UnloadImage(draw_image_converted);
+        UnloadTexture(model_image.texture);
+        model_image.texture = LoadTextureFromImage(new_model_input_image);
+    }
+
+    DrawTexturePro(model_image.texture, (Rectangle) {.x = 0, .y = 0, .width = model_image.texture.width, .height = model_image.texture.height},
+            model_input_rec, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
+
+
+    // TODO draw the model's output
+    
 }
 
 Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
@@ -562,13 +633,13 @@ void DrawLayerInformation(int layer_index, layer_t *layer) {
     int layer_function_name_y = layer_name_y - LAYER_DISPLAY_FONTSIZE / 2 + LAYER_DISPLAY_FONTSIZE * 2;
     int layer_x = model_start_x + layer_index * (LAYER_GAP + 2 * NODE_RADIUS) + NODE_RADIUS;
     int layer_info_font_size = LAYER_DISPLAY_FONTSIZE - 4;
-    DrawOutlinedCenteredText(get_layer_name(layer), layer_x, layer_name_y, LAYER_DISPLAY_FONTSIZE, WHITE, 1, BLACK);
+    DrawOutlinedCenteredText(get_layer_name(layer), layer_x, layer_name_y, LAYER_DISPLAY_FONTSIZE, BLACK, 0, BLACK);
     if (layer->type == ACTIVATION) {
         DrawOutlinedCenteredText(get_activation_function_name(&layer->layer.activation), layer_x, 
-                layer_function_name_y, layer_info_font_size, WHITE, 1, BLACK);
+                layer_function_name_y, layer_info_font_size, BLACK, 0, BLACK);
     } else if (layer->type == OUTPUT) {
         DrawOutlinedCenteredText(get_output_function_name(&layer->layer.output), layer_x, 
-                layer_function_name_y, layer_info_font_size, WHITE, 1, BLACK);
+                layer_function_name_y, layer_info_font_size, BLACK, 0, BLACK);
     }
 }
 
@@ -660,7 +731,7 @@ void DrawNeuralNetwork(neural_network_model_t *model) {
     model_start_y = MODEL_Y;
 
     // draw model background
-    Color color = DARKBLUE;
+    Color color = GRAY;
     color.a = 170;
     DrawRectangle(MODEL_X, MODEL_Y, MODEL_WIDTH, MODEL_HEIGHT, color);
     DrawCenteredText(vis_args.model_name, MODEL_WIDTH/2, 35, 20, BLACK);
@@ -709,6 +780,7 @@ void DrawWindow(neural_network_model_t *model) {
             playground_state = false;
         }
 
+        // TODO dont add drawing panel if model does not accept drawings as input
         if (GuiButton((Rectangle) {.x = 410, .y = 60, .height = 30, .width = 120}, "Drawing Panel") && !drawing_panel_args.isOpen) {
             drawing_panel_args.isOpen = true;
         }

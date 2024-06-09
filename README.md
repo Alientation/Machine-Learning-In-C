@@ -2,7 +2,8 @@
 learned a lot about the math behind neural networks (gradient descent/backprop)
 really just an application of what i learned in multivariable and lin alg.
 
-![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/visualizer.PNG)
+![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/neuralnetwork-06-07-2024.PNG)
+![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/drawingpanel.PNG)
 
 ## Details
 Simple, really not too optimized multilayer perceptron model. A model is structured with a 

@@ -112,6 +112,8 @@ struct DrawingPanelArgs {
 
     // scaled down
     bool updated;
+    int update_frames; // how many frames before each update
+    int cur_frames;
     RenderTexture2D model_input_image;
     int buffer_width;
     int buffer_height;
@@ -136,7 +138,7 @@ void* window_run(void *vargp) {
 
     drawing_panel_args = (struct DrawingPanelArgs) {
         .isOpen = false,
-        .brush_size = 4,
+        .brush_size = 10,
         .brush_color = ColorToHSV(BLACK),
         
         .prev_draw_pos = (Vector2) {.x = -1, .y = -1},
@@ -149,11 +151,14 @@ void* window_run(void *vargp) {
         .segments_queue_size = 0,
 
         .updated = false,
-        .model_input_image = LoadRenderTexture(10, 10),
-        .buffer_width = 10,
-        .buffer_height = 10,
-        .output_buffer = malloc(sizeof(float) * 100)
+        .update_frames = 3,
+        .cur_frames = 0,
+        .model_input_image = LoadRenderTexture(28, 28),
+        .buffer_width = 28,
+        .buffer_height = 28,
+        .output_buffer = malloc(sizeof(float) * 28 * 28)
     };
+    SetTextureFilter(drawing_panel_args.drawn_image.texture, TEXTURE_FILTER_TRILINEAR);
 
     BeginTextureMode(drawing_panel_args.drawn_image);
     {
@@ -348,13 +353,13 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
         .height = 30,
     };
 
-    float max_brush_size = 10;
-    float min_brush_size = 0.5;
+    float max_brush_size = 18;
+    float min_brush_size = 4;
     GuiSliderBar(brush_size_picker_rec, TextFormat("%.2f", min_brush_size), TextFormat("%.2f", max_brush_size), &args->brush_size, min_brush_size, max_brush_size);
     DrawText("Brush Size", brush_size_picker_rec.x, brush_size_picker_rec.y - 20, 12, BLACK);
 
     Vector2 brush_size_display_rec = {
-        .x = brush_size_picker_rec.x + brush_size_picker_rec.width + 45,
+        .x = brush_size_picker_rec.x + brush_size_picker_rec.width + max_brush_size * 2 + 20,
         .y = brush_size_picker_rec.y + brush_size_picker_rec.height/2
     };
     DrawRectangleRoundedLines((Rectangle) {.x = brush_size_display_rec.x - max_brush_size, .y = brush_size_display_rec.y - max_brush_size, .width = max_brush_size*2, .height = max_brush_size*2}, 
@@ -445,7 +450,6 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
 
         // check if just stopped drawing, register segment
         if (args->is_drawing) {
-            printf("DETECTED Line Segment !!\n");
             DrawingPanelAdd(args);
         }
         args->is_drawing = false;     
@@ -458,66 +462,29 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
 
     // Draw what the model will see
     Rectangle model_input_rec = {
-        .x = draw_panel_rec.x - 10 - 50,
+        .x = draw_panel_rec.x - 10 - (120 / args->buffer_width) * args->buffer_width,
         .y = draw_panel_rec.y,
-        .width = 50,
-        .height = 50
+        .width = (120 / args->buffer_width) * args->buffer_width,
+        .height = (120 / args->buffer_height) * args->buffer_height
     };
 
     RenderTexture2D model_image = args->model_input_image;
 
-    if (args->updated) {
-        // scale down drawn image
+    args->cur_frames++;
+    if (args->updated && args->update_frames <= args->cur_frames) {
+        args->cur_frames = 0;
         args->updated = false;
-        int scale_ceil = (draw_image.texture.height + model_image.texture.height - 1) / model_image.texture.height;
-        int scale_floor = draw_image.texture.height / model_image.texture.height;
-        Image draw_image_converted = LoadImageFromTexture(draw_image.texture);
-        
-        BeginTextureMode(model_image);
-        {
-            for (int r = 0; r < model_image.texture.height; r++) {
-                for (int c = 0; c < model_image.texture.width; c++) {
-                    int actualR = r * scale_floor;
-                    int actualC = c * scale_floor;
-
-                    int radius = (scale_ceil + 1) / 2 - 1;
-                    double sum = 0;
-                    double total_distance = 0;
-                    int n_pixels = 0;
-                    for (int d_r = -radius; d_r <= radius; d_r++) {
-                        for (int d_c = -radius; d_c <= radius; d_c++) {
-                            int new_r = actualR + d_r;
-                            int new_c = actualC + d_c;
-                            if (new_r < 0 || new_c < 0 || new_r >= draw_image.texture.height || new_c >= draw_image.texture.width) {
-                                continue;
-                            }
-                            double distance = sqrt(d_r * d_r + d_c * d_c);
-                            total_distance += distance;
-                            n_pixels++;
-                            Color pixel = GetImageColor(draw_image_converted, new_c, new_r);
-                            
-                            Color new_pixel = gray_scale(pixel.r, pixel.g, pixel.b);
-                            sum += new_pixel.r * distance;
-                        }
-                    }
-
-                    double new_color = sum / total_distance;
-                    
-                    DrawPixel(c, model_image.texture.height - r, (Color) {.a = 255, .r = new_color, .g = new_color, .b = new_color});
-
-                    assert(r * args->buffer_width + c < args->buffer_width * args->buffer_height);
-                    args->output_buffer[r * args->buffer_width + c] = new_color / 255.0;
-                }
-            }
-        }
-        EndTextureMode();
-
-        UnloadImage(draw_image_converted);
     }
 
-    DrawTexturePro(model_image.texture, (Rectangle) {.x = 0, .y = 0, .width = model_image.texture.width, .height = model_image.texture.height},
-            model_input_rec, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
+    BeginTextureMode(model_image);
+    {
+        DrawTexturePro(draw_image.texture, (Rectangle) {.x = 0, .y = 0, .width = draw_image.texture.width, .height = -draw_image.texture.height}, 
+                (Rectangle) {.x = 0, .y = 0,. width = model_image.texture.width, .height = model_image.texture.height}, (Vector2) {0, 0}, 0, WHITE);
+    }
+    EndTextureMode();
 
+    DrawTexturePro(model_image.texture, (Rectangle) {.x = 0, .y = 0, .width = model_image.texture.width, .height = model_image.texture.height}, 
+            model_input_rec, (Vector2) {0, 0}, 0, WHITE);
 
     // TODO draw the model's output
     

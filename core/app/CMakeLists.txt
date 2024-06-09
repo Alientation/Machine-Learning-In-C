@@ -37,6 +37,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/app.c
     src/visualizer.c
     src/visutil.c
+    src/drawpanel.c
 )
 
 # sets the search paths for the include files

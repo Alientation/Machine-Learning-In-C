@@ -7,8 +7,6 @@
 #include <util/profiler.h>
 #include <util/debug_memory.h>
 
-training_info_t training_info;
-
 void free_matrix_list(mymatrix_t *matrix_list, int size) {
     for (int i = 0; i < size; i++) {
         matrix_free(matrix_list[i]);
@@ -22,13 +20,14 @@ int main(void) {
     neural_network_model_t nnmodel;
     // todo, app should connect to visualizer's start button and only start the training process when it is clicked
 
-    training_info = nn_XOR(&nnmodel);
+    training_info_t training_info = nn_XOR(&nnmodel);
     training_info.model = &nnmodel;
     model_calculate(&nnmodel);
 
     pthread_t thread_id;
     visualizer_argument_t vis_args = {
         .model = &nnmodel,
+        .training_info = training_info,
         .model_name = "XOR Model",
         .allow_drawing_panel_as_model_input = false,
         .label_guess = NULL,

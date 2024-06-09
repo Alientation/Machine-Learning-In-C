@@ -125,6 +125,7 @@ void DrawingPanelAdd(struct DrawingPanelArgs *args);
 
 void* window_run(void *vargp) {
     assert(!is_window_open);
+    SetTraceLogLevel(LOG_ERROR); 
 
     visualizer_argument_t *args = (visualizer_argument_t*) vargp;
     vis_args = *args;    
@@ -284,7 +285,6 @@ void DrawingPanelClear(struct DrawingPanelArgs *args) {
 
     args->updated = true;
 }
-
 
 
 // GOALS
@@ -466,51 +466,53 @@ void GuiDrawingPanelPopup(struct DrawingPanelArgs *args) {
 
     RenderTexture2D model_image = args->model_input_image;
 
-    // TODO THIS DEFINETLY NEEDS TO BE ON A SEPARATE THREAD FOR SURE!!!@!
     if (args->updated) {
-        
         // scale down drawn image
         args->updated = false;
         int scale_ceil = (draw_image.texture.height + model_image.texture.height - 1) / model_image.texture.height;
         int scale_floor = draw_image.texture.height / model_image.texture.height;
         Image draw_image_converted = LoadImageFromTexture(draw_image.texture);
-        Image new_model_input_image = GenImageColor(model_image.texture.width, model_image.texture.height, WHITE);
         
-        for (int r = 0; r < model_image.texture.height; r++) {
-            for (int c = 0; c < model_image.texture.width; c++) {
-                int actualR = r * scale_floor;
-                int actualC = c * scale_floor;
+        BeginTextureMode(model_image);
+        {
+            for (int r = 0; r < model_image.texture.height; r++) {
+                for (int c = 0; c < model_image.texture.width; c++) {
+                    int actualR = r * scale_floor;
+                    int actualC = c * scale_floor;
 
-                int radius = (scale_ceil + 1) / 2 - 1;
-                double sum = 0;
-                double total_distance = 0;
-                int n_pixels = 0;
-                for (int d_r = -radius; d_r <= radius; d_r++) {
-                    for (int d_c = -radius; d_c <= radius; d_c++) {
-                        int new_r = actualR + d_r;
-                        int new_c = actualC + d_c;
-                        if (new_r < 0 || new_c < 0 || new_r >= draw_image.texture.height || new_c >= draw_image.texture.width) {
-                            continue;
+                    int radius = (scale_ceil + 1) / 2 - 1;
+                    double sum = 0;
+                    double total_distance = 0;
+                    int n_pixels = 0;
+                    for (int d_r = -radius; d_r <= radius; d_r++) {
+                        for (int d_c = -radius; d_c <= radius; d_c++) {
+                            int new_r = actualR + d_r;
+                            int new_c = actualC + d_c;
+                            if (new_r < 0 || new_c < 0 || new_r >= draw_image.texture.height || new_c >= draw_image.texture.width) {
+                                continue;
+                            }
+                            double distance = sqrt(d_r * d_r + d_c * d_c);
+                            total_distance += distance;
+                            n_pixels++;
+                            Color pixel = GetImageColor(draw_image_converted, new_c, new_r);
+                            
+                            Color new_pixel = gray_scale(pixel.r, pixel.g, pixel.b);
+                            sum += new_pixel.r * distance;
                         }
-                        double distance = sqrt(d_r * d_r + d_c * d_c);
-                        total_distance += distance;
-                        n_pixels++;
-                        Color pixel = GetImageColor(draw_image_converted, new_c, new_r);
-                        Color new_pixel = gray_scale(pixel.r, pixel.g, pixel.b);
-                        sum += new_pixel.r * distance;
                     }
+
+                    double new_color = sum / total_distance;
+                    
+                    DrawPixel(c, model_image.texture.height - r, (Color) {.a = 255, .r = new_color, .g = new_color, .b = new_color});
+
+                    assert(r * args->buffer_width + c < args->buffer_width * args->buffer_height);
+                    args->output_buffer[r * args->buffer_width + c] = new_color / 255.0;
                 }
-
-                double new_color = sum / total_distance;
-                ImageDrawPixel(&new_model_input_image, c, r, (Color) {.a = 255, .r = new_color, .g = new_color, .b = new_color});
-
-                assert(r * args->buffer_width + c < args->buffer_width * args->buffer_height);
-                args->output_buffer[r * args->buffer_width + c] = new_color / 255.0;
             }
         }
+        EndTextureMode();
+
         UnloadImage(draw_image_converted);
-        UnloadTexture(model_image.texture);
-        model_image.texture = LoadTextureFromImage(new_model_input_image);
     }
 
     DrawTexturePro(model_image.texture, (Rectangle) {.x = 0, .y = 0, .width = model_image.texture.width, .height = model_image.texture.height},

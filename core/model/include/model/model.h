@@ -192,6 +192,7 @@ layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(la
 char* get_layer_name(layer_t *layer);
 char* get_activation_function_name(activation_layer_t *layer);
 char* get_output_function_name(output_layer_t *layer);
+char* get_output_guess_function_name(output_layer_t *layer);
 mymatrix_t layer_get_neurons(layer_t *layer);
 
 mymatrix_t model_predict(neural_network_model_t *model, mymatrix_t input, 

@@ -233,10 +233,12 @@ void DrawLayerInformation(int layer_index, layer_t *layer) {
     mymatrix_t nodes = layer_get_neurons(layer);
 
     // draw layer name and information about it
+    // number of nodes * node diameter + node_gap between each node (subtract one because fence post problem)
     int layer_height = nodes.r * (NODE_GAP + 2 * NODE_RADIUS) - NODE_GAP;
+    // offset the layer so that it is in the center vertically
     int layer_start_y = MODEL_Y + (MODEL_HEIGHT - layer_height) / 2;
     int layer_name_y = layer_start_y + layer_height + LAYER_NAME_OFFSET_Y + LAYER_DISPLAY_FONTSIZE / 2;
-    int layer_function_name_y = layer_name_y - LAYER_DISPLAY_FONTSIZE / 2 + LAYER_DISPLAY_FONTSIZE * 2;
+    int layer_function_name_y = layer_name_y + (3 * LAYER_DISPLAY_FONTSIZE) / 2;
 
     int model_width = vis_state.vis_args.model->num_layers * (LAYER_GAP + 2 * NODE_RADIUS) - LAYER_GAP;
     int layer_x = (MODEL_WIDTH - model_width) / 2 + layer_index * (LAYER_GAP + 2 * NODE_RADIUS) + NODE_RADIUS;
@@ -248,6 +250,8 @@ void DrawLayerInformation(int layer_index, layer_t *layer) {
     } else if (layer->type == OUTPUT) {
         DrawOutlinedCenteredText(get_output_function_name(&layer->layer.output), layer_x, 
                 layer_function_name_y, layer_info_font_size, BLACK, 0, BLACK);
+        DrawOutlinedCenteredText(get_output_guess_function_name(&layer->layer.output), layer_x, 
+                layer_function_name_y + (3 * LAYER_DISPLAY_FONTSIZE) / 2, layer_info_font_size, BLACK, 0, BLACK);
     }
 }
 

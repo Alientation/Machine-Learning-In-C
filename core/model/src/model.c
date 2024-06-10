@@ -223,6 +223,20 @@ char* get_output_function_name(output_layer_t *layer) {
     }
 }
 
+char* get_output_guess_function_name(output_layer_t *layer) {
+    if (layer->make_guess == output_make_guess_one_hot_encoded) {
+        return "One Hot Encoded";
+    } else if (layer->make_guess == output_make_guess_passforward) {
+        return "Passforward";
+    } else if (layer->make_guess == output_make_guess_round) {
+        return "Round";
+    } else if (layer->make_guess == output_make_guess_softmax) {
+        return "Softmax";
+    } else {
+        assert(0);
+    }
+}
+
 void layer_free(layer_t *layer) {
     switch (layer->type) {
         case INPUT:
@@ -261,7 +275,8 @@ mymatrix_t layer_get_neurons(layer_t *layer) {
             return layer->layer.activation.activated_values;
             break;
         case OUTPUT:
-            return layer->layer.output.output_values;
+            // return layer->layer.output.output_values;
+            return layer->layer.output.guess;
             break;
     }
 
@@ -410,7 +425,8 @@ void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_out
 }
 
 float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, float learning_rate) {
-    mymatrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
+    // mymatrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
+    mymatrix_t output = model->output_layer->layer.output.output_values;
     float avg_error = 0;
     for (int example_i = 0; example_i < num_examples; example_i++) {
         model_predict(model, inputs[example_i], output);
@@ -419,12 +435,13 @@ float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t 
     }
     avg_error /= (float) num_examples;
     // printf("train avg error=%f", (float) avg_error);
-    matrix_free(output);
+    // matrix_free(output);
     return avg_error;
 }
 
 void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_tests) {
-    mymatrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
+    // mymatrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
+    mymatrix_t output = model->output_layer->layer.output.output_values;
     int passed = 0;
     for (int test_i = 0; test_i < num_tests; test_i++) {
         model_predict(model, inputs[test_i], output);
@@ -445,7 +462,7 @@ void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *e
     // 2 decimal places
     float accuracy = ((int)(100.0 * (float) passed / (float) num_tests)) / 100.0;
     printf("accuracy: %f  passed=%d, total=%d\n", accuracy, passed, num_tests);
-    matrix_free(output);
+    // matrix_free(output);
 }
 
 mymatrix_t model_calculate(neural_network_model_t *model) {

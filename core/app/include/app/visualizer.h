@@ -43,13 +43,18 @@ static const int TOOLTIP_FONTSIZE = 16;
 static const float TOOLTIP_WEIGHT_VALUE_SCALE = 0.05;
 #define TOOLTIP_BUFFER_SIZE 100
 
+typedef struct LabelGuesses {
+    char **labels;
+    float *confidences;
+} label_guesses_t;
+
 typedef struct VisualizerArgument {
     neural_network_model_t *model;
     training_info_t training_info;
     char *model_name;
     bool allow_drawing_panel_as_model_input;
 
-    char** (*label_guess)(mymatrix_t model_guess);
+    label_guesses_t (*label_guess)(mymatrix_t model_guess);
 } visualizer_argument_t;
 
 typedef struct SegmentListNode {
@@ -81,6 +86,9 @@ typedef struct DrawingPanelArgs {
     int buffer_width;
     int buffer_height;
     float *output_buffer;
+
+    // should be same as vis_args
+    label_guesses_t (*label_guess)(mymatrix_t model_guess);
 } drawing_panel_args_t; 
 
 typedef struct VisualizerState {

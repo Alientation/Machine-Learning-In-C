@@ -235,10 +235,6 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *args) {
                 DrawLineEx(args->prev_draw_pos, pos, args->brush_size * 2, draw_color);
                 DrawCircleV(args->prev_draw_pos, args->brush_size, draw_color);
             }
-
-            // TODO try to fix
-            // when dragging mouse past border of draw panel, there is a small gap between the border and the last drawn
-            // position. Perhaps track whenever the mouse drag JUST leaves the area, and still draw that line segment
             
             args->prev_draw_pos = pos;
         }
@@ -274,11 +270,7 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *args) {
 
     RenderTexture2D input_texture = args->input_texture;
 
-    args->cur_frames++;
-    if (args->updated && args->update_frames <= args->cur_frames) {
-        args->cur_frames = 0;
-        args->updated = false;
-    }
+    
 
     BeginTextureMode(input_texture);
     {
@@ -287,27 +279,34 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *args) {
     }
     EndTextureMode();
 
-    if (args->gray_scale) {
-        Image gray_scale_image = LoadImageFromTexture(input_texture.texture);
-        ImageColorGrayscale(&gray_scale_image);
-        UpdateTexture(input_texture.texture, LoadImageColors(gray_scale_image));
-        UnloadImage(gray_scale_image);
+    args->cur_frames++;
+    if (args->updated && args->update_frames <= args->cur_frames) {
+        args->cur_frames = 0;
+        args->updated = false;
+        Image input_image = LoadImageFromTexture(input_texture.texture);
+
+        if (args->gray_scale) {
+            ImageColorGrayscale(&input_image);
+            Color *pixels = LoadImageColors(input_image);
+            UpdateTexture(input_texture.texture, pixels);
+            UnloadImageColors(pixels);
+        }
+
+        // read in model input into buffer
+        for (int r = 0; r < input_image.height; r++) {
+            for (int c = 0; c < input_image.width; c++) {
+                Color color = GetImageColor(input_image, c, r);
+                args->output_buffer[r * input_image.height + c] = color.r;
+            }
+        }
+        UnloadImage(input_image);
+        
+        // TODO run the model on the new input
     }
 
     DrawTexturePro(input_texture.texture, (Rectangle) {.x = 0, .y = 0, .width = input_texture.texture.width, .height = input_texture.texture.height}, 
             model_input_rec, (Vector2) {0, 0}, 0, WHITE);
 
-
-    // read in model input into buffer
-    Image input_image = LoadImageFromTexture(input_texture.texture);
-    for (int r = 0; r < input_image.height; r++) {
-        for (int c = 0; c < input_image.width; c++) {
-            Color color = GetImageColor(input_image, c, r);
-            args->output_buffer[r * input_image.height + c] = color.r;
-        }
-    }
-    UnloadImage(input_image);
-    
     // TODO draw the model's output
     
 }

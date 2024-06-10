@@ -55,13 +55,13 @@ static const Color TOOLTIP_BACKGROUND_COLOR = {
 
 void* window_run(void *vargp) {    
     assert(!vis_state.is_window_open);
-    SetTraceLogLevel(LOG_ERROR); 
+    // SetTraceLogLevel(LOG_ERROR); 
 
-    visualizer_argument_t *args = (visualizer_argument_t*) vargp;
-    vis_state.vis_args = *args;
+    visualizer_argument_t *vis_args = (visualizer_argument_t*) vargp;
+    vis_state.vis_args = *vis_args;
     vis_state.is_window_open = true;
 
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, TextFormat("%s Visualizer", args->model_name));
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, TextFormat("%s Visualizer", vis_args->model_name));
     SetTargetFPS(60);    
 
     vis_state.draw_args = (drawing_panel_args_t) {
@@ -85,7 +85,9 @@ void* window_run(void *vargp) {
         .gray_scale = true,
         .buffer_width = 28,
         .buffer_height = 28,
-        .output_buffer = malloc(sizeof(float) * 28 * 28)
+        .output_buffer = malloc(sizeof(float) * 28 * 28),
+
+        .label_guess = vis_args->label_guess,
     };
     SetTextureFilter(vis_state.draw_args.draw_texture.texture, TEXTURE_FILTER_TRILINEAR);
 
@@ -96,7 +98,7 @@ void* window_run(void *vargp) {
     EndTextureMode();
     DrawingPanelAdd(&vis_state.draw_args);
 
-    window_keep_open(args->model, 0);
+    window_keep_open(vis_args->model, 0);
 
     DrawingPanelFreeHistory(&vis_state.draw_args);
     UnloadRenderTexture(vis_state.draw_args.draw_texture);
@@ -163,6 +165,12 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
     
     if (layer->type == DENSE) { // fully connected
         mymatrix_t weights = layer->layer.dense.weights;
+
+        // if too many
+        if (weights.r * weights.c >= 100) {
+            return;
+        }
+
         for (int r2 = 0; r2 < this_neurons.r; r2++) {
             // so we can color each weight based on its respective value to other weights
             // connecting to the same output neuron

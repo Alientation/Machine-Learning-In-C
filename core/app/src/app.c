@@ -65,7 +65,7 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     layer_t *activation_layer_2 = layer_activation(model_digit, activation_functions_relu);
     layer_t *dense_layer_3 = layer_dense(model_digit, output);
     layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_relu);
-    layer_t *output_layer = layer_output(model_digit, output_make_guess_softmax, output_functions_meansquared);
+    layer_t *output_layer = layer_output(model_digit, output_make_guess_softmax, output_functions_crossentropy);
 
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);

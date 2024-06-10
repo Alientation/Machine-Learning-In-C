@@ -152,11 +152,12 @@ mymatrix_t output_back_propagation_mean_squared(layer_t *this, mymatrix_t expect
     return this->layer.output.d_cost_wrt_input;
 }
 
-mymatrix_t output_back_propagation_cross_entropy(layer_t *this, mymatrix_t expected_output, float learning_rate) {
-    // todo
-    assert(0);
-    mymatrix_t output;
-    return output;
+// Categorical Cross Entropy with Softmax
+// gradient = Y - y*
+mymatrix_t output_back_propagation_categorical_cross_entropy(layer_t *this, mymatrix_t expected_output, float learning_rate) {
+    mymatrix_t output = this->layer.output.guess;
+    matrix_sub(expected_output, output, this->layer.output.d_cost_wrt_input);
+    return this->layer.output.d_cost_wrt_input;
 }
 
 float output_cost_mean_squared(layer_t *this, mymatrix_t expected_output) {
@@ -171,10 +172,15 @@ float output_cost_mean_squared(layer_t *this, mymatrix_t expected_output) {
     return mean_squared;
 }
 
-float output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output) {
-    // TODO
-    assert(0);
-    return -1.0;
+float output_cost_categorical_cross_entropy(layer_t *this, mymatrix_t expected_output) {
+    float cross_entropy = 0;
+    mymatrix_t actual_output = this->layer.output.guess; // USES guess (assumption that softmax is used)
+    for (int r = 0; r < actual_output.r; r++) {
+        for (int c = 0; c < actual_output.c; c++) {
+            cross_entropy += expected_output.matrix[r][c] * log10(actual_output.matrix[r][c]);
+        }
+    }
+    return -cross_entropy;
 }
 
 const layer_function_t output_functions_meansquared = {
@@ -183,7 +189,7 @@ const layer_function_t output_functions_meansquared = {
 };
 const layer_function_t output_functions_crossentropy = {
     .feed_forward = feedforward_donothing,
-    .back_propagation = output_back_propagation_cross_entropy
+    .back_propagation = output_back_propagation_categorical_cross_entropy
 };
 
 
@@ -216,7 +222,7 @@ char* get_activation_function_name(activation_layer_t *layer) {
 char* get_output_function_name(output_layer_t *layer) {
     if (layer->functions.back_propagation == output_back_propagation_mean_squared) {
         return "Mean Squared Loss";
-    } else if (layer->functions.back_propagation == output_back_propagation_cross_entropy) {
+    } else if (layer->functions.back_propagation == output_back_propagation_categorical_cross_entropy) {
         return "Cross Entropy Loss";
     } else {
         assert(0);
@@ -365,6 +371,9 @@ layer_t* layer_activation(neural_network_model_t *model, layer_function_t functi
 
 layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
+    if (functions.back_propagation == output_functions_crossentropy.back_propagation) {
+        assert(make_guess == output_make_guess_softmax);
+    }
     
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = OUTPUT;

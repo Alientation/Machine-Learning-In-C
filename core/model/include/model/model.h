@@ -173,7 +173,7 @@ mymatrix_t output_make_guess_round(layer_t *this, mymatrix_t output);
 mymatrix_t output_make_guess_softmax(layer_t *this, mymatrix_t output);
 
 float output_cost_mean_squared(layer_t *this, mymatrix_t expected_output);
-float output_cost_cross_entropy(layer_t *this, mymatrix_t expected_output);
+float output_cost_categorical_cross_entropy(layer_t *this, mymatrix_t expected_output);
 
 // frees allocated memory for the layer
 void layer_free(layer_t *layer);

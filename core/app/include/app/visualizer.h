@@ -59,24 +59,25 @@ typedef struct SegmentListNode {
 } segment_list_node_t;
 
 typedef struct DrawingPanelArgs {
-    bool isOpen;
+    bool is_open;
     float brush_size;
     Vector3 brush_color; // in HSV
 
     Vector2 prev_draw_pos;
     bool is_dragged;
     bool is_drawing;
-    RenderTexture2D drawn_image;
+    RenderTexture2D draw_texture;
 
     segment_list_node_t *segments_list_head;
     segment_list_node_t *segments_list_cur;
-    int segments_queue_size;
+    int segments_list_size;
 
     // scaled down
     bool updated;
     int update_frames; // how many frames before each update
     int cur_frames;
-    RenderTexture2D model_input_image;
+    RenderTexture2D input_texture;
+    bool gray_scale;
     int buffer_width;
     int buffer_height;
     float *output_buffer;

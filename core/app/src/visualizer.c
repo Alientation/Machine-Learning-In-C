@@ -65,30 +65,31 @@ void* window_run(void *vargp) {
     SetTargetFPS(60);    
 
     vis_state.draw_args = (drawing_panel_args_t) {
-        .isOpen = false,
+        .is_open = false,
         .brush_size = 10,
         .brush_color = ColorToHSV(BLACK),
         
         .prev_draw_pos = (Vector2) {.x = -1, .y = -1},
         .is_dragged = false,
         .is_drawing = false,
-        .drawn_image = LoadRenderTexture(400, 400),
+        .draw_texture = LoadRenderTexture(400, 400),
         
         .segments_list_head = NULL,
         .segments_list_cur = NULL,
-        .segments_queue_size = 0,
+        .segments_list_size = 0,
 
         .updated = false,
         .update_frames = 3,
         .cur_frames = 0,
-        .model_input_image = LoadRenderTexture(28, 28),
+        .input_texture = LoadRenderTexture(28, 28),
+        .gray_scale = true,
         .buffer_width = 28,
         .buffer_height = 28,
         .output_buffer = malloc(sizeof(float) * 28 * 28)
     };
-    SetTextureFilter(vis_state.draw_args.drawn_image.texture, TEXTURE_FILTER_TRILINEAR);
+    SetTextureFilter(vis_state.draw_args.draw_texture.texture, TEXTURE_FILTER_TRILINEAR);
 
-    BeginTextureMode(vis_state.draw_args.drawn_image);
+    BeginTextureMode(vis_state.draw_args.draw_texture);
     {
         ClearBackground(WHITE);
     }
@@ -98,7 +99,7 @@ void* window_run(void *vargp) {
     window_keep_open(args->model, 0);
 
     DrawingPanelFreeHistory(&vis_state.draw_args);
-    UnloadRenderTexture(vis_state.draw_args.drawn_image);
+    UnloadRenderTexture(vis_state.draw_args.draw_texture);
     free(vis_state.draw_args.output_buffer);
 }
 
@@ -301,7 +302,7 @@ void DrawLayer(int layer_index, layer_t *layer) {
         
         // edit input node values
         if (vis_state.playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, MOUSE_HOVER_DISTANCE_TO_NODE)
-                && !vis_state.draw_args.isOpen) {
+                && !vis_state.draw_args.is_open) {
             // check if too small
             if (NODE_RADIUS < MIN_NODE_RADIUS_FOR_SLIDER_BAR) {
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -370,13 +371,13 @@ void DrawWindow(neural_network_model_t *model) {
         // TODO
 
         // some model control buttons
-        if (GuiButton((Rectangle) {.x = 50, .y = 60, .height = 30, .width = 130}, "Start Training") && !vis_state.draw_args.isOpen) {
+        if (GuiButton((Rectangle) {.x = 50, .y = 60, .height = 30, .width = 130}, "Start Training") && !vis_state.draw_args.is_open) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, train_run, &vis_state.vis_args.training_info);
             pthread_detach(thread_id);
         }
 
-        if (GuiButton((Rectangle) {.x = 190, .y = 60, .height = 30, .width = 100}, "Start Test") && !vis_state.draw_args.isOpen) {
+        if (GuiButton((Rectangle) {.x = 190, .y = 60, .height = 30, .width = 100}, "Start Test") && !vis_state.draw_args.is_open) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, test_run, &vis_state.vis_args.training_info);
             pthread_detach(thread_id);
@@ -388,13 +389,13 @@ void DrawWindow(neural_network_model_t *model) {
         }
 
         // TODO dont add drawing panel if model does not accept drawings as input
-        if (GuiButton((Rectangle) {.x = 410, .y = 60, .height = 30, .width = 120}, "Drawing Panel") && !vis_state.draw_args.isOpen) {
-            vis_state.draw_args.isOpen = true;
+        if (GuiButton((Rectangle) {.x = 410, .y = 60, .height = 30, .width = 120}, "Drawing Panel") && !vis_state.draw_args.is_open) {
+            vis_state.draw_args.is_open = true;
         }
         GuiDrawingPanelPopup(&vis_state.draw_args);
 
         // draw tooltip
-        if (vis_state.show_tooltip && !vis_state.draw_args.isOpen) {
+        if (vis_state.show_tooltip && !vis_state.draw_args.is_open) {
             Vector2 mouse_pos = GetMousePosition();
             int rec_x = mouse_pos.x;
             int rec_y = mouse_pos.y - TOOLTIP_HEIGHT;

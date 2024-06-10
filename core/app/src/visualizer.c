@@ -137,10 +137,10 @@ Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
     int x = (MODEL_WIDTH - model_width) / 2 + layer_index * (LAYER_GAP + 2 * NODE_RADIUS) + NODE_RADIUS;
     int y = layer_start_y + r * (NODE_GAP + 2 * NODE_RADIUS) + NODE_RADIUS;
     
-    if (nodes.r > MAX_LAYER_NODES) {
-        // used for drawing weights since those can be squished together
-        y = (((float) r) / nodes.r) * HIDDEN_LAYER_HEIGHT;
-    }
+    // if (nodes.r > MAX_LAYER_NODES) {
+    //     // used for drawing weights since those can be squished together
+    //     y = (((float) r) / nodes.r) * HIDDEN_LAYER_HEIGHT;
+    // }
     return (Vector2) {.x = x, .y = y};
 }
 
@@ -166,9 +166,9 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
     if (layer->type == DENSE) { // fully connected
         mymatrix_t weights = layer->layer.dense.weights;
 
-        // if too many
-        if (weights.r * weights.c >= 100) {
-            return;
+        int skip = 1;
+        if (weights.r * weights.c >= 150) {
+            skip = 1 + (weights.r * weights.c + 149) / 150;
         }
 
         for (int r2 = 0; r2 < this_neurons.r; r2++) {
@@ -181,6 +181,10 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
             }
             
             for (int r1 = 0; r1 < prev_neurons.r; r1++) {
+                if ((r2 * weights.r + r1) % skip != 0) {
+                    continue;
+                }
+
                 Vector2 this_pos = get_node_position(layer_index, r2, this_neurons);
                 Vector2 prev_pos = get_node_position(layer_index-1, r1, prev_neurons);
 
@@ -206,7 +210,7 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                     // display information about the weight
                     char weight[WEIGHT_DISPLAY_PRECISION];
                     snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", weights.matrix[r2][r1]);
-                    OpenTooltip(weight, sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2)), &weights.matrix[r2][r1]);
+                    OpenTooltip(weight, 1 / (sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2))), &weights.matrix[r2][r1]);
                 }
             }
         }
@@ -267,13 +271,13 @@ void DrawLayerInformation(int layer_index, layer_t *layer) {
 void DrawLayer(int layer_index, layer_t *layer) {
     mymatrix_t nodes = layer_get_neurons(layer);
 
-    if (nodes.r > MAX_LAYER_NODES) {
-        DrawRectangleLines(get_node_position(layer_index, 0, nodes).x - NODE_RADIUS, get_node_position(layer_index, 0, nodes).y, 
-                HIDDEN_LAYER_WIDTH, HIDDEN_LAYER_HEIGHT, BLACK);
+    // if (nodes.r > MAX_LAYER_NODES) {
+    //     DrawRectangleLines(get_node_position(layer_index, 0, nodes).x - NODE_RADIUS, get_node_position(layer_index, 0, nodes).y, 
+    //             HIDDEN_LAYER_WIDTH, HIDDEN_LAYER_HEIGHT, BLACK);
 
-        DrawLayerInformation(layer_index, layer);
-        return;
-    }
+    //     DrawLayerInformation(layer_index, layer);
+    //     return;
+    // }
 
     // calculate values for color scaling
     float max_node_value = -1;
@@ -337,9 +341,19 @@ void DrawLayer(int layer_index, layer_t *layer) {
         // clicking it opens a small gui that has a slider for the node's value
         
         // draw value of node
-        char node_value[NODE_DISPLAY_PRECISION];
-        snprintf(node_value, NODE_DISPLAY_PRECISION, "%f", (float) nodes.matrix[r][0]);
-        DrawCenteredText(node_value, pos.x, pos.y, NODE_DISPLAY_FONTSIZE, BLACK);
+        if (NODE_DISPLAY_PRECISION > 2) {
+            char node_value[NODE_DISPLAY_PRECISION];
+            snprintf(node_value, NODE_DISPLAY_PRECISION, "%f", (float) nodes.matrix[r][0]);
+            DrawCenteredText(node_value, pos.x, pos.y, NODE_DISPLAY_FONTSIZE, BLACK);
+        } else {
+            // display tooltip
+            if (CheckCollisionPointCircle(GetMousePosition(), pos, NODE_RADIUS)) { 
+                // display information about the weight
+                char weight[WEIGHT_DISPLAY_PRECISION];
+                snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", nodes.matrix[r][0]);
+                OpenTooltip(weight, 100, NULL);
+            }
+        }
     }
 
     DrawLayerInformation(layer_index, layer);

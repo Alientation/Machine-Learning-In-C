@@ -14,18 +14,18 @@ static const int MODEL_HEIGHT = 450;
 static const int MODEL_X = 20;
 static const int MODEL_Y = 20;
 
-#define SCALING_FACTOR 0.7
+#define SCALING_FACTOR 0.2
 
-static const int WEIGHT_DISPLAY_PRECISION = ceil(9 * SCALING_FACTOR);
+static const int WEIGHT_DISPLAY_PRECISION = 9;
 static const int NODE_DISPLAY_PRECISION = ceil(7 * SCALING_FACTOR);
-static const int WEIGHT_DOTTED_LINES = 2 * (((int)ceil((11 * SCALING_FACTOR))) / 2) + 1;
+static const int WEIGHT_DOTTED_LINES =  11;
 
 static const int NODE_DISPLAY_FONTSIZE = 15 * SCALING_FACTOR;
 static const int NODE_RADIUS = 35 * SCALING_FACTOR;
 static const int NODE_GAP = 20 * SCALING_FACTOR;
-static const int LAYER_DISPLAY_FONTSIZE = 16 * SCALING_FACTOR;
-static const int LAYER_NAME_OFFSET_Y = 20 * SCALING_FACTOR;
-static const int LAYER_GAP = 60 * SCALING_FACTOR;
+static const int LAYER_DISPLAY_FONTSIZE = 12;
+static const int LAYER_NAME_OFFSET_Y = 20;
+static const int LAYER_GAP = 65;
 static const int MAX_LAYER_NODES = 3 / SCALING_FACTOR;
 static const int HIDDEN_LAYER_WIDTH = NODE_RADIUS * 2;
 static const int HIDDEN_LAYER_HEIGHT = MAX_LAYER_NODES * (NODE_GAP + NODE_RADIUS * 2) - NODE_GAP;

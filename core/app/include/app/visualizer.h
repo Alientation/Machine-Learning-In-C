@@ -7,10 +7,10 @@
 #include <raylib.h>
 #include <math.h>
 
-static const int SCREEN_WIDTH = 1200;
-static const int SCREEN_HEIGHT = 700;
-static const int MODEL_WIDTH = 1160;
-static const int MODEL_HEIGHT = 450;
+static const int SCREEN_WIDTH = 1600;
+static const int SCREEN_HEIGHT = 900;
+static const int MODEL_WIDTH = 1560;
+static const int MODEL_HEIGHT = 700;
 static const int MODEL_X = 20;
 static const int MODEL_Y = 20;
 
@@ -26,14 +26,13 @@ static const int NODE_GAP = 20 * SCALING_FACTOR;
 static const int LAYER_DISPLAY_FONTSIZE = 12;
 static const int LAYER_NAME_OFFSET_Y = 20;
 static const int LAYER_GAP = 65;
-static const int MAX_LAYER_NODES = 3 / SCALING_FACTOR;
-static const int HIDDEN_LAYER_WIDTH = NODE_RADIUS * 2;
-static const int HIDDEN_LAYER_HEIGHT = MAX_LAYER_NODES * (NODE_GAP + NODE_RADIUS * 2) - NODE_GAP;
+static const int INPUT_LAYER_NODES_HEIGHT = 28; // should prolly be passed into the visualizer as an argument
+static const int HIDDEN_LAYER_NODES_HEIGHT = 32;
 
 static const int MIN_NODE_RADIUS_FOR_SLIDER_BAR = 20;
 
 static const int MOUSE_HOVER_DISTANCE_TO_NODE = NODE_RADIUS + NODE_GAP/2;
-static const int MOUSE_HOVER_DISTANCE_TO_WEIGHT = ceil(10 * SCALING_FACTOR);
+static const int MOUSE_HOVER_DISTANCE_TO_WEIGHT = ceil(14 * SCALING_FACTOR);
 
 static const int TOOLTIP_BORDER = 10;
 static const int TOOLTIP_HEIGHT = 30;
@@ -41,6 +40,8 @@ static const int TOOLTIP_WIDTH = 100;
 static const int TOOLTIP_FONTSIZE = 16;
 
 static const float TOOLTIP_WEIGHT_VALUE_SCALE = 0.05;
+static const float NODE_VALUE_MOUSEWHEEL_SCALE = 0.625;
+
 #define TOOLTIP_BUFFER_SIZE 100
 
 typedef struct LabelGuesses {
@@ -98,6 +99,9 @@ typedef struct VisualizerState {
     bool is_testing;
     bool playground_state;
 
+    // draw info
+    Vector2 **node_positions;
+
     bool show_tooltip;
     char tooltip_msg[TOOLTIP_BUFFER_SIZE];
     float tooltip_priority;
@@ -116,7 +120,6 @@ void* window_run(void *vargp);
  * for a very, very long time (UINT32_MAX seconds)
  */
 void window_keep_open(neural_network_model_t *model, unsigned int num_seconds);
-
 
 
 #endif // VISUALIZER_H

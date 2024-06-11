@@ -27,6 +27,8 @@ static visualizer_state_t vis_state = {
     .is_training = false,
     .is_testing = false,
     .playground_state = false,
+    
+    .node_positions = NULL,
 
     .show_tooltip = false,
     .tooltip_priority = 0,
@@ -62,7 +64,7 @@ void* window_run(void *vargp) {
     vis_state.is_window_open = true;
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, TextFormat("%s Visualizer", vis_args->model_name));
-    SetTargetFPS(60);    
+    SetTargetFPS(60);
 
     vis_state.draw_args = (drawing_panel_args_t) {
         .is_open = false,
@@ -98,11 +100,72 @@ void* window_run(void *vargp) {
     EndTextureMode();
     DrawingPanelAdd(&vis_state.draw_args);
 
+    // TODO construct information about the location of each node and layer
+    // in future move all information about layer drawing to separate file
+
+    vis_state.node_positions = malloc(vis_args->model->num_layers * sizeof(Vector2*));
+    layer_t *cur_layer = vis_args->model->input_layer;
+    int network_width = LAYER_GAP * (vis_args->model->num_layers - 1);
+    for (int i = 0; i < vis_args->model->num_layers; i++) {
+        mymatrix_t neurons = layer_get_neurons(cur_layer);
+        int num_nodes = neurons.r * neurons.c;
+        vis_state.node_positions[i] = malloc(num_nodes * sizeof(Vector2));
+        
+        int nodes_per_section = HIDDEN_LAYER_NODES_HEIGHT;
+        if (cur_layer->type == INPUT) {
+            nodes_per_section = INPUT_LAYER_NODES_HEIGHT;
+        }
+
+        int num_sections = (num_nodes + nodes_per_section - 1) / nodes_per_section;
+        network_width += (NODE_RADIUS * 2) * num_sections + NODE_GAP * (num_sections - 1);
+        cur_layer = cur_layer->next;
+    }
+
+    int network_x = MODEL_X + MODEL_WIDTH/2 - network_width/2;
+    int layer_x = network_x;
+
+    cur_layer = vis_args->model->input_layer;
+    for (int i = 0 ; i < vis_args->model->num_layers; i++) {
+        mymatrix_t neurons = layer_get_neurons(cur_layer);
+        int num_nodes = neurons.r * neurons.c;
+        int nodes_per_section = HIDDEN_LAYER_NODES_HEIGHT;
+        if (cur_layer->type == INPUT) {
+            nodes_per_section = INPUT_LAYER_NODES_HEIGHT;
+        }
+        if (nodes_per_section > num_nodes) {
+            nodes_per_section = num_nodes;
+        }
+
+        int num_sections = (num_nodes + nodes_per_section - 1) / nodes_per_section;
+        int layer_height = (NODE_RADIUS * 2) * nodes_per_section + (NODE_GAP) * (nodes_per_section - 1);
+        int layer_y = MODEL_Y + MODEL_HEIGHT/2 - layer_height/2;
+
+        for (int sec = 0; sec < num_sections; sec++) {
+            for (int node = 0; node < nodes_per_section; node++) {
+                int node_index = sec * nodes_per_section + node;
+                vis_state.node_positions[i][node_index].x = layer_x + sec * (NODE_RADIUS*2 + NODE_GAP) + NODE_RADIUS;
+                vis_state.node_positions[i][node_index].y = layer_y + node * (NODE_RADIUS*2 + NODE_GAP) + NODE_RADIUS;
+            }
+        }
+
+        layer_x += (NODE_RADIUS * 2) * num_sections + NODE_GAP * (num_sections - 1);
+        layer_x += LAYER_GAP;
+
+        cur_layer = cur_layer->next;
+    }
+
+    // RUNNER
     window_keep_open(vis_args->model, 0);
 
+    // CLEAN UP
     DrawingPanelFreeHistory(&vis_state.draw_args);
     UnloadRenderTexture(vis_state.draw_args.draw_texture);
     free(vis_state.draw_args.output_buffer);
+    
+    for (int i = 0; i < vis_args->model->num_layers; i++) {
+        free(vis_state.node_positions[i]);
+    }
+    free(vis_state.node_positions);
 }
 
 void* train_run(void *vargp) {
@@ -127,21 +190,27 @@ void* test_run(void *vargp) {
 
 
 //===================================================================
+layer_t *get_layer(int layer_index) {
+    assert(layer_index < vis_state.vis_args.model->num_layers);
 
+    layer_t *cur = vis_state.vis_args.model->input_layer;
+    for (int i = 0; i < layer_index; i++) {
+        cur = cur->next;
+    }
+    return cur;
+}
 
-Vector2 get_node_position(int layer_index, int r, mymatrix_t nodes) {
-    int layer_height = nodes.r * (NODE_GAP + 2 * NODE_RADIUS) - NODE_GAP;
-    int model_width = vis_state.vis_args.model->num_layers * (LAYER_GAP + 2 * NODE_RADIUS) - LAYER_GAP;
-    int layer_start_y = MODEL_Y + (MODEL_HEIGHT - layer_height) / 2;
-
-    int x = (MODEL_WIDTH - model_width) / 2 + layer_index * (LAYER_GAP + 2 * NODE_RADIUS) + NODE_RADIUS;
-    int y = layer_start_y + r * (NODE_GAP + 2 * NODE_RADIUS) + NODE_RADIUS;
+Vector2 get_node_position(int layer_index, int r) {
+    return vis_state.node_positions[layer_index][r];    
+}
+Vector2 get_layer_topleft(int layer_index) {
+    return vis_state.node_positions[layer_index][0];
+}
+Vector2 get_layer_bottomright(int layer_index) {
+    mymatrix_t nodes = layer_get_neurons(get_layer(layer_index));
     
-    // if (nodes.r > MAX_LAYER_NODES) {
-    //     // used for drawing weights since those can be squished together
-    //     y = (((float) r) / nodes.r) * HIDDEN_LAYER_HEIGHT;
-    // }
-    return (Vector2) {.x = x, .y = y};
+    return vis_state.node_positions[layer_index][nodes.r * nodes.c - 1]; // TODO bottom right position is not accurate if last section of layer has less nodes
+    // instead store more info in node_positions (maybe make it an array of layer_info which contains node_positions)
 }
 
 // displays the highest priority tooltip
@@ -185,8 +254,8 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                     continue;
                 }
 
-                Vector2 this_pos = get_node_position(layer_index, r2, this_neurons);
-                Vector2 prev_pos = get_node_position(layer_index-1, r1, prev_neurons);
+                Vector2 this_pos = get_node_position(layer_index, r2);
+                Vector2 prev_pos = get_node_position(layer_index-1, r1);
 
                 this_pos.x -= NODE_RADIUS;
                 prev_pos.x += NODE_RADIUS;
@@ -217,8 +286,8 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
     } else { // Activation or Output, one to one connections
         assert(this_neurons.r == prev_neurons.r);
         for (int r = 0; r < prev_neurons.r; r++) {
-            Vector2 this_pos = get_node_position(layer_index, r, this_neurons);
-            Vector2 prev_pos = get_node_position(layer_index-1, r, prev_neurons);
+            Vector2 this_pos = get_node_position(layer_index, r);
+            Vector2 prev_pos = get_node_position(layer_index-1, r);
 
             this_pos.x -= NODE_RADIUS;
             prev_pos.x += NODE_RADIUS;
@@ -236,8 +305,6 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 draw_start.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * ((dot-1) / (float) WEIGHT_DOTTED_LINES));
                 DrawLineV(draw_start, draw_end, BLACK);
             }
-
-            // todo draw tooltip info about layer?
         }
     }
 }
@@ -246,15 +313,16 @@ void DrawLayerInformation(int layer_index, layer_t *layer) {
     mymatrix_t nodes = layer_get_neurons(layer);
 
     // draw layer name and information about it
-    // number of nodes * node diameter + node_gap between each node (subtract one because fence post problem)
-    int layer_height = nodes.r * (NODE_GAP + 2 * NODE_RADIUS) - NODE_GAP;
+    Vector2 layer_topleft = get_layer_topleft(layer_index);
+    Vector2 layer_bottomright = get_layer_bottomright(layer_index);
+
+    int layer_height = layer_bottomright.y - layer_topleft.y + 2*NODE_RADIUS;
     // offset the layer so that it is in the center vertically
     int layer_start_y = MODEL_Y + (MODEL_HEIGHT - layer_height) / 2;
     int layer_name_y = layer_start_y + layer_height + LAYER_NAME_OFFSET_Y + LAYER_DISPLAY_FONTSIZE / 2;
     int layer_function_name_y = layer_name_y + (3 * LAYER_DISPLAY_FONTSIZE) / 2;
 
-    int model_width = vis_state.vis_args.model->num_layers * (LAYER_GAP + 2 * NODE_RADIUS) - LAYER_GAP;
-    int layer_x = (MODEL_WIDTH - model_width) / 2 + layer_index * (LAYER_GAP + 2 * NODE_RADIUS) + NODE_RADIUS;
+    int layer_x = layer_topleft.x + (layer_bottomright.x - layer_topleft.x)/2;
     int layer_info_font_size = LAYER_DISPLAY_FONTSIZE - 4;
     DrawOutlinedCenteredText(get_layer_name(layer), layer_x, layer_name_y, LAYER_DISPLAY_FONTSIZE, BLACK, 0, BLACK);
     if (layer->type == ACTIVATION) {
@@ -270,15 +338,7 @@ void DrawLayerInformation(int layer_index, layer_t *layer) {
 
 void DrawLayer(int layer_index, layer_t *layer) {
     mymatrix_t nodes = layer_get_neurons(layer);
-
-    // if (nodes.r > MAX_LAYER_NODES) {
-    //     DrawRectangleLines(get_node_position(layer_index, 0, nodes).x - NODE_RADIUS, get_node_position(layer_index, 0, nodes).y, 
-    //             HIDDEN_LAYER_WIDTH, HIDDEN_LAYER_HEIGHT, BLACK);
-
-    //     DrawLayerInformation(layer_index, layer);
-    //     return;
-    // }
-
+    
     // calculate values for color scaling
     float max_node_value = -1;
     float min_node_value = -1;
@@ -294,6 +354,7 @@ void DrawLayer(int layer_index, layer_t *layer) {
     }
 
     // draw each neuron
+    
     for (int r = 0; r < nodes.r; r++) {
         // draw node with color respective to its value
         float ratio = .5;
@@ -307,7 +368,7 @@ void DrawLayer(int layer_index, layer_t *layer) {
             .g = target.g,
             .b = target.b
         };
-        Vector2 pos = get_node_position(layer_index, r, nodes);
+        Vector2 pos = get_node_position(layer_index, r);
         DrawCircleV(pos, NODE_RADIUS, WHITE);
         DrawCircleV(pos, NODE_RADIUS, shade);
         DrawCircleLinesV(pos, NODE_RADIUS, BLACK); // outline
@@ -320,6 +381,7 @@ void DrawLayer(int layer_index, layer_t *layer) {
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                     // show node's details in a pop up window with a slider
                 }
+                
             } else {
                 int rec_x = pos.x - NODE_RADIUS - 6;
                 int rec_y = pos.y + NODE_DISPLAY_FONTSIZE - 4;
@@ -345,14 +407,11 @@ void DrawLayer(int layer_index, layer_t *layer) {
             char node_value[NODE_DISPLAY_PRECISION];
             snprintf(node_value, NODE_DISPLAY_PRECISION, "%f", (float) nodes.matrix[r][0]);
             DrawCenteredText(node_value, pos.x, pos.y, NODE_DISPLAY_FONTSIZE, BLACK);
-        } else {
-            // display tooltip
-            if (CheckCollisionPointCircle(GetMousePosition(), pos, NODE_RADIUS)) { 
-                // display information about the weight
-                char weight[WEIGHT_DISPLAY_PRECISION];
-                snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", nodes.matrix[r][0]);
-                OpenTooltip(weight, 100, NULL);
-            }
+        } else if (CheckCollisionPointCircle(GetMousePosition(), pos, NODE_RADIUS)) { // display tooltip
+            // display information about the weight
+            char weight[WEIGHT_DISPLAY_PRECISION];
+            snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", nodes.matrix[r][0]);
+            OpenTooltip(weight, 1000000, &nodes.matrix[r][0]);
         }
     }
 
@@ -369,10 +428,10 @@ void DrawNeuralNetwork(neural_network_model_t *model) {
     // draw each layer
     layer_t *cur = model->input_layer;
     for (int layer_i = 0; layer_i < model->num_layers; layer_i++) {
-        DrawLayer(layer_i, cur);
-        if (layer_i != 0) {
-            DrawLayerEdges(layer_i, cur, cur->prev);
+        if (layer_i != model->num_layers-1) {
+            DrawLayerEdges(layer_i+1, cur->next, cur);
         }
+        DrawLayer(layer_i, cur);
         cur = cur->next;
     }
 }
@@ -393,25 +452,25 @@ void DrawWindow(neural_network_model_t *model) {
         // TODO
 
         // some model control buttons
-        if (GuiButton((Rectangle) {.x = 50, .y = 60, .height = 30, .width = 130}, "Start Training") && !vis_state.draw_args.is_open) {
+        if (GuiButton((Rectangle) {.x = MODEL_X + 30, .y = MODEL_Y + 40, .height = 30, .width = 130}, "Start Training") && !vis_state.draw_args.is_open) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, train_run, &vis_state.vis_args.training_info);
             pthread_detach(thread_id);
         }
 
-        if (GuiButton((Rectangle) {.x = 190, .y = 60, .height = 30, .width = 100}, "Start Test") && !vis_state.draw_args.is_open) {
+        if (GuiButton((Rectangle) {.x = MODEL_X + 170, .y = MODEL_Y + 40, .height = 30, .width = 100}, "Start Test") && !vis_state.draw_args.is_open) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, test_run, &vis_state.vis_args.training_info);
             pthread_detach(thread_id);
         }
 
-        GuiToggle((Rectangle) {.x = 300, .y = 60, .height = 30, .width = 100}, "Playground", &vis_state.playground_state);
+        GuiToggle((Rectangle) {.x = MODEL_X + 280, .y = MODEL_Y + 40, .height = 30, .width = 100}, "Playground", &vis_state.playground_state);
         if (vis_state.is_testing || vis_state.is_training) { // dont mess with training
             vis_state.playground_state = false;
         }
 
         // TODO dont add drawing panel if model does not accept drawings as input
-        if (GuiButton((Rectangle) {.x = 410, .y = 60, .height = 30, .width = 120}, "Drawing Panel") && !vis_state.draw_args.is_open) {
+        if (GuiButton((Rectangle) {.x = MODEL_X + 390, .y = MODEL_Y + 40, .height = 30, .width = 120}, "Drawing Panel") && !vis_state.draw_args.is_open) {
             vis_state.draw_args.is_open = true;
         }
         GuiDrawingPanelPopup(&vis_state.draw_args);

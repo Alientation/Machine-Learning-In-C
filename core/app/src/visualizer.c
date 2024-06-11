@@ -100,6 +100,17 @@ void* window_run(void *vargp) {
     EndTextureMode();
     DrawingPanelAdd(&vis_state.draw_args);
 
+    // preload circle textures for nodes
+    vis_state.node_texture = LoadRenderTexture(2*NODE_RADIUS, 2*NODE_RADIUS);
+    BeginTextureMode(vis_state.node_texture);
+        DrawCircle(NODE_RADIUS, NODE_RADIUS, NODE_RADIUS, WHITE);
+    EndTextureMode();
+    vis_state.node_outline_texture = LoadRenderTexture(2*NODE_RADIUS, 2*NODE_RADIUS);
+    BeginTextureMode(vis_state.node_outline_texture);
+        DrawCircleLines(NODE_RADIUS, NODE_RADIUS, NODE_RADIUS, BLACK);
+    EndTextureMode();
+
+
     // TODO construct information about the location of each node and layer
     // in future move all information about layer drawing to separate file
 
@@ -160,6 +171,8 @@ void* window_run(void *vargp) {
     // CLEAN UP
     DrawingPanelFreeHistory(&vis_state.draw_args);
     UnloadRenderTexture(vis_state.draw_args.draw_texture);
+    UnloadRenderTexture(vis_state.node_texture);
+    UnloadRenderTexture(vis_state.node_outline_texture);
     free(vis_state.draw_args.output_buffer);
     
     for (int i = 0; i < vis_args->model->num_layers; i++) {
@@ -361,17 +374,22 @@ void DrawLayer(int layer_index, layer_t *layer) {
         if (max_node_value != min_node_value) {
             ratio = (fabs(tanh(nodes.matrix[r][0])) - min_node_value) / (max_node_value - min_node_value);
         }
-        Color target = nodes.matrix[r][0] < 0 ? NODE_NEG_COLOR : NODE_POS_COLOR;        
-        Color shade = {
-            .a = (char) round(255 * ratio),
-            .r = target.r,
-            .g = target.g,
-            .b = target.b
-        };
+        Color target = nodes.matrix[r][0] < 0 ? NODE_NEG_COLOR : NODE_POS_COLOR;
+        // Color shade = {
+        //     // .a = (char) round(255 * ratio),
+        //     .a = 255,
+        //     .r = target.r,
+        //     .g = target.g,
+        //     .b = target.b
+        // };
+        Vector3 HSV = ColorToHSV(target);
+        Color shade = ColorFromHSV(HSV.x, HSV.y * ratio, HSV.z);
         Vector2 pos = get_node_position(layer_index, r);
-        DrawCircleV(pos, NODE_RADIUS, WHITE);
-        DrawCircleV(pos, NODE_RADIUS, shade);
-        DrawCircleLinesV(pos, NODE_RADIUS, BLACK); // outline
+        // DrawCircleV(pos, NODE_RADIUS, WHITE);
+        // DrawCircleV(pos, NODE_RADIUS, shade);
+        // DrawCircleLinesV(pos, NODE_RADIUS, BLACK); // outline
+        DrawTexture(vis_state.node_texture.texture, pos.x - NODE_RADIUS, pos.y - NODE_RADIUS, shade);
+        DrawTexture(vis_state.node_outline_texture.texture, pos.x - NODE_RADIUS, pos.y - NODE_RADIUS, WHITE);
         
         // edit input node values
         if (vis_state.playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, MOUSE_HOVER_DISTANCE_TO_NODE)

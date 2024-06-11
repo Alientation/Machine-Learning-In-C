@@ -101,6 +101,8 @@ typedef struct VisualizerState {
 
     // draw info
     Vector2 **node_positions;
+    RenderTexture2D node_texture;
+    RenderTexture2D node_outline_texture;
 
     bool show_tooltip;
     char tooltip_msg[TOOLTIP_BUFFER_SIZE];
@@ -120,6 +122,5 @@ void* window_run(void *vargp);
  * for a very, very long time (UINT32_MAX seconds)
  */
 void window_keep_open(neural_network_model_t *model, unsigned int num_seconds);
-
 
 #endif // VISUALIZER_H

@@ -117,10 +117,6 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
     draw_args->is_save_popup_open = !GuiWindowBox(save_window_rec, "Save Drawing");
 
     // IDEAS
-    // group of toggle buttons (only one can be selected at a time) depicting the classification of the image
-    // Dropdown box showing all saved files
-    // List view on left showing prev drawings
-    // preview in middle
     // name of file on bottom left, bottom right 'upload' button
     // labeler on the right,
 
@@ -152,13 +148,32 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
         "\\",
         draw_args->data_directory,
     };
-
     const char *dir_path = TextJoin(dir_paths, 3, "");
+
+    if (IsFileDropped()) {
+        FilePathList dropped_files = LoadDroppedFiles();
+        const char* file_paths[5] = {
+            GetWorkingDirectory(),
+            "\\",
+            draw_args->data_directory,
+            "\\",
+            "FILL IN",
+        };
+        for (int i = 0; i < dropped_files.count; i++) {
+            file_paths[4] = GetFileName(dropped_files.paths[i]);
+            const char *file_path = TextJoin(file_paths, 5, "");
+            printf("loading file %s\n", file_path);
+            char *text = LoadFileText(dropped_files.paths[i]);
+            SaveFileText(file_path, text);
+            UnloadFileText(text);
+        }
+        UnloadDroppedFiles(dropped_files);
+    }
+
     FilePathList data_files = LoadDirectoryFiles(dir_path);
-    int dir_length = strlen(dir_path);
     char* file_paths[data_files.count];
     for (int i = 0; i < data_files.count; i++) {
-        const char* file = TextSubtext(data_files.paths[i], dir_length, strlen(data_files.paths[i]) - dir_length);
+        const char* file = GetFileName(data_files.paths[i]);
         file_paths[i] = malloc(sizeof(char) * (strlen(file) + 1));
         strcpy(file_paths[i], file);
     }

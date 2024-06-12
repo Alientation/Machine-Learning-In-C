@@ -15,6 +15,9 @@ void free_matrix_list(mymatrix_t *matrix_list, int size) {
     free(matrix_list);
 }
 
+static char* outputs[10] = {
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
+};
 int main(void) {
     CLOCK_MARK
     neural_network_model_t nnmodel;
@@ -30,9 +33,12 @@ int main(void) {
         .model = &nnmodel,
         .training_info = training_info,
         .model_name = "Digit Recognizer",
+        .output_labels = outputs,
+        .default_data_directory = "images\\digits",
         .allow_drawing_panel_as_model_input = true,
         .label_guess = NULL,
     };
+
     pthread_create(&thread_id, NULL, window_run, &vis_args);
 
     // clean up

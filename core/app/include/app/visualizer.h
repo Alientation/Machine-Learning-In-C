@@ -92,6 +92,9 @@ typedef struct VisualizerArgument {
     char *model_name;
     bool allow_drawing_panel_as_model_input;
 
+    char **output_labels; // one hot encoded
+    char *default_data_directory; // input data
+
     label_guesses_t (*label_guess)(mymatrix_t model_guess);
 } visualizer_argument_t;
 
@@ -114,6 +117,14 @@ typedef struct DrawingPanelArgs {
     segment_list_node_t *segments_list_head;
     segment_list_node_t *segments_list_cur;
     int segments_list_size;
+
+    // save popup
+    char* data_directory;
+    bool is_save_popup_open;
+    int label_selection;
+    bool is_file_viewer_open;
+    int selected_file;
+    int file_list_scroll_index;
 
     // scaled down
     bool updated;
@@ -159,5 +170,6 @@ void* window_run(void *vargp);
  * for a very, very long time (UINT32_MAX seconds)
  */
 void window_keep_open(neural_network_model_t *model, unsigned int num_seconds);
+
 
 #endif // VISUALIZER_H

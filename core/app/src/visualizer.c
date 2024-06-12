@@ -65,6 +65,13 @@ void* window_run(void *vargp) {
         .segments_list_cur = NULL,
         .segments_list_size = 0,
 
+        .data_directory = vis_args->default_data_directory,
+        .is_save_popup_open = false,
+        .label_selection = 0,
+        .is_file_viewer_open = false,
+        .selected_file = 0,
+        .file_list_scroll_index = 0, 
+
         .updated = false,
         .update_frames = 3,
         .cur_frames = 0,

@@ -37,21 +37,6 @@ static visualizer_state_t vis_state = {
     .is_window_open = false,
 }; 
 
-static const Color NODE_POS_COLOR = {
-    .a = 128,
-    .r = 150, .g = 255, .b = 173
-};
-static const Color NODE_NEG_COLOR = {
-    .a = 128,
-    .r = 255, .g = 178, .b = 150
-};
-
-static const Color TOOLTIP_FONTCOLOR = BLACK;
-static const Color TOOLTIP_BACKGROUND_COLOR = {
-    .a = 255,
-    .r = 227, .g = 215, .b = 252
-};
-
 
 //===========================================================================
 
@@ -216,9 +201,11 @@ layer_t *get_layer(int layer_index) {
 Vector2 get_node_position(int layer_index, int r) {
     return vis_state.node_positions[layer_index][r];    
 }
+
 Vector2 get_layer_topleft(int layer_index) {
     return vis_state.node_positions[layer_index][0];
 }
+
 Vector2 get_layer_bottomright(int layer_index) {
     mymatrix_t nodes = layer_get_neurons(get_layer(layer_index));
     
@@ -249,8 +236,8 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
         mymatrix_t weights = layer->layer.dense.weights;
 
         int skip = 1;
-        if (weights.r * weights.c >= 150) {
-            skip = 1 + (weights.r * weights.c + 149) / 150;
+        if (weights.r * weights.c >= MAX_WEIGHTS_DRAWN_PER_LAYER) {
+            skip = 1 + (weights.r * weights.c + MAX_WEIGHTS_DRAWN_PER_LAYER - 1) / MAX_WEIGHTS_DRAWN_PER_LAYER;
         }
 
         for (int r2 = 0; r2 < this_neurons.r; r2++) {
@@ -272,19 +259,14 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
 
                 this_pos.x -= NODE_RADIUS;
                 prev_pos.x += NODE_RADIUS;
-                float ratio = 0.5;
-                if (max_weight != 0) {
-                    ratio = 1 - fabs(weights.matrix[r2][r1]) / max_weight;
-                }
+                float ratio = max_weight != 0 ? 1 - fabs(weights.matrix[r2][r1]) / max_weight : 0.5;
                 
                 // todo future, draw lines with thickness relative to its weight instead of color
                 // it is kind of hard to distinguish between colors especially when weight lines are extremely thin
                 int cval = (int) (255 * ratio);
                 Color color = {
                     .a = 255,
-                    .r = cval,
-                    .g = cval,
-                    .b = cval,
+                    .r = cval, .g = cval, .b = cval,
                 };
                 DrawLineEx(this_pos, prev_pos, 3, BLACK);
                 DrawLineV(this_pos, prev_pos, color);
@@ -292,7 +274,7 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                     // display information about the weight
                     char weight[WEIGHT_DISPLAY_PRECISION];
                     snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", weights.matrix[r2][r1]);
-                    OpenTooltip(weight, 1 / (sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2))), &weights.matrix[r2][r1]);
+                    OpenTooltip(weight, 1 / (0.1 + sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2))), &weights.matrix[r2][r1]);
                 }
             }
         }
@@ -305,11 +287,7 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
             this_pos.x -= NODE_RADIUS;
             prev_pos.x += NODE_RADIUS;
             
-            for (int dot = 1; dot <= WEIGHT_DOTTED_LINES; dot++) {
-                if (dot % 2 == 0) {
-                    continue;
-                }
-
+            for (int dot = 1; dot <= WEIGHT_DOTTED_LINES; dot+=2) {
                 Vector2 draw_end;
                 draw_end.x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * (dot / (float) WEIGHT_DOTTED_LINES));
                 draw_end.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * (dot / (float) WEIGHT_DOTTED_LINES));
@@ -375,19 +353,10 @@ void DrawLayer(int layer_index, layer_t *layer) {
             ratio = (fabs(tanh(nodes.matrix[r][0])) - min_node_value) / (max_node_value - min_node_value);
         }
         Color target = nodes.matrix[r][0] < 0 ? NODE_NEG_COLOR : NODE_POS_COLOR;
-        // Color shade = {
-        //     // .a = (char) round(255 * ratio),
-        //     .a = 255,
-        //     .r = target.r,
-        //     .g = target.g,
-        //     .b = target.b
-        // };
         Vector3 HSV = ColorToHSV(target);
         Color shade = ColorFromHSV(HSV.x, HSV.y * ratio, HSV.z);
         Vector2 pos = get_node_position(layer_index, r);
-        // DrawCircleV(pos, NODE_RADIUS, WHITE);
-        // DrawCircleV(pos, NODE_RADIUS, shade);
-        // DrawCircleLinesV(pos, NODE_RADIUS, BLACK); // outline
+        
         DrawTexture(vis_state.node_texture.texture, pos.x - NODE_RADIUS, pos.y - NODE_RADIUS, shade);
         DrawTexture(vis_state.node_outline_texture.texture, pos.x - NODE_RADIUS, pos.y - NODE_RADIUS, WHITE);
         
@@ -416,12 +385,9 @@ void DrawLayer(int layer_index, layer_t *layer) {
                 mymatrix_t output = model_calculate(vis_state.vis_args.training_info.model);
             }
         }
-
-        // todo maybe in future allow user to alter value in node maybe
-        // clicking it opens a small gui that has a slider for the node's value
         
         // draw value of node
-        if (NODE_DISPLAY_PRECISION > 2) {
+        if (NODE_DISPLAY_PRECISION > MIN_NODE_PRECISION_FOR_DISPLAY) {
             char node_value[NODE_DISPLAY_PRECISION];
             snprintf(node_value, NODE_DISPLAY_PRECISION, "%f", (float) nodes.matrix[r][0]);
             DrawCenteredText(node_value, pos.x, pos.y, NODE_DISPLAY_FONTSIZE, BLACK);
@@ -470,25 +436,26 @@ void DrawWindow(neural_network_model_t *model) {
         // TODO
 
         // some model control buttons
-        if (GuiButton((Rectangle) {.x = MODEL_X + 30, .y = MODEL_Y + 40, .height = 30, .width = 130}, "Start Training") && !vis_state.draw_args.is_open) {
+        int control_y = MODEL_Y + 40;
+        if (GuiButton((Rectangle) {.x = MODEL_X + 30, .y = control_y, .height = 30, .width = 130}, "Start Training") && !vis_state.draw_args.is_open) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, train_run, &vis_state.vis_args.training_info);
             pthread_detach(thread_id);
         }
 
-        if (GuiButton((Rectangle) {.x = MODEL_X + 170, .y = MODEL_Y + 40, .height = 30, .width = 100}, "Start Test") && !vis_state.draw_args.is_open) {
+        if (GuiButton((Rectangle) {.x = MODEL_X + 170, .y = control_y, .height = 30, .width = 100}, "Start Test") && !vis_state.draw_args.is_open) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, test_run, &vis_state.vis_args.training_info);
             pthread_detach(thread_id);
         }
 
-        GuiToggle((Rectangle) {.x = MODEL_X + 280, .y = MODEL_Y + 40, .height = 30, .width = 100}, "Playground", &vis_state.playground_state);
+        GuiToggle((Rectangle) {.x = MODEL_X + 280, .y = control_y, .height = 30, .width = 100}, "Playground", &vis_state.playground_state);
         if (vis_state.is_testing || vis_state.is_training) { // dont mess with training
             vis_state.playground_state = false;
         }
 
         // TODO dont add drawing panel if model does not accept drawings as input
-        if (GuiButton((Rectangle) {.x = MODEL_X + 390, .y = MODEL_Y + 40, .height = 30, .width = 120}, "Drawing Panel") && !vis_state.draw_args.is_open) {
+        if (GuiButton((Rectangle) {.x = MODEL_X + 390, .y = control_y, .height = 30, .width = 120}, "Drawing Panel") && !vis_state.draw_args.is_open) {
             vis_state.draw_args.is_open = true;
         }
         GuiDrawingPanelPopup(&vis_state.draw_args);
@@ -503,7 +470,7 @@ void DrawWindow(neural_network_model_t *model) {
             DrawCenteredText(vis_state.tooltip_msg, mouse_pos.x + TOOLTIP_WIDTH / 2, mouse_pos.y - TOOLTIP_HEIGHT / 2, TOOLTIP_FONTSIZE, TOOLTIP_FONTCOLOR);
 
             if (vis_state.tooltip_weight_value && vis_state.playground_state && !vis_state.is_testing && !vis_state.is_training) { // todo replace with model.isLocked instead
-                *vis_state.tooltip_weight_value += TOOLTIP_WEIGHT_VALUE_SCALE * GetMouseWheelMove();
+                *vis_state.tooltip_weight_value += WEIGHT_VALUE_MOUSEWHEEL_SCALE * GetMouseWheelMove();
                 mymatrix_t output = model_calculate(vis_state.vis_args.training_info.model); // todo preferrably run on separate thread
             }
         }

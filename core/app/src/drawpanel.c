@@ -198,7 +198,7 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
                 printf("Invalid dataset selected \'%s\'\n", data_files.paths[draw_args->selected_dataset]);
                 draw_args->selected_dataset = -1;
             } else {
-                draw_args->image_dataset_visualizer = LoadImageDataSetVisualizer(draw_args->current_dataset);
+                draw_args->image_dataset_visualizer = LoadImageDataSetVisualizer(&draw_args->current_dataset);
             }
         }
     }
@@ -289,14 +289,16 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
 
 
     Rectangle save_image_rec = {
-        .x = image_preview_rec.x + 60,
+        .x = image_preview_rec.x + 50,
         .y = image_preview_rec.y + image_preview_rec.height + 10,
-        .width = image_preview_rec.width - 120,
+        .width = image_preview_rec.width - 100,
         .height = 30,
     };
-    if (GuiButton(save_image_rec, "Save") && draw_args->selected_dataset != -1) {
+    if (draw_args->selected_dataset != -1 && GuiButton(save_image_rec, "Add to Dataset")) {
         printf("Saved current image to %s\n", draw_args->current_dataset.file_path);
 
+        DataSetAddImage(&draw_args->current_dataset, LoadImageFromTexture(draw_args->input_texture.texture), draw_args->selected_label);
+        UpdateImageDataSetVisualizer(&draw_args->image_dataset_visualizer);
     }
 
 
@@ -311,27 +313,44 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
         if (draw_args->current_dataset.type == DATASET_IMAGES) {
             image_dataset_visualizer_t vis = draw_args->image_dataset_visualizer;
             for (int i = 0; i < vis.number_displayed; i++) {
+                Rectangle image_display_rec = {
+                    .x = dataset_display_rec.x, .y = dataset_display_rec.y + 60 * i, .width = 50, .height = 50
+                };
+
+                GuiToggle(image_display_rec, "", &draw_args->selected_dataset_image[i]);
+                if (draw_args->selected_dataset_image[i]) { 
+                    // printf("Selected image %d\n", i);
+                    draw_args->selected_label = vis.displayed_images_nodes[i + vis.left_image_index]->label;
+                    for (int other_image = 0; other_image < NUMBER_DISPLAYED_IMAGES; other_image++) {
+                        draw_args->selected_dataset_image[other_image] = i == other_image;
+                    }
+                }
+
                 DrawTexturePro(vis.displayed_images[i],
                         (Rectangle) {.x = 0, .y = 0, .width = draw_args->current_dataset.data.image_dataset.uniform_width, .height = draw_args->current_dataset.data.image_dataset.uniform_height},
-                        (Rectangle) {.x = dataset_display_rec.x, .y = dataset_display_rec.y + 60 * i, .width = 50, .height = 50}, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
-                DrawRectangleLinesEx((Rectangle) {.x = dataset_display_rec.x-1, .y = dataset_display_rec.y-1 + 60 * i, .width = 50, .height = 50}, 2, DARKGRAY);
+                        image_display_rec, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
+                DrawRectangleLinesEx((Rectangle) {.x = image_display_rec.x-1, .y = image_display_rec.y-1, .width = image_display_rec.width, .height = image_display_rec.height},
+                        2, draw_args->selected_dataset_image[i] ? BLUE : DARKGRAY);
             } 
 
             // draw the arrows on the top and bottom only if there is more images than the number of displayed images
-            if (vis.dataset.data.image_dataset.count > vis.number_displayed) {
+            if (vis.dataset->data.image_dataset.count > vis.number_displayed) {
                 // move images down faster if shift is pressed
                 bool shift_is_down = GetKeyPressed() == KEY_LEFT_SHIFT;
                 
-                if (GuiButton((Rectangle) {.x = dataset_display_rec.x + dataset_display_rec.width/2 - 24, .y = dataset_display_rec.y - 28, .width = 48, .height = 20}, "")) {
-                    MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? NUMBER_DISPLAYED_IMAGES : 1);
+                if (vis.left_image_index > 0) {
+                    if (GuiButton((Rectangle) {.x = dataset_display_rec.x + dataset_display_rec.width/2 - 24, .y = dataset_display_rec.y - 28, .width = 48, .height = 20}, "")) {
+                        MoveDisplayImageDataSetVisualizer(&vis, shift_is_down ? NUMBER_DISPLAYED_IMAGES : 1);
+                    }
+                    GuiDrawIcon(ICON_ARROW_UP_FILL, dataset_display_rec.x + dataset_display_rec.width/2 - 8, dataset_display_rec.y - 26, 1, BLACK);
                 }
 
-                if (GuiButton((Rectangle) {.x = dataset_display_rec.x + dataset_display_rec.width/2 - 24, .y = dataset_display_rec.y + dataset_display_rec.height + 4, .width = 48, .height = 20}, "")) {
-                    MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? -NUMBER_DISPLAYED_IMAGES : -1);
+                if (vis.left_image_index < vis.dataset->data.image_dataset.count - NUMBER_DISPLAYED_IMAGES) {
+                    if (GuiButton((Rectangle) {.x = dataset_display_rec.x + dataset_display_rec.width/2 - 24, .y = dataset_display_rec.y + dataset_display_rec.height + 4, .width = 48, .height = 20}, "")) {
+                        MoveDisplayImageDataSetVisualizer(&vis, shift_is_down ? -NUMBER_DISPLAYED_IMAGES : -1);
+                    }
+                    GuiDrawIcon(ICON_ARROW_DOWN_FILL, dataset_display_rec.x + dataset_display_rec.width/2 - 8, dataset_display_rec.y + dataset_display_rec.height + 6, 1, BLACK);
                 }
-
-                GuiDrawIcon(ICON_ARROW_UP_FILL, dataset_display_rec.x + dataset_display_rec.width/2 - 8, dataset_display_rec.y - 26, 1, BLACK);
-                GuiDrawIcon(ICON_ARROW_DOWN_FILL, dataset_display_rec.x + dataset_display_rec.width/2 - 8, dataset_display_rec.y + dataset_display_rec.height + 6, 1, BLACK);
             }
         } else {
             assert(0);

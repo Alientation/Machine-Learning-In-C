@@ -23,30 +23,64 @@ void write_bytes(unsigned char *data, int start_byte, unsigned long value, int b
     }
 }
 
-image_dataset_visualizer_t LoadImageDataSetVisualizer(dataset_t dataset) {
-    assert(dataset.type == DATASET_IMAGES);
+image_dataset_visualizer_t LoadImageDataSetVisualizer(dataset_t *dataset) {
+    assert(dataset->type == DATASET_IMAGES);
     
     image_dataset_visualizer_t dataset_vis = {
         .dataset = dataset,
         .left_image_index = 0,
-        .left_image_node = dataset.data.image_dataset.image_list_head,
+        .left_image_node = dataset->data.image_dataset.image_list_head,
     };
-    struct DataSetData_Images images = dataset.data.image_dataset;
+    struct DataSetData_Images images = dataset->data.image_dataset;
 
-    struct ImageListNode *cur = dataset.data.image_dataset.image_list_head;
-    for (int i = 0; i < NUMBER_DISPLAYED_IMAGES && i < dataset.data.image_dataset.count; i++) {
+    struct ImageListNode *cur = dataset->data.image_dataset.image_list_head;
+    for (int i = 0; i < NUMBER_DISPLAYED_IMAGES && i < dataset->data.image_dataset.count; i++) {
         dataset_vis.displayed_images[i] = LoadTextureFromImage(cur->image);
+        dataset_vis.displayed_images_nodes[i] = cur;
         cur = cur->next;
     }
 
-    dataset_vis.number_displayed = NUMBER_DISPLAYED_IMAGES >= dataset.data.image_dataset.count ? dataset.data.image_dataset.count : NUMBER_DISPLAYED_IMAGES;
+    dataset_vis.number_displayed = NUMBER_DISPLAYED_IMAGES >= dataset->data.image_dataset.count ? dataset->data.image_dataset.count : NUMBER_DISPLAYED_IMAGES;
 
     Image img = GenImageColor(images.uniform_width, images.uniform_height, WHITE);
-    for (int i = dataset.data.image_dataset.count; i < NUMBER_DISPLAYED_IMAGES; i++) {
+    for (int i = dataset->data.image_dataset.count; i < NUMBER_DISPLAYED_IMAGES; i++) {
         dataset_vis.displayed_images[i] = LoadTextureFromImage(img);
+        dataset_vis.displayed_images_nodes[i] = NULL;
     }
     UnloadImage(img);
     return dataset_vis;
+}
+
+void UpdateImageDataSetVisualizer(image_dataset_visualizer_t *dataset_vis) {
+    for (int i = 0; i < NUMBER_DISPLAYED_IMAGES; i++) {
+        UnloadTexture(dataset_vis->displayed_images[i]);
+    }
+
+    int num_images = dataset_vis->dataset->data.image_dataset.count;
+
+    dataset_vis->left_image_node = dataset_vis->dataset->data.image_dataset.image_list_head;
+    dataset_vis->number_displayed = num_images > NUMBER_DISPLAYED_IMAGES ? NUMBER_DISPLAYED_IMAGES : num_images;
+    printf("updating dataset vis with %d images showcasing images %d-%d\n", num_images, dataset_vis->left_image_index, dataset_vis->left_image_index + dataset_vis->number_displayed);
+    for (int i = 0; i < dataset_vis->left_image_index; i++) {
+        dataset_vis->left_image_node = dataset_vis->left_image_node->next;
+    }
+    
+    struct ImageListNode *cur = dataset_vis->left_image_node;
+    Image img = GenImageColor(dataset_vis->dataset->data.image_dataset.uniform_width, dataset_vis->dataset->data.image_dataset.uniform_height, WHITE);
+    for (int i = 0; i < NUMBER_DISPLAYED_IMAGES; i++) {
+        if (cur != NULL) {
+            dataset_vis->displayed_images[i] = LoadTextureFromImage(cur->image);
+            dataset_vis->displayed_images_nodes[i] = cur;
+        } else {
+            dataset_vis->displayed_images[i] = LoadTextureFromImage(img);
+            dataset_vis->displayed_images_nodes[i] = NULL;
+        }
+
+        if (cur != NULL) {
+            cur = cur->next;
+        }
+    }
+    UnloadImage(img);
 }
 
 void UnloadImageDataSetVisualizer(image_dataset_visualizer_t dataset_vis) {
@@ -55,12 +89,20 @@ void UnloadImageDataSetVisualizer(image_dataset_visualizer_t dataset_vis) {
     }
 }
 
-void MoveDisplayImageDataSetVisualizer(image_dataset_visualizer_t dataset_vis, int move_count) {
+void MoveDisplayImageDataSetVisualizer(image_dataset_visualizer_t *dataset_vis, int move_count) {
+    int target = move_count + dataset_vis->left_image_index;
+    if (target < 0) {
+        target = 0;
+    } else if (target > dataset_vis->dataset->data.image_dataset.count - NUMBER_DISPLAYED_IMAGES) {
+        target = dataset_vis->dataset->data.image_dataset.count - NUMBER_DISPLAYED_IMAGES;
+    }
 
+    dataset_vis->left_image_index = target;
+    UpdateImageDataSetVisualizer(dataset_vis);
 }
 
-void SetDisplayImageDataSetVisualizer(image_dataset_visualizer_t dataset_vis, int pos) {
-
+void SetDisplayImageDataSetVisualizer(image_dataset_visualizer_t *dataset_vis, int pos) {
+    MoveDisplayImageDataSetVisualizer(dataset_vis, pos - dataset_vis->left_image_index);
 }
 
 
@@ -70,6 +112,7 @@ dataset_t ConstructImageDataSet(const char* file_path, int width, int height, in
         .file_path = strdup(file_path),
         .data.image_dataset.count = 0,
         .data.image_dataset.image_list_head = NULL,
+        .data.image_dataset.image_list_tail = NULL,
         .data.image_dataset.uniform_width = width,
         .data.image_dataset.uniform_height = height,
         .data.image_dataset.num_labels = num_labels,
@@ -110,12 +153,17 @@ dataset_t LoadDataSet(const char* file_path) {
             long image_label = read_bytes(data, byte, 8);
             byte += 8;
 
-            DataSetAddImage(dataset, LoadImageFromMemory(".png", data + byte, image_bytes), image_label);
+            printf("loading image: image_bytes=%d, label=%d\n", image_bytes, image_label);
+
+            DataSetAddImage(&dataset, LoadImageFromMemory(".png", data + byte, image_bytes), image_label);
+            
             byte += image_bytes;
         }
+        UnloadFileData(data);
         return dataset;
     }
 
+    UnloadFileData(data);
     printf("Failed to load dataset from %s with header %llx\n", file_path, header);
     return (dataset_t) {.type = DATASET_INVALID};
 }
@@ -140,9 +188,11 @@ void WriteDataSet(dataset_t dataset) {
             data_size += strlen(images.label_names[i]) + 1; // NULL TERMINATED CHARACTER
         }
 
-        struct ImageListNode *cur_image = images.image_list_head;        
+        printf("saving dataset: number of images %d\n", images.count);
+
+        struct ImageListNode *cur_image = images.image_list_head;
         for (int i = 0; i < images.count; i++) {
-            images_data[i] = ExportImageToMemory(images.image_list_head->image, ".png", &images_size[i]);
+            images_data[i] = ExportImageToMemory(cur_image->image, ".png", &images_size[i]);
             data_size += 16 + images_size[i]; // NUM_IMAGE_BYTES + IMAGE_LABEL + IMAGE_DATA
             cur_image = cur_image->next;
         }
@@ -166,7 +216,7 @@ void WriteDataSet(dataset_t dataset) {
             byte_index += 8;
             write_bytes(data, byte_index, cur_image->label, 8);
             byte_index += 8;
-            for (int j = i; j < images_size[i]; j++) {
+            for (int j = 0; j < images_size[i]; j++) {
                 data[j + byte_index] = images_data[i][j];
             }
             byte_index += images_size[i];
@@ -174,43 +224,51 @@ void WriteDataSet(dataset_t dataset) {
         }
 
         SaveFileData(dataset.file_path, data, data_size);
+
+        free(data);
+        for (int i = 0; i < images.count; i++) {
+            free(images_data[i]);
+        }
     } else {
         assert(0);
     }
 }
 
-void DataSetAddImage(dataset_t dataset, Image image, long label) {
-    assert(dataset.type == DATASET_IMAGES);
+void DataSetAddImage(dataset_t *dataset, Image image, long label) {
+    assert(dataset->type == DATASET_IMAGES);
     
-    struct DataSetData_Images images = dataset.data.image_dataset;
-    if (images.image_list_head == NULL) {
-        images.image_list_head = malloc(sizeof(struct ImageListNode));
-        images.image_list_head->image = image;
-        images.image_list_head->label = label;
-        images.image_list_head->next = NULL;
-        images.image_list_head->prev = NULL;
+    struct DataSetData_Images *images = &dataset->data.image_dataset;
+    if (images->image_list_head == NULL) {
+        images->image_list_head = malloc(sizeof(struct ImageListNode));
+        images->image_list_head->image = image;
+        images->image_list_head->label = label;
+        images->image_list_head->next = NULL;
+        images->image_list_head->prev = NULL;
+
+        images->image_list_tail = images->image_list_head;
     } else {
-        images.image_list_head->next = malloc(sizeof(struct ImageListNode));
-        images.image_list_head->next->image = image;
-        images.image_list_head->next->label = label;
-        images.image_list_head->next->prev = images.image_list_head;
-        images.image_list_head = images.image_list_head->next;
+        images->image_list_tail->next = malloc(sizeof(struct ImageListNode));
+        images->image_list_tail->next->image = image;
+        images->image_list_tail->next->label = label;
+        images->image_list_tail->next->prev = images->image_list_tail;
+        images->image_list_tail = images->image_list_tail->next;
+        images->image_list_tail->next = NULL;
     }
-    images.count++;
+    images->count++;
 }
 
-void DataSetRemoveImage(dataset_t dataset, int index) {
+void DataSetRemoveImage(dataset_t *dataset, int index) {
     DataSetRemoveImages(dataset, index, index+1);
 }
 
-void DataSetRemoveImages(dataset_t dataset, int from_index, int to_index) {
+void DataSetRemoveImages(dataset_t *dataset, int from_index, int to_index) {
     assert(from_index >= 0);
     assert(from_index <= to_index);
-    assert(to_index <= dataset.data.image_dataset.count);
+    assert(to_index <= dataset->data.image_dataset.count);
 
-    struct DataSetData_Images images = dataset.data.image_dataset;
+    struct DataSetData_Images *images = &dataset->data.image_dataset;
     
-    struct ImageListNode *remove_start = images.image_list_head;
+    struct ImageListNode *remove_start = images->image_list_head;
     for (int i = 0; i < from_index; i++) {
         remove_start = remove_start->next;
     }
@@ -227,7 +285,7 @@ void DataSetRemoveImages(dataset_t dataset, int from_index, int to_index) {
         remove_end->prev = remove_start->prev;
     }
 
-    images.count -= to_index - from_index;
+    images->count -= to_index - from_index;
 }
 
 

@@ -69,6 +69,7 @@ void* window_run(void *vargp) {
         .is_save_popup_open = false,
         .is_dataset_viewer_open = false,
         .selected_dataset = -1,
+        .selected_label = 0,
         .dataset_list_scroll_index = 0, 
         .add_dataset_file_name = malloc((FILE_NAME_BUFFER_SIZE + 1) * sizeof(char)),
         .add_dataset_type = 0,
@@ -77,6 +78,7 @@ void* window_run(void *vargp) {
         .images_dataset_height_option_active = false,
         .images_dataset_height_input = malloc((NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char)),
         .is_editing_dataset_file_name = false,
+        .selected_dataset_image = {false, false, false, false, false},
 
         .num_labels = vis_args->num_labels,
         .label_names = vis_args->output_labels,
@@ -94,9 +96,11 @@ void* window_run(void *vargp) {
     };
     memset(vis_state.draw_args.add_dataset_file_name, 0, (FILE_NAME_BUFFER_SIZE + 1) * sizeof(char));
     memset(vis_state.draw_args.images_dataset_width_input, 0, (NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char));
-    vis_state.draw_args.images_dataset_width_input[0] = '0';
+    vis_state.draw_args.images_dataset_width_input[0] = '2';
+    vis_state.draw_args.images_dataset_width_input[1] = '8';
     memset(vis_state.draw_args.images_dataset_height_input, 0, (NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char));
-    vis_state.draw_args.images_dataset_height_input[0] = '0';
+    vis_state.draw_args.images_dataset_height_input[0] = '2';
+    vis_state.draw_args.images_dataset_height_input[1] = '8';
     
     SetTextureFilter(vis_state.draw_args.draw_texture.texture, TEXTURE_FILTER_TRILINEAR);
 
@@ -176,6 +180,15 @@ void* window_run(void *vargp) {
     window_keep_open(vis_args->model, 0);
 
     // CLEAN UP
+    if (vis_state.draw_args.selected_dataset != -1) {
+        WriteDataSet(vis_state.draw_args.current_dataset);
+
+        if (vis_state.draw_args.current_dataset.type == DATASET_IMAGES) {
+            UnloadImageDataSetVisualizer(vis_state.draw_args.image_dataset_visualizer);
+        }
+        UnloadDataSet(vis_state.draw_args.current_dataset);
+    }
+
     DrawingPanelFreeHistory(&vis_state.draw_args);
     UnloadRenderTexture(vis_state.draw_args.draw_texture);
     UnloadRenderTexture(vis_state.node_texture);

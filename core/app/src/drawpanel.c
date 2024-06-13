@@ -145,25 +145,11 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
         .height = 300,
     };
 
-    const char* dir_paths[3] = {
-        GetWorkingDirectory(),
-        "\\",
-        draw_args->dataset_directory,
-    };
-    const char *dir_path = TextJoin(dir_paths, 3, "");
-
+    char *dir_path = strdup(concat(3, GetWorkingDirectory(), "\\", draw_args->dataset_directory));
     if (IsFileDropped()) {
         FilePathList dropped_files = LoadDroppedFiles();
-        const char* file_paths[5] = {
-            GetWorkingDirectory(),
-            "\\",
-            draw_args->dataset_directory,
-            "\\",
-            "FILL IN",
-        };
         for (int i = 0; i < dropped_files.count; i++) {
-            file_paths[4] = GetFileName(dropped_files.paths[i]);
-            const char *file_path = TextJoin(file_paths, 5, "");
+            const char *file_path = concat(3, dir_path, "\\", GetFileName(dropped_files.paths[i]));
             printf("loading file %s\n", file_path);
             char *text = LoadFileText(dropped_files.paths[i]);
             SaveFileText(file_path, text);
@@ -173,6 +159,7 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
     }
 
     FilePathList data_files = LoadDirectoryFiles(dir_path);
+    free(dir_path);
     char* file_paths[data_files.count];
     for (int i = 0; i < data_files.count; i++) {
         const char* file = GetFileName(data_files.paths[i]);
@@ -231,20 +218,12 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
     };
     if (GuiButton(add_dataset_rec, "Add") && strlen(draw_args->add_dataset_file_name) != 0) {
         if (draw_args->add_dataset_type == 0) {
-            const char* dataset_paths[6] = {
-                GetWorkingDirectory(),
-                "\\",
-                draw_args->dataset_directory,
-                "\\",
-                draw_args->add_dataset_file_name,
-                ".ds",
-            };
-            const char* dataset_path = TextJoin(dataset_paths, 6, "");
+            const char* dataset_path = concat(6, GetWorkingDirectory(), "\\", draw_args->dataset_directory, "\\", draw_args->add_dataset_file_name, ".ds");
             dataset_t dataset = ConstructImageDataSet(dataset_path, TextToInteger(draw_args->images_dataset_width_input), TextToInteger(draw_args->images_dataset_height_input));
             if (!FileExists(dataset_path)) {
                 WriteDataSet(dataset);
                 UnloadDataSet(dataset);
-            }            
+            }
         } else {
             assert(0);
         }

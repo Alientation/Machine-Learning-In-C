@@ -39,3 +39,15 @@ Color gray_scale(int r, int g, int b) {
     int gray_color = round(linear_to_sRGB(gray_linear) * 255);
     return (Color) {.a = 255, .r = gray_color, .g = gray_color, .b = gray_color};
 }
+
+const char* concat(int count, ...) {
+    const char* array[count];
+    va_list ptr;
+    va_start(ptr, count);
+    for (int i = 0; i < count; i++) {
+        array[i] = va_arg(ptr, char*);
+    }
+    va_end(ptr);
+
+    return TextJoin(array, count, "");
+}

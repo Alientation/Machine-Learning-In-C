@@ -78,6 +78,9 @@ void* window_run(void *vargp) {
         .images_dataset_height_input = malloc((NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char)),
         .is_editing_dataset_file_name = false,
 
+        .num_labels = vis_args->num_labels,
+        .label_names = vis_args->output_labels,
+
         .updated = false,
         .update_frames = 3,
         .cur_frames = 0,
@@ -94,6 +97,7 @@ void* window_run(void *vargp) {
     vis_state.draw_args.images_dataset_width_input[0] = '0';
     memset(vis_state.draw_args.images_dataset_height_input, 0, (NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char));
     vis_state.draw_args.images_dataset_height_input[0] = '0';
+    
     SetTextureFilter(vis_state.draw_args.draw_texture.texture, TEXTURE_FILTER_TRILINEAR);
 
     BeginTextureMode(vis_state.draw_args.draw_texture);

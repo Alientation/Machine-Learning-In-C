@@ -15,7 +15,7 @@ void free_matrix_list(mymatrix_t *matrix_list, int size) {
     free(matrix_list);
 }
 
-static char* outputs[10] = {
+static const char* outputs[10] = {
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
 };
 int main(void) {
@@ -34,6 +34,7 @@ int main(void) {
         .training_info = training_info,
         .model_name = "Digit Recognizer",
         .output_labels = outputs,
+        .num_labels = 10,
         .default_dataset_directory = "images\\digits",
         .allow_drawing_panel_as_model_input = true,
         .label_guess = NULL,

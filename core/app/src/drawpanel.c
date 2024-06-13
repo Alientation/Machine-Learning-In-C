@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+// TODO SOME METHODS ARE WAAAYYY TOO LONG AND CLUNKY, REFACTOR LATER
+
 // TODO perhaps for optimization, but not really critical, instead of storing these saved
 // drawing panel images as render textures which would be put in VRAM, store as images on RAM and
 // write to the drawing panel's render texture when needed (saves VRAM space and time spent sending these textures to it after each draw segment)
@@ -102,6 +104,7 @@ void DrawingPanelClear(drawing_panel_args_t *draw_args) {
 // IDEAS
 // Open datasets on the left list panel,
 // currently opened dataset will display a list of images contained within on the right side
+// display dataset information on a panel next to the dataset list
 // ability to edit dataset's images like adding new images, relabeling prev images, and deleting prev images
 void GuiSavePopup(drawing_panel_args_t *draw_args) {
     if (!draw_args->is_save_popup_open) {
@@ -136,7 +139,6 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
             image_preview_rec, (Vector2) {0, 0}, 0, WHITE);
     DrawRectangleLines(image_preview_rec.x - 1, image_preview_rec.y - 1, image_preview_rec.width + 2, image_preview_rec.height + 2, BLACK);
 
-    DrawCenteredText(draw_args->dataset_directory, save_window_rec.x + 130, save_window_rec.y + save_window_rec.height/2 - 220, 16, BLACK);
 
     Rectangle file_viewer_rec = {
         .x = save_window_rec.x + 30, 
@@ -145,6 +147,8 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
         .height = 300,
     };
 
+    DrawCenteredText(draw_args->dataset_directory, file_viewer_rec.x + file_viewer_rec.width/2, file_viewer_rec.y - 10, 12, BLACK);
+    
     char *dir_path = strdup(concat(3, GetWorkingDirectory(), "\\", draw_args->dataset_directory));
     if (IsFileDropped()) {
         FilePathList dropped_files = LoadDroppedFiles();
@@ -202,10 +206,11 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
 
     Rectangle name_dataset_rec = {
         .x = file_viewer_rec.x,
-        .y = file_viewer_rec.y + file_viewer_rec.height + 10,
-        .width = file_viewer_rec.width - 50,
+        .y = file_viewer_rec.y + file_viewer_rec.height + 40,
+        .width = file_viewer_rec.width - 60,
         .height = 30,
     };
+    DrawCenteredText("New Dataset", file_viewer_rec.x + file_viewer_rec.width/2, name_dataset_rec.y - 20, 12, BLACK);
     if (GuiTextBox(name_dataset_rec, draw_args->add_dataset_file_name, FILE_NAME_BUFFER_SIZE, draw_args->is_editing_dataset_file_name)) {
         draw_args->is_editing_dataset_file_name = !draw_args->is_editing_dataset_file_name;
     }
@@ -216,10 +221,11 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
         .width = file_viewer_rec.width - name_dataset_rec.width - 10,
         .height = 30,
     };
-    if (GuiButton(add_dataset_rec, "Add") && strlen(draw_args->add_dataset_file_name) != 0) {
+    if (GuiButton(add_dataset_rec, "Create") && strlen(draw_args->add_dataset_file_name) != 0) {
         if (draw_args->add_dataset_type == 0) {
             const char* dataset_path = concat(6, GetWorkingDirectory(), "\\", draw_args->dataset_directory, "\\", draw_args->add_dataset_file_name, ".ds");
-            dataset_t dataset = ConstructImageDataSet(dataset_path, TextToInteger(draw_args->images_dataset_width_input), TextToInteger(draw_args->images_dataset_height_input));
+            dataset_t dataset = ConstructImageDataSet(dataset_path, TextToInteger(draw_args->images_dataset_width_input), 
+                    TextToInteger(draw_args->images_dataset_height_input), draw_args->num_labels, draw_args->label_names);
             if (!FileExists(dataset_path)) {
                 WriteDataSet(dataset);
                 UnloadDataSet(dataset);
@@ -278,7 +284,7 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
             draw_args->images_dataset_height_option_active = !draw_args->images_dataset_height_option_active;
         }
     } else {
-
+        assert(0);
     }
 
 
@@ -288,19 +294,57 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
         .width = image_preview_rec.width - 120,
         .height = 30,
     };
-    if (GuiButton(save_image_rec, "Save")) {
-        printf("Saved %s to ...\n", draw_args->add_dataset_file_name);
+    if (GuiButton(save_image_rec, "Save") && draw_args->selected_dataset != -1) {
+        printf("Saved current image to %s\n", draw_args->current_dataset.file_path);
+
     }
+
+
+    Rectangle dataset_display_rec = {
+        .x = image_preview_rec.x + image_preview_rec.width + 10,
+        .y = image_preview_rec.y + image_preview_rec.height/2 - (60 * NUMBER_DISPLAYED_IMAGES - 10)/2,
+        .width = 50,
+        .height = 60 * NUMBER_DISPLAYED_IMAGES - 10
+    };
+    
+    if (draw_args->selected_dataset != -1) {
+        if (draw_args->current_dataset.type == DATASET_IMAGES) {
+            image_dataset_visualizer_t vis = draw_args->image_dataset_visualizer;
+            for (int i = 0; i < vis.number_displayed; i++) {
+                DrawTexturePro(vis.displayed_images[i],
+                        (Rectangle) {.x = 0, .y = 0, .width = draw_args->current_dataset.data.image_dataset.uniform_width, .height = draw_args->current_dataset.data.image_dataset.uniform_height},
+                        (Rectangle) {.x = dataset_display_rec.x, .y = dataset_display_rec.y + 60 * i, .width = 50, .height = 50}, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
+                DrawRectangleLinesEx((Rectangle) {.x = dataset_display_rec.x-1, .y = dataset_display_rec.y-1 + 60 * i, .width = 50, .height = 50}, 2, DARKGRAY);
+            } 
+
+            // draw the arrows on the top and bottom only if there is more images than the number of displayed images
+            if (vis.dataset.data.image_dataset.count > vis.number_displayed) {
+                // move images down faster if shift is pressed
+                bool shift_is_down = GetKeyPressed() == KEY_LEFT_SHIFT;
+                
+                if (GuiButton((Rectangle) {.x = dataset_display_rec.x + dataset_display_rec.width/2 - 24, .y = dataset_display_rec.y - 28, .width = 48, .height = 20}, "")) {
+                    MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? NUMBER_DISPLAYED_IMAGES : 1);
+                }
+
+                if (GuiButton((Rectangle) {.x = dataset_display_rec.x + dataset_display_rec.width/2 - 24, .y = dataset_display_rec.y + dataset_display_rec.height + 4, .width = 48, .height = 20}, "")) {
+                    MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? -NUMBER_DISPLAYED_IMAGES : -1);
+                }
+
+                GuiDrawIcon(ICON_ARROW_UP_FILL, dataset_display_rec.x + dataset_display_rec.width/2 - 8, dataset_display_rec.y - 26, 1, BLACK);
+                GuiDrawIcon(ICON_ARROW_DOWN_FILL, dataset_display_rec.x + dataset_display_rec.width/2 - 8, dataset_display_rec.y + dataset_display_rec.height + 6, 1, BLACK);
+            }
+        } else {
+            assert(0);
+        }
+    }
+    
 }
-
-
 
 
 // GOALS
 // Set Brush Mode
 // Save image
 // Load image
-// Show Buffered view that will be sent to the model
 void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
     if (!draw_args->is_open) {
         draw_args->is_save_popup_open = false;

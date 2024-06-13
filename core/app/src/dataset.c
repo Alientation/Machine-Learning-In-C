@@ -24,35 +24,63 @@ void write_bytes(unsigned char *data, int start_byte, unsigned long value, int b
 }
 
 image_dataset_visualizer_t LoadImageDataSetVisualizer(dataset_t dataset) {
+    assert(dataset.type == DATASET_IMAGES);
+    
     image_dataset_visualizer_t dataset_vis = {
         .dataset = dataset,
-        .left_image_index = 0
+        .left_image_index = 0,
+        .left_image_node = dataset.data.image_dataset.image_list_head,
     };
+    struct DataSetData_Images images = dataset.data.image_dataset;
 
     struct ImageListNode *cur = dataset.data.image_dataset.image_list_head;
     for (int i = 0; i < NUMBER_DISPLAYED_IMAGES && i < dataset.data.image_dataset.count; i++) {
         dataset_vis.displayed_images[i] = LoadTextureFromImage(cur->image);
         cur = cur->next;
     }
+
+    dataset_vis.number_displayed = NUMBER_DISPLAYED_IMAGES >= dataset.data.image_dataset.count ? dataset.data.image_dataset.count : NUMBER_DISPLAYED_IMAGES;
+
+    Image img = GenImageColor(images.uniform_width, images.uniform_height, WHITE);
+    for (int i = dataset.data.image_dataset.count; i < NUMBER_DISPLAYED_IMAGES; i++) {
+        dataset_vis.displayed_images[i] = LoadTextureFromImage(img);
+    }
+    UnloadImage(img);
+    return dataset_vis;
 }
 
 void UnloadImageDataSetVisualizer(image_dataset_visualizer_t dataset_vis) {
-    for (int i = 0; i < NUMBER_DISPLAYED_IMAGES && i < dataset_vis.dataset.data.image_dataset.count; i++) {
+    for (int i = 0; i < NUMBER_DISPLAYED_IMAGES; i++) {
         UnloadTexture(dataset_vis.displayed_images[i]);
     }
 }
 
+void MoveDisplayImageDataSetVisualizer(image_dataset_visualizer_t dataset_vis, int move_count) {
+
+}
+
+void SetDisplayImageDataSetVisualizer(image_dataset_visualizer_t dataset_vis, int pos) {
+
+}
 
 
-dataset_t ConstructImageDataSet(const char* file_path, int width, int height) {
-    return (dataset_t) {
+dataset_t ConstructImageDataSet(const char* file_path, int width, int height, int num_labels, const char** label_names) {
+     dataset_t dataset = {
         .type = DATASET_IMAGES,
         .file_path = strdup(file_path),
         .data.image_dataset.count = 0,
         .data.image_dataset.image_list_head = NULL,
         .data.image_dataset.uniform_width = width,
         .data.image_dataset.uniform_height = height,
+        .data.image_dataset.num_labels = num_labels,
+        .data.image_dataset.label_names = malloc(sizeof(char*) * num_labels),
     };
+    
+    for (int i = 0; i < num_labels; i++) {
+        dataset.data.image_dataset.label_names[i] = strdup(label_names[i]);
+    }
+
+    return dataset;
 }
 
 dataset_t LoadDataSet(const char* file_path) {
@@ -64,15 +92,25 @@ dataset_t LoadDataSet(const char* file_path) {
         int width = (int) read_bytes(data, 8, 4);
         int height = (int) read_bytes(data, 12, 4);
         long num_images = read_bytes(data, 16, 8);
+        long num_labels = read_bytes(data, 24, 8);
 
-        dataset_t dataset = ConstructImageDataSet(file_path, width, height);
+        const char* labels[num_labels];
+        int byte = 32;
+        for (int i = 0; i < num_labels; i++) {
+            int len = strlen(data + byte);
+            labels[i] = data+byte;
+            byte += len + 1; // including NULL TERMINATED CHARACTER
+        }
 
-        int byte = 24;
+        dataset_t dataset = ConstructImageDataSet(file_path, width, height, num_labels, labels);
+
         for (int i = 0; i < num_images; i++) {
             long image_bytes = read_bytes(data, byte, 8);
             byte += 8;
+            long image_label = read_bytes(data, byte, 8);
+            byte += 8;
 
-            DataSetAddImage(dataset, LoadImageFromMemory(".png", data + byte, image_bytes));
+            DataSetAddImage(dataset, LoadImageFromMemory(".png", data + byte, image_bytes), image_label);
             byte += image_bytes;
         }
         return dataset;
@@ -88,18 +126,24 @@ void WriteDataSet(dataset_t dataset) {
     // IMAGE_WIDTH: 4 BYTES
     // IMAGE_HEIGHT: 4 BYTES
     // NUM_IMAGES: 8 BYTES
+    // NUM_LABELS: 8 BYTES
+    // LABELS: X NULL TERMINATED STRINGS
     // NUM_IMAGE_BYTES: 8 BYTES
     // IMAGE_DATA: NUM_IMAGE_BYTES BYTES
     if (dataset.type == DATASET_IMAGES) {
         struct DataSetData_Images images = dataset.data.image_dataset;
-        int data_size = 24; // HEADER + NUM_IMAGES
+        int data_size = 32; // HEADER + IMAGES DIMENSIONS + NUM_IMAGES + NUM_LABELS
         unsigned char* images_data[images.count];
         int images_size[images.count];
+
+        for (int i = 0; i < images.num_labels; i++) {
+            data_size += strlen(images.label_names[i]) + 1; // NULL TERMINATED CHARACTER
+        }
 
         struct ImageListNode *cur_image = images.image_list_head;        
         for (int i = 0; i < images.count; i++) {
             images_data[i] = ExportImageToMemory(images.image_list_head->image, ".png", &images_size[i]);
-            data_size += 8 + images_size[i]; // NUM_IMAGE_BYTES + IMAGE_DATA
+            data_size += 16 + images_size[i]; // NUM_IMAGE_BYTES + IMAGE_LABEL + IMAGE_DATA
             cur_image = cur_image->next;
         }
 
@@ -108,14 +152,25 @@ void WriteDataSet(dataset_t dataset) {
         write_bytes(data, 8, images.uniform_width, 4);
         write_bytes(data, 12, images.uniform_height, 4);
         write_bytes(data, 16, images.count, 8);
-        int byte_index = 24;
+        write_bytes(data, 24, images.num_labels, 8);
+        int byte_index = 32;
+
+        for (int i = 0; i < images.num_labels; i++) {
+            strcpy(data + byte_index, images.label_names[i]);
+            byte_index += strlen(images.label_names[i]) + 1; // NULL TERMINATED CHARACTER
+        }
+
+        cur_image = images.image_list_head;
         for (int i = 0; i < images.count; i++) {
             write_bytes(data, byte_index, images_size[i], 8);
+            byte_index += 8;
+            write_bytes(data, byte_index, cur_image->label, 8);
             byte_index += 8;
             for (int j = i; j < images_size[i]; j++) {
                 data[j + byte_index] = images_data[i][j];
             }
             byte_index += images_size[i];
+            cur_image = cur_image->next;
         }
 
         SaveFileData(dataset.file_path, data, data_size);
@@ -124,18 +179,20 @@ void WriteDataSet(dataset_t dataset) {
     }
 }
 
-void DataSetAddImage(dataset_t dataset, Image image) {
+void DataSetAddImage(dataset_t dataset, Image image, long label) {
     assert(dataset.type == DATASET_IMAGES);
     
     struct DataSetData_Images images = dataset.data.image_dataset;
     if (images.image_list_head == NULL) {
         images.image_list_head = malloc(sizeof(struct ImageListNode));
         images.image_list_head->image = image;
+        images.image_list_head->label = label;
         images.image_list_head->next = NULL;
         images.image_list_head->prev = NULL;
     } else {
         images.image_list_head->next = malloc(sizeof(struct ImageListNode));
         images.image_list_head->next->image = image;
+        images.image_list_head->next->label = label;
         images.image_list_head->next->prev = images.image_list_head;
         images.image_list_head = images.image_list_head->next;
     }
@@ -186,6 +243,11 @@ void UnloadDataSet(dataset_t dataset) {
                 free(cur_image);
                 cur_image = next;
             }
+
+            for (int i = 0; i < images.num_labels; i++) {
+                free(images.label_names[i]);
+            }
+            free(images.label_names);
             break;
         default:
             assert(0);

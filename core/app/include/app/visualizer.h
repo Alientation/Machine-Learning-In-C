@@ -94,8 +94,9 @@ typedef struct VisualizerArgument {
     training_info_t training_info;
     char *model_name;
     bool allow_drawing_panel_as_model_input;
-
-    char **output_labels; // one hot encoded
+    
+    int num_labels;
+    const char **output_labels; // one hot encoded
     char *default_dataset_directory; // input data
 
     label_guesses_t (*label_guess)(mymatrix_t model_guess);
@@ -138,6 +139,9 @@ typedef struct DrawingPanelArgs {
     bool images_dataset_height_option_active;
     char *images_dataset_height_input;
     bool is_editing_dataset_file_name;
+
+    int num_labels;
+    const char** label_names;
 
     // scaled down
     bool updated;
@@ -183,6 +187,5 @@ void* window_run(void *vargp);
  * for a very, very long time (UINT32_MAX seconds)
  */
 void window_keep_open(neural_network_model_t *model, unsigned int num_seconds);
-
 
 #endif // VISUALIZER_H

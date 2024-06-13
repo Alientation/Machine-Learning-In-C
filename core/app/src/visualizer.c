@@ -65,12 +65,18 @@ void* window_run(void *vargp) {
         .segments_list_cur = NULL,
         .segments_list_size = 0,
 
-        .data_directory = vis_args->default_data_directory,
+        .dataset_directory = vis_args->default_dataset_directory,
         .is_save_popup_open = false,
-        .label_selection = 0,
-        .is_file_viewer_open = false,
-        .selected_file = 0,
-        .file_list_scroll_index = 0, 
+        .is_dataset_viewer_open = false,
+        .selected_dataset = -1,
+        .dataset_list_scroll_index = 0, 
+        .add_dataset_file_name = malloc((FILE_NAME_BUFFER_SIZE + 1) * sizeof(char)),
+        .add_dataset_type = 0,
+        .images_dataset_width_option_active = false,
+        .images_dataset_width_input = malloc((NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char)),
+        .images_dataset_height_option_active = false,
+        .images_dataset_height_input = malloc((NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char)),
+        .is_editing_dataset_file_name = false,
 
         .updated = false,
         .update_frames = 3,
@@ -83,6 +89,11 @@ void* window_run(void *vargp) {
 
         .label_guess = vis_args->label_guess,
     };
+    memset(vis_state.draw_args.add_dataset_file_name, 0, (FILE_NAME_BUFFER_SIZE + 1) * sizeof(char));
+    memset(vis_state.draw_args.images_dataset_width_input, 0, (NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char));
+    vis_state.draw_args.images_dataset_width_input[0] = '0';
+    memset(vis_state.draw_args.images_dataset_height_input, 0, (NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char));
+    vis_state.draw_args.images_dataset_height_input[0] = '0';
     SetTextureFilter(vis_state.draw_args.draw_texture.texture, TEXTURE_FILTER_TRILINEAR);
 
     BeginTextureMode(vis_state.draw_args.draw_texture);
@@ -166,6 +177,9 @@ void* window_run(void *vargp) {
     UnloadRenderTexture(vis_state.node_texture);
     UnloadRenderTexture(vis_state.node_outline_texture);
     free(vis_state.draw_args.output_buffer);
+    free(vis_state.draw_args.add_dataset_file_name);
+    free(vis_state.draw_args.images_dataset_width_input);
+    free(vis_state.draw_args.images_dataset_height_input);
     
     for (int i = 0; i < vis_args->model->num_layers; i++) {
         free(vis_state.node_positions[i]);

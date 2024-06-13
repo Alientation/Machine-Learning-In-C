@@ -3,6 +3,7 @@
 #define VISUALIZER_H
 
 #include <model/model.h>
+#include <app/dataset.h>
 
 #include <raylib.h>
 #include <math.h>
@@ -80,6 +81,8 @@ static const Color TOOLTIP_BACKGROUND_COLOR = {
 
 // max characters that can be written in a tooltip
 #define TOOLTIP_BUFFER_SIZE 100
+static const int FILE_NAME_BUFFER_SIZE = 40;
+static const int NUMBER_INPUT_BUFFER_SIZE = 10;
 
 typedef struct LabelGuesses {
     char **labels;
@@ -93,7 +96,7 @@ typedef struct VisualizerArgument {
     bool allow_drawing_panel_as_model_input;
 
     char **output_labels; // one hot encoded
-    char *default_data_directory; // input data
+    char *default_dataset_directory; // input data
 
     label_guesses_t (*label_guess)(mymatrix_t model_guess);
 } visualizer_argument_t;
@@ -104,6 +107,7 @@ typedef struct SegmentListNode {
     struct SegmentListNode *prev;
 } segment_list_node_t;
 
+// TODO MOVE MOST TO SEPARATE DRAWING PANEL STATE STRUCT TO DECLUTTER
 typedef struct DrawingPanelArgs {
     bool is_open;
     float brush_size;
@@ -118,13 +122,22 @@ typedef struct DrawingPanelArgs {
     segment_list_node_t *segments_list_cur;
     int segments_list_size;
 
+    // TODO SAVE THESE IN A SEPARATE STRUCT FOR THE SAVE WINDOW
     // save popup
-    char* data_directory;
+    char *dataset_directory;
     bool is_save_popup_open;
-    int label_selection;
-    bool is_file_viewer_open;
-    int selected_file;
-    int file_list_scroll_index;
+    bool is_dataset_viewer_open;
+    int selected_dataset;
+    dataset_t current_dataset;
+    image_dataset_visualizer_t image_dataset_visualizer;
+    int dataset_list_scroll_index;
+    char *add_dataset_file_name;
+    int add_dataset_type;
+    bool images_dataset_width_option_active;
+    char *images_dataset_width_input;
+    bool images_dataset_height_option_active;
+    char *images_dataset_height_input;
+    bool is_editing_dataset_file_name;
 
     // scaled down
     bool updated;

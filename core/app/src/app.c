@@ -34,7 +34,7 @@ int main(void) {
         .training_info = training_info,
         .model_name = "Digit Recognizer",
         .output_labels = outputs,
-        .default_data_directory = "images\\digits",
+        .default_dataset_directory = "images\\digits",
         .allow_drawing_panel_as_model_input = true,
         .label_guess = NULL,
     };

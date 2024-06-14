@@ -134,8 +134,8 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
         .height = 200,
     };
 
-    RenderTexture2D input_texture = draw_args->input_texture;
-    DrawTexturePro(input_texture.texture, (Rectangle) {.x = 0, .y = 0, .width = input_texture.texture.width, .height = input_texture.texture.height}, 
+    Texture2D input_texture = draw_args->selected_dataset_image != -1 ? draw_args->image_dataset_visualizer.displayed_images[draw_args->selected_dataset_image] : draw_args->input_texture.texture;
+    DrawTexturePro(input_texture, (Rectangle) {.x = 0, .y = 0, .width = input_texture.width, .height = input_texture.height}, 
             image_preview_rec, (Vector2) {0, 0}, 0, WHITE);
     DrawRectangleLines(image_preview_rec.x - 1, image_preview_rec.y - 1, image_preview_rec.width + 2, image_preview_rec.height + 2, BLACK);
 
@@ -317,12 +317,13 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
                     .x = dataset_display_rec.x, .y = dataset_display_rec.y + 60 * i, .width = 50, .height = 50
                 };
 
-                if (GuiButton(image_display_rec, "")) {
+                bool is_mouse_over = CheckCollisionPointRec(GetMousePosition(), image_display_rec);
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && is_mouse_over) {
                     if (draw_args->selected_dataset_image == i) {
                         draw_args->selected_dataset_image = -1;
                         draw_args->selected_label = -1;
                     } else {
-                        draw_args->selected_label = vis->displayed_images_nodes[i + vis->left_image_index]->label;
+                        draw_args->selected_label = vis->displayed_images_nodes[i]->label;
                         draw_args->selected_dataset_image = i;
                     }
                 }
@@ -331,7 +332,7 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
                         (Rectangle) {.x = 0, .y = 0, .width = draw_args->current_dataset.data.image_dataset.uniform_width, .height = draw_args->current_dataset.data.image_dataset.uniform_height},
                         image_display_rec, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
                 DrawRectangleLinesEx((Rectangle) {.x = image_display_rec.x-1, .y = image_display_rec.y-1, .width = image_display_rec.width, .height = image_display_rec.height},
-                        2, draw_args->selected_dataset_image == i ? BLUE : DARKGRAY);
+                        2, (draw_args->selected_dataset_image == i || is_mouse_over) ? BLUE : DARKGRAY);
             } 
 
             // draw the arrows on the top and bottom only if there is more images than the number of displayed images

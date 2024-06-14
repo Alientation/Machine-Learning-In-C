@@ -21,8 +21,16 @@ void DrawOutlinedCenteredText(const char* text, int posX, int posY, int fontSize
     DrawCenteredText(text, posX - outlineSize, posY + outlineSize, fontSize, outlineColor);
     DrawCenteredText(text, posX + outlineSize, posY + outlineSize, fontSize, outlineColor);
     DrawCenteredText(text, posX, posY, fontSize, color);
-} 
+}
 
+void DrawOutlinedRectangle(int x, int y, int width, int height, Color color, int outlineSize, Color outlineColor) {
+    DrawRectangle(x, y, width, height, color);
+    DrawRectangleLines(x - outlineSize/2.0, y - outlineSize/2.0, width, height, outlineColor);
+}
+
+void DrawOutlinedRectangleRec(Rectangle rec, Color color, int outlineSize, Color outlineColor) {
+    DrawOutlinedRectangle(rec.x, rec.y, rec.width, rec.height, color, outlineSize, outlineColor);
+}
 
 double sRGB_to_linear(double x) {
     if (x < 0.04045) return x/12.92;

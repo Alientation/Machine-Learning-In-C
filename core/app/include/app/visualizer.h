@@ -128,8 +128,8 @@ typedef struct DrawingPanelArgs {
     char *dataset_directory;
     bool is_save_popup_open;
     bool is_dataset_viewer_open;
-    int selected_dataset;
-    int selected_label;
+    int sel_dataset_index;
+    int sel_label_index;
     dataset_t current_dataset;
     image_dataset_visualizer_t image_dataset_visualizer;
     int dataset_list_scroll_index;
@@ -140,7 +140,7 @@ typedef struct DrawingPanelArgs {
     bool images_dataset_height_option_active;
     char *images_dataset_height_input;
     bool is_editing_dataset_file_name;
-    int selected_dataset_image;
+    int sel_dataset_image_index;
 
     int num_labels;
     const char** label_names;

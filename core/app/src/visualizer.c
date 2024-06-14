@@ -69,7 +69,7 @@ void* window_run(void *vargp) {
         .is_save_popup_open = false,
         .is_dataset_viewer_open = false,
         .selected_dataset = -1,
-        .selected_label = 0,
+        .selected_label = -1,
         .dataset_list_scroll_index = 0, 
         .add_dataset_file_name = malloc((FILE_NAME_BUFFER_SIZE + 1) * sizeof(char)),
         .add_dataset_type = 0,
@@ -78,7 +78,7 @@ void* window_run(void *vargp) {
         .images_dataset_height_option_active = false,
         .images_dataset_height_input = malloc((NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char)),
         .is_editing_dataset_file_name = false,
-        .selected_dataset_image = {false, false, false, false, false},
+        .selected_dataset_image = -1,
 
         .num_labels = vis_args->num_labels,
         .label_names = vis_args->output_labels,

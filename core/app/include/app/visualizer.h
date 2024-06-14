@@ -140,7 +140,7 @@ typedef struct DrawingPanelArgs {
     bool images_dataset_height_option_active;
     char *images_dataset_height_input;
     bool is_editing_dataset_file_name;
-    bool selected_dataset_image[NUMBER_DISPLAYED_IMAGES];
+    int selected_dataset_image;
 
     int num_labels;
     const char** label_names;
@@ -189,5 +189,6 @@ void* window_run(void *vargp);
  * for a very, very long time (UINT32_MAX seconds)
  */
 void window_keep_open(neural_network_model_t *model, unsigned int num_seconds);
+
 
 #endif // VISUALIZER_H

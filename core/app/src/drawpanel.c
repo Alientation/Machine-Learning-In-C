@@ -311,43 +311,46 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
     
     if (draw_args->selected_dataset != -1) {
         if (draw_args->current_dataset.type == DATASET_IMAGES) {
-            image_dataset_visualizer_t vis = draw_args->image_dataset_visualizer;
-            for (int i = 0; i < vis.number_displayed; i++) {
+            image_dataset_visualizer_t *vis = &draw_args->image_dataset_visualizer;
+            for (int i = 0; i < vis->number_displayed; i++) {
                 Rectangle image_display_rec = {
                     .x = dataset_display_rec.x, .y = dataset_display_rec.y + 60 * i, .width = 50, .height = 50
                 };
 
-                GuiToggle(image_display_rec, "", &draw_args->selected_dataset_image[i]);
-                if (draw_args->selected_dataset_image[i]) { 
-                    // printf("Selected image %d\n", i);
-                    draw_args->selected_label = vis.displayed_images_nodes[i + vis.left_image_index]->label;
-                    for (int other_image = 0; other_image < NUMBER_DISPLAYED_IMAGES; other_image++) {
-                        draw_args->selected_dataset_image[other_image] = i == other_image;
+                if (GuiButton(image_display_rec, "")) {
+                    if (draw_args->selected_dataset_image == i) {
+                        draw_args->selected_dataset_image = -1;
+                        draw_args->selected_label = -1;
+                    } else {
+                        draw_args->selected_label = vis->displayed_images_nodes[i + vis->left_image_index]->label;
+                        draw_args->selected_dataset_image = i;
                     }
                 }
 
-                DrawTexturePro(vis.displayed_images[i],
+                DrawTexturePro(vis->displayed_images[i],
                         (Rectangle) {.x = 0, .y = 0, .width = draw_args->current_dataset.data.image_dataset.uniform_width, .height = draw_args->current_dataset.data.image_dataset.uniform_height},
                         image_display_rec, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
                 DrawRectangleLinesEx((Rectangle) {.x = image_display_rec.x-1, .y = image_display_rec.y-1, .width = image_display_rec.width, .height = image_display_rec.height},
-                        2, draw_args->selected_dataset_image[i] ? BLUE : DARKGRAY);
+                        2, draw_args->selected_dataset_image == i ? BLUE : DARKGRAY);
             } 
 
             // draw the arrows on the top and bottom only if there is more images than the number of displayed images
-            if (vis.dataset->data.image_dataset.count > vis.number_displayed) {
+            if (vis->dataset->data.image_dataset.count > vis->number_displayed) {
                 // move images down faster if shift is pressed
-                bool shift_is_down = GetKeyPressed() == KEY_LEFT_SHIFT;
+                bool shift_is_down = IsKeyDown(KEY_LEFT_SHIFT);
                 
-                if (vis.left_image_index > 0) {
+                if (vis->left_image_index > 0) {
                     if (GuiButton((Rectangle) {.x = dataset_display_rec.x + dataset_display_rec.width/2 - 24, .y = dataset_display_rec.y - 28, .width = 48, .height = 20}, "")) {
-                        MoveDisplayImageDataSetVisualizer(&vis, shift_is_down ? NUMBER_DISPLAYED_IMAGES : 1);
+                        printf("Moving Display Images Up\n");
+                        MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? -NUMBER_DISPLAYED_IMAGES : -1);
                     }
                     GuiDrawIcon(ICON_ARROW_UP_FILL, dataset_display_rec.x + dataset_display_rec.width/2 - 8, dataset_display_rec.y - 26, 1, BLACK);
                 }
 
-                if (vis.left_image_index < vis.dataset->data.image_dataset.count - NUMBER_DISPLAYED_IMAGES) {
+                if (vis->left_image_index < vis->dataset->data.image_dataset.count - NUMBER_DISPLAYED_IMAGES) {
                     if (GuiButton((Rectangle) {.x = dataset_display_rec.x + dataset_display_rec.width/2 - 24, .y = dataset_display_rec.y + dataset_display_rec.height + 4, .width = 48, .height = 20}, "")) {
-                        MoveDisplayImageDataSetVisualizer(&vis, shift_is_down ? -NUMBER_DISPLAYED_IMAGES : -1);
+                        printf("Moving Display Images Down\n");
+                        MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? NUMBER_DISPLAYED_IMAGES : 1);
                     }
                     GuiDrawIcon(ICON_ARROW_DOWN_FILL, dataset_display_rec.x + dataset_display_rec.width/2 - 8, dataset_display_rec.y + dataset_display_rec.height + 6, 1, BLACK);
                 }

@@ -89,12 +89,17 @@ void UnloadImageDataSetVisualizer(image_dataset_visualizer_t dataset_vis) {
     }
 }
 
+// TODO OPTIMIZE THIS
 void MoveDisplayImageDataSetVisualizer(image_dataset_visualizer_t *dataset_vis, int move_count) {
     int target = move_count + dataset_vis->left_image_index;
     if (target < 0) {
         target = 0;
     } else if (target > dataset_vis->dataset->data.image_dataset.count - NUMBER_DISPLAYED_IMAGES) {
         target = dataset_vis->dataset->data.image_dataset.count - NUMBER_DISPLAYED_IMAGES;
+    }
+
+    if (target == dataset_vis->left_image_index) {
+        return; // no need to update anything
     }
 
     dataset_vis->left_image_index = target;

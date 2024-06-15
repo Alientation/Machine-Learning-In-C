@@ -190,6 +190,8 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
             UnloadImageDataSetVisualizer(draw_args->image_dataset_visualizer);
         }
 
+        draw_args->sel_dataset_image_index = -1;
+        draw_args->sel_label_index = -1;
         if (draw_args->sel_dataset_index != -1) {
             draw_args->current_dataset = LoadDataSet(data_files.paths[draw_args->sel_dataset_index]);
             
@@ -286,21 +288,6 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
     } else {
         assert(0);
     }
-
-
-    Rectangle save_img_r = {
-        .x = img_preview_r.x + 50,
-        .y = img_preview_r.y + img_preview_r.height + 10,
-        .width = img_preview_r.width - 100,
-        .height = 30,
-    };
-    if (draw_args->sel_dataset_index != -1 && GuiButton(save_img_r, "Add to Dataset")) {
-        printf("Saved current image to %s\n", draw_args->current_dataset.file_path);
-
-        DataSetAddImage(&draw_args->current_dataset, LoadImageFromTexture(draw_args->input_texture.texture), draw_args->sel_label_index);
-        UpdateImageDataSetVisualizer(&draw_args->image_dataset_visualizer);
-    }
-
 
     Rectangle ds_display_r = {
         .x = img_preview_r.x + img_preview_r.width + 10,
@@ -419,6 +406,47 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
             assert(0);
         }
 
+
+        if (draw_args->sel_dataset_index == -1) {
+
+        } else if (draw_args->sel_dataset_image_index == -1) {
+            Rectangle add_img_r = {
+                .x = img_preview_r.x + 50,
+                .y = img_preview_r.y + img_preview_r.height + 10,
+                .width = img_preview_r.width - 100,
+                .height = 30,
+            };
+            if (GuiButton(add_img_r, "Add to Dataset")) {
+                printf("Saved current image to %s\n", draw_args->current_dataset.file_path);
+
+                DataSetAddImage(&draw_args->current_dataset, LoadImageFromTexture(draw_args->input_texture.texture), draw_args->sel_label_index);
+                UpdateImageDataSetVisualizer(&draw_args->image_dataset_visualizer);
+            }
+
+            // todo add insert image option
+        } else if (draw_args->sel_dataset_image_index != -1) {
+            Rectangle delete_img_r = {
+                .x = img_preview_r.x + 50,
+                .y = img_preview_r.y + img_preview_r.height + 10,
+                .width = img_preview_r.width - 100,
+                .height = 30,
+            };
+
+            if (GuiButton(delete_img_r, "Delete")) {
+                printf("Deleted image from %s", draw_args->current_dataset.file_path);
+
+                DataSetRemoveImage(&draw_args->current_dataset, draw_args->image_dataset_visualizer.left_image_index + draw_args->sel_dataset_image_index);
+                if (draw_args->sel_dataset_image_index + NUMBER_DISPLAYED_IMAGES >= draw_args->current_dataset.data.image_dataset.count) {
+                    draw_args->image_dataset_visualizer.left_image_index = draw_args->current_dataset.data.image_dataset.count - NUMBER_DISPLAYED_IMAGES;
+                    if (draw_args->image_dataset_visualizer.left_image_index < 0) {
+                        draw_args->image_dataset_visualizer.left_image_index = 0;
+                    }
+                }
+                
+                UpdateImageDataSetVisualizer(&draw_args->image_dataset_visualizer);
+                draw_args->sel_dataset_image_index = -1;
+            }
+        }
     }
     
 }

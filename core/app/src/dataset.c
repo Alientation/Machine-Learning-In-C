@@ -276,18 +276,30 @@ void DataSetRemoveImages(dataset_t *dataset, int from_index, int to_index) {
     struct ImageListNode *remove_start = images->image_list_head;
     for (int i = 0; i < from_index; i++) {
         remove_start = remove_start->next;
-    }
+    } 
 
     struct ImageListNode *remove_end = remove_start;
     for (int i = from_index; i < to_index - 1; i++) {
         UnloadImage(remove_end->image);
+        struct ImageListNode *delete = remove_end;
         remove_end = remove_end->next;
+        free(delete);
     }
     UnloadImage(remove_end->image);
 
-    remove_start->prev->next = remove_end->next;
-    if (remove_end->next) {
-        remove_end->prev = remove_start->prev;
+    // TODO implement linked list as circular with header node to clean it up
+    if (from_index == 0 && to_index == dataset->data.image_dataset.count) {
+        images->image_list_head = NULL;
+        images->image_list_tail = NULL;
+    } else if (from_index == 0) {
+        images->image_list_head = remove_end->next;
+    } else if (to_index == dataset->data.image_dataset.count) {
+        images->image_list_tail = remove_start->prev;
+    } else {
+        remove_start->prev->next = remove_end->next;
+        if (remove_end->next) {
+            remove_end->prev = remove_start->prev;
+        }
     }
 
     images->count -= to_index - from_index;

@@ -491,6 +491,13 @@ mymatrix_t model_calculate(neural_network_model_t *model) {
     return current->layer.output.output_values;
 }
 
+void training_info_free(training_info_t *training_info) {
+    free_matrix_list(training_info->train_x, training_info->train_size);
+    free_matrix_list(training_info->train_y, training_info->train_size);
+    free_matrix_list(training_info->test_x, training_info->test_size);
+    free_matrix_list(training_info->test_y, training_info->test_size);
+}
+
 void model_train_info(training_info_t *training_info) {
     // todo support batch size in future
     assert(training_info->batch_size == 1);
@@ -510,6 +517,7 @@ void model_train_info(training_info_t *training_info) {
     mymatrix_t *test_y = training_info->test_y;
 
     mymatrix_t actual_output = matrix_allocator(output_layer.output_values.r, output_layer.output_values.c);
+    int print_every = target_epochs / 10;
     for (*epoch = 0; *epoch < target_epochs; (*epoch)++) {
         // perform training
         float avg_train_error = 0;
@@ -543,11 +551,43 @@ void model_train_info(training_info_t *training_info) {
         training_info->avg_test_error = avg_test_error / (float) test_size;
         training_info->test_accuracy = ((int)(100.0 * (float) passed_test / (float) test_size)) / 100.0;
 
+        if (((*epoch) % print_every == 0 && *epoch != 0) || *epoch == target_epochs - 1) {
+            printf("==== Epoch %d ==== \ntrain_error: %f, train_accuracy: %f\ntest_error: %f, test_accuracy: %f\n\n", *epoch, 
+                    training_info->avg_train_error, training_info->train_accuracy, 
+                    training_info->avg_test_error, training_info->test_accuracy);
+        }
 
         // check if we can stop
         if (training_info->target_accuracy <= training_info->test_accuracy && training_info->target_accuracy <= training_info->train_accuracy) {
             break; // finish early
         }
     }
+    matrix_free(actual_output);
+}
+
+void model_test_info(training_info_t *training_info) {
+    // perform test
+    neural_network_model_t *model = training_info->model;
+    output_layer_t output_layer = model->output_layer->layer.output;
+    mymatrix_t actual_output = matrix_allocator(output_layer.output_values.r, output_layer.output_values.c);
+    mymatrix_t *test_x = training_info->test_x;
+    mymatrix_t *test_y = training_info->test_y;
+    unsigned int *test_index = &training_info->test_index;
+    unsigned int test_size = training_info->test_size;
+    float avg_test_error = 0;
+    int passed_test = 0;
+    for (*test_index = 0; *test_index < test_size; (*test_index)++) {
+        model_predict(model, test_x[*test_index], actual_output);
+        avg_test_error += output_cost_mean_squared(model->output_layer, test_y[*test_index]);
+        
+        mymatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
+        if (matrix_equal(test_y[*test_index], model_guess)) {
+            passed_test++;
+        }
+    }
+
+    training_info->avg_test_error = avg_test_error / (float) test_size;
+    training_info->test_accuracy = ((int)(100.0 * (float) passed_test / (float) test_size)) / 100.0;
+
     matrix_free(actual_output);
 }

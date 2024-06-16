@@ -204,7 +204,10 @@ float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t 
 void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_tests);
 mymatrix_t model_calculate(neural_network_model_t *model);
 
-void model_train_info(training_info_t *training_info);
 
+void training_info_free(training_info_t *training_info);
+
+void model_train_info(training_info_t *training_info);
+void model_test_info(training_info_t *training_info);
 
 #endif // MODEL_H

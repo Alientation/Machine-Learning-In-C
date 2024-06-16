@@ -2,6 +2,8 @@
 #ifndef DATASET_H
 #define DATASET_H
 
+#include <model/model.h>
+
 #include <raylib.h>
 
 typedef struct DataSet {
@@ -58,6 +60,7 @@ void WriteDataSet(dataset_t dataset);
 void DataSetAddImage(dataset_t *dataset, Image image, long label);
 void DataSetRemoveImage(dataset_t *dataset, int index);
 void DataSetRemoveImages(dataset_t *dataset, int from_index, int to_index);
+void DataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset);
 
 void UnloadDataSet(dataset_t dataset);
 

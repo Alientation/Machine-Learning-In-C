@@ -52,6 +52,8 @@ void* window_run(void *vargp) {
     SetTargetFPS(60);
 
     vis_state.draw_args = (drawing_panel_args_t) {
+        .vis_args = vis_args,
+
         .is_open = false,
         .brush_size = 10,
         .brush_color = ColorToHSV(BLACK),
@@ -218,7 +220,7 @@ void* test_run(void *vargp) {
     if (!vis_state.is_testing && !vis_state.is_training) {
         vis_state.is_testing = true;
         CLOCK_MARK
-        // model_test_info((training_info_t*) vargp); // TODO
+        model_test_info((training_info_t*) vargp);
         CLOCK_MARK_ENTRY("TESTING")
         vis_state.is_testing = false;
     }
@@ -403,8 +405,13 @@ void DrawLayer(int layer_index, layer_t *layer) {
                 && !vis_state.draw_args.is_open) {
             // check if too small
             if (NODE_RADIUS < MIN_NODE_RADIUS_FOR_SLIDER_BAR) {
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
                     // show node's details in a pop up window with a slider
+
+                    nodes.matrix[r][0] = 1;
+                } else if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+
+                    nodes.matrix[r][0] = 0;
                 }
                 
             } else {
@@ -420,7 +427,7 @@ void DrawLayer(int layer_index, layer_t *layer) {
 
                 // todo this should most likely be ran on a separate thread, perhaps just have one thread always running
                 // that detects changes to the model's inputs when not currently training or testing and recalculates the corresponding output
-                mymatrix_t output = model_calculate(vis_state.vis_args.training_info.model);
+                mymatrix_t output = model_calculate(vis_state.vis_args.training_info->model);
             }
         }
         
@@ -477,13 +484,13 @@ void DrawWindow(neural_network_model_t *model) {
         int control_y = MODEL_Y + 40;
         if (GuiButton((Rectangle) {.x = MODEL_X + 30, .y = control_y, .height = 30, .width = 130}, "Start Training") && !vis_state.draw_args.is_open) {
             pthread_t thread_id;
-            pthread_create(&thread_id, NULL, train_run, &vis_state.vis_args.training_info);
+            pthread_create(&thread_id, NULL, train_run, vis_state.vis_args.training_info);
             pthread_detach(thread_id);
         }
 
         if (GuiButton((Rectangle) {.x = MODEL_X + 170, .y = control_y, .height = 30, .width = 100}, "Start Test") && !vis_state.draw_args.is_open) {
             pthread_t thread_id;
-            pthread_create(&thread_id, NULL, test_run, &vis_state.vis_args.training_info);
+            pthread_create(&thread_id, NULL, test_run, vis_state.vis_args.training_info);
             pthread_detach(thread_id);
         }
 
@@ -493,10 +500,12 @@ void DrawWindow(neural_network_model_t *model) {
         }
 
         // TODO dont add drawing panel if model does not accept drawings as input
-        if (GuiButton((Rectangle) {.x = MODEL_X + 390, .y = control_y, .height = 30, .width = 120}, "Drawing Panel") && !vis_state.draw_args.is_open) {
-            vis_state.draw_args.is_open = true;
+        if (vis_state.vis_args.allow_drawing_panel_as_model_input) {
+            if (GuiButton((Rectangle) {.x = MODEL_X + 390, .y = control_y, .height = 30, .width = 120}, "Drawing Panel") && !vis_state.draw_args.is_open) {
+                vis_state.draw_args.is_open = true;
+            }
+            GuiDrawingPanelPopup(&vis_state.draw_args);
         }
-        GuiDrawingPanelPopup(&vis_state.draw_args);
 
         // draw tooltip
         if (vis_state.show_tooltip && !vis_state.draw_args.is_open) {
@@ -509,7 +518,7 @@ void DrawWindow(neural_network_model_t *model) {
 
             if (vis_state.tooltip_weight_value && vis_state.playground_state && !vis_state.is_testing && !vis_state.is_training) { // todo replace with model.isLocked instead
                 *vis_state.tooltip_weight_value += WEIGHT_VALUE_MOUSEWHEEL_SCALE * GetMouseWheelMove();
-                mymatrix_t output = model_calculate(vis_state.vis_args.training_info.model); // todo preferrably run on separate thread
+                mymatrix_t output = model_calculate(vis_state.vis_args.training_info->model); // todo preferrably run on separate thread
             }
         }
     }

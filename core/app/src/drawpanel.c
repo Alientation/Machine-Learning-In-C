@@ -368,6 +368,11 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
                 DrawText(TextFormat("label %d)  %s", i+1, vis->dataset->data.image_dataset.label_names[i]), ds_info_r.x + 20, ds_info_r.y + 130 + i * 15, 12, DARKGRAY);
             }
 
+            if (GuiButton((Rectangle) {.x = ds_info_r.x, .y = ds_info_r.y + ds_info_r.height + 10, 80, 30}, "Use")) {
+                training_info_free(draw_args->vis_args->training_info);
+                DataSetConvertToTraining(draw_args->vis_args->training_info, &draw_args->current_dataset);
+            }
+
             // display currently selected image info
             Rectangle img_info_r = {
                 .x = ds_display_r.x + ds_display_r.width + 20,

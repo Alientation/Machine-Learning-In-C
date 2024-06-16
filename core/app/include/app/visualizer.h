@@ -91,7 +91,7 @@ typedef struct LabelGuesses {
 
 typedef struct VisualizerArgument {
     neural_network_model_t *model;
-    training_info_t training_info;
+    training_info_t *training_info;
     char *model_name;
     bool allow_drawing_panel_as_model_input;
     
@@ -110,6 +110,8 @@ typedef struct SegmentListNode {
 
 // TODO MOVE MOST TO SEPARATE DRAWING PANEL STATE STRUCT TO DECLUTTER
 typedef struct DrawingPanelArgs {
+    visualizer_argument_t *vis_args;
+
     bool is_open;
     float brush_size;
     Vector3 brush_color; // in HSV

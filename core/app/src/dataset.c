@@ -1,4 +1,5 @@
 #include <app/dataset.h>
+#include <util/math.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -303,6 +304,91 @@ void DataSetRemoveImages(dataset_t *dataset, int from_index, int to_index) {
     }
 
     images->count -= to_index - from_index;
+}
+
+void convert_image_to_mymatrix(mymatrix_t* mymatrix, Image image) {
+    for (int i = 0; i < image.height; i++) {
+        for (int j = 0; j < image.width; j++) {
+            // mymatrix->matrix[i * image.width + j][0] = 1 - GetImageColor(image, j, i).r / 256.0;
+            mymatrix->matrix[j * image.height + i][0] = 1 - GetImageColor(image, j, i).r / 256.0;
+        }
+    }
+}
+
+void one_hot_encode_matrix(mymatrix_t *mymatrix, int label) {
+    mymatrix->matrix[label][0] = 1;
+}
+
+void DataSetConvertToTraining(training_info_t* training_info, dataset_t *dataset) {
+    if (dataset->type == DATASET_IMAGES) {
+        // TODO add option to select training/testing split, batch size, learning rate, target epochs, target accuracy
+        const float train_test_split = 0.8;
+        struct DataSetData_Images data = dataset->data.image_dataset;
+
+        training_info->in_progress = false;
+        training_info->train_size = 0;
+        training_info->train_x = NULL;
+        training_info->train_y = NULL;
+        training_info->test_size = 0;
+        training_info->test_x = NULL;
+        training_info->test_y = NULL;
+
+        training_info->batch_size = 1;
+        training_info->learning_rate = 0.1;
+        training_info->target_epochs = 20;
+        training_info->target_accuracy = 1.5;
+        
+        training_info->train_size = data.count * train_test_split;
+        training_info->test_size = data.count - training_info->train_size;
+
+        training_info->train_x = malloc(training_info->train_size * sizeof(mymatrix_t));
+        training_info->train_y = malloc(training_info->train_size * sizeof(mymatrix_t));
+        training_info->test_x = malloc(training_info->test_size * sizeof(mymatrix_t));
+        training_info->test_y = malloc(training_info->test_size * sizeof(mymatrix_t));
+
+        struct ImageListNode* shuffler[data.count];
+        const int input_size = data.uniform_width * data.uniform_width;
+        const int output_size = data.num_labels;
+        
+        struct ImageListNode *cur = data.image_list_head;
+        for (int i = 0; i < data.count; i++) {
+            shuffler[i] = cur;
+            cur = cur->next;
+        }
+
+        for (int i = 0; i < data.count; i++) {
+            int s1 = random_uniform_range(1) * data.count;
+            int s2 = random_uniform_range(1) * data.count;
+            if (s1 >= data.count) {
+                s1 = data.count - 1;
+            }
+            if (s2 >= data.count) {
+                s2 = data.count - 1;
+            }
+
+            struct ImageListNode *temp = shuffler[s1];
+            shuffler[s1] = shuffler[s2];
+            shuffler[s2] = temp; 
+        }
+
+        for (int i = 0; i < training_info->train_size; i++) {
+            training_info->train_x[i] = matrix_allocator(input_size, 1);
+            training_info->train_y[i] = matrix_allocator(output_size, 1);
+
+            convert_image_to_mymatrix(&training_info->train_x[i], shuffler[i]->image);
+            one_hot_encode_matrix(&training_info->train_y[i], shuffler[i]->label);
+        }
+
+        for (int i = 0; i < training_info->test_size; i++) {
+            training_info->test_x[i] = matrix_allocator(input_size, 1);
+            training_info->test_y[i] = matrix_allocator(output_size, 1);
+
+            convert_image_to_mymatrix(&training_info->test_x[i], shuffler[i + training_info->train_size]->image);
+            one_hot_encode_matrix(&training_info->test_y[i], shuffler[i + training_info->train_size]->label);
+        }
+    } else {
+        assert(0);
+    }
 }
 
 

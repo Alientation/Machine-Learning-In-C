@@ -28,5 +28,6 @@
         "tests/build/test/_deps/googletest-src/googletest/include",
         "tests/include",
         "core/app/build/release/_deps/raylib-build/raylib/include"
-    ]
+    ],
+    "vim.useCtrlKeys": true,
 }

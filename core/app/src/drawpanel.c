@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-// TODO SOME METHODS ARE WAAAYYY TOO LONG AND CLUNKY, REFACTOR LATER
-
 // TODO perhaps for optimization, but not really critical, instead of storing these saved
 // drawing panel images as render textures which would be put in VRAM, store as images on RAM and
 // write to the drawing panel's render texture when needed (saves VRAM space and time spent sending these textures to it after each draw segment)
@@ -294,13 +292,13 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
     // draw the arrows on the top and bottom only if there is more images than the number of displayed images
     if (img_ds->count > vis->number_displayed) {
         // move display images faster if shift is pressed
-        bool shift_is_down = IsKeyDown(KEY_LEFT_SHIFT);
+        int move_magnitude = IsKeyDown(KEY_LEFT_CONTROL) ? 100000 : IsKeyDown(KEY_LEFT_SHIFT) ? 5 : 1;
         
         // move up
         if (vis->left_image_index > 0) {
             if (GuiButton((Rectangle) {.x = ds_display_r.x + ds_display_r.width/2 - 24, .y = ds_display_r.y - 28, .width = 48, .height = 20}, "")) {
                 printf("Moving Display Images Up\n");
-                MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? -NUMBER_DISPLAYED_IMAGES : -1);
+                MoveDisplayImageDataSetVisualizer(vis, -move_magnitude);
             }
             GuiDrawIcon(ICON_ARROW_UP_FILL, ds_display_r.x + ds_display_r.width/2 - 8, ds_display_r.y - 26, 1, BLACK);
         }
@@ -309,7 +307,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
         if (vis->left_image_index < img_ds->count - NUMBER_DISPLAYED_IMAGES) {
             if (GuiButton((Rectangle) {.x = ds_display_r.x + ds_display_r.width/2 - 24, .y = ds_display_r.y + ds_display_r.height + 4, .width = 48, .height = 20}, "")) {
                 printf("Moving Display Images Down\n");
-                MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? NUMBER_DISPLAYED_IMAGES : 1);
+                MoveDisplayImageDataSetVisualizer(vis, move_magnitude);
             }
             GuiDrawIcon(ICON_ARROW_DOWN_FILL, ds_display_r.x + ds_display_r.width/2 - 8, ds_display_r.y + ds_display_r.height + 6, 1, BLACK);
         }

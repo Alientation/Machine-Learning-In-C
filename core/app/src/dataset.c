@@ -1,6 +1,10 @@
 #include <app/dataset.h>
 #include <util/math.h>
 
+#define PROFILER_DISABLE_FUNCTION_RETURN
+#include <util/profiler.h>
+
+#include <pthread.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -132,7 +136,6 @@ dataset_t ConstructImageDataSet(const char* file_path, int width, int height, in
     return dataset;
 }
 
-// TODO make loading images from data multi threaded
 dataset_t LoadDataSet(const char* file_path) {
     int file_size = 0;
     unsigned char* data = LoadFileData(file_path, &file_size);
@@ -160,12 +163,13 @@ dataset_t LoadDataSet(const char* file_path) {
             long image_label = read_bytes(data, byte, 8);
             byte += 8;
 
-            printf("loading image: image_bytes=%d, label=%d\n", image_bytes, image_label);
+            // printf("loading image: image_bytes=%d, label=%d\n", image_bytes, image_label);
 
             DataSetAddImage(&dataset, LoadImageFromMemory(".png", data + byte, image_bytes), image_label);
             
             byte += image_bytes;
         }
+        
         UnloadFileData(data);
         return dataset;
     }

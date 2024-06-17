@@ -101,9 +101,8 @@ void DrawingPanelClear(drawing_panel_args_t *draw_args) {
     draw_args->updated = true;
 }
 
-
 void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
-    // display all dataset files in directory
+    // files can be dropped into the current directory
     char *dir_path = strdup(concat(3, GetWorkingDirectory(), "\\", draw_args->dataset_directory));
     if (IsFileDropped()) {
         FilePathList dropped_files = LoadDroppedFiles();
@@ -117,6 +116,7 @@ void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
         UnloadDroppedFiles(dropped_files);
     }
 
+    // display all dataset files in directory
     FilePathList data_files = LoadDirectoryFiles(dir_path);
     free(dir_path);
     char* file_paths[data_files.count];
@@ -126,10 +126,7 @@ void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
         strcpy(file_paths[i], file);
     }
 
-    const char* text = NULL;
-    if (data_files.count > 0) {
-        text = TextJoin((const char**)file_paths, data_files.count, ";");
-    }
+    const char* text = data_files.count > 0 ? TextJoin((const char**)file_paths, data_files.count, ";") : NULL;
     for (int i = 0; i < data_files.count; i++) {
         free(file_paths[i]);
     }
@@ -137,7 +134,6 @@ void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
     int prev_selected_file = draw_args->sel_dataset_index;
     GuiListView(file_viewer_r, text, &draw_args->dataset_list_scroll_index, &draw_args->sel_dataset_index);
     if (draw_args->sel_dataset_index != prev_selected_file) {
-        // select the new dataset
         // unload the previous dataset
         if (prev_selected_file != -1) {
             WriteDataSet(draw_args->current_dataset);
@@ -145,6 +141,7 @@ void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
             UnloadImageDataSetVisualizer(draw_args->img_dataset_vis);
         }
 
+        // select and load the new dataset
         draw_args->sel_dataset_image_index = -1;
         draw_args->sel_label_index = -1;
         if (draw_args->sel_dataset_index != -1) {
@@ -163,6 +160,7 @@ void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
 }
 
 void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
+    // name of new dataset
     Rectangle name_ds_r = {
         .x = file_viewer_r.x,
         .y = file_viewer_r.y + file_viewer_r.height + 40,
@@ -174,6 +172,7 @@ void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
         draw_args->is_editing_dataset_file_name = !draw_args->is_editing_dataset_file_name;
     }
 
+    // add new dataset button
     Rectangle add_ds_r = {
         .x = name_ds_r.x + name_ds_r.width + 10,
         .y = name_ds_r.y,
@@ -185,7 +184,9 @@ void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
             const char* dataset_path = concat(6, GetWorkingDirectory(), "\\", draw_args->dataset_directory, "\\", draw_args->add_dataset_file_name, ".ds");
             dataset_t dataset = ConstructImageDataSet(dataset_path, TextToInteger(draw_args->images_dataset_width_input), 
                     TextToInteger(draw_args->images_dataset_height_input), draw_args->num_labels, draw_args->label_names);
+            // if there is not already a file with the same name in the directory
             if (!FileExists(dataset_path)) {
+                // create an empty dataset file
                 WriteDataSet(dataset);
                 UnloadDataSet(dataset);
             }
@@ -194,7 +195,8 @@ void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
         }
     }
 
-    // dataset types
+    // new dataset options
+    // type of dataset, currently only possible type are images
     const int num_dataset_types = 1;
     Rectangle ds_type_r = {
         .x = name_ds_r.x,
@@ -206,7 +208,7 @@ void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
     
     // If selected dataset to add is IMAGE
     if (draw_args->add_dataset_type == 0) {
-        // need to know the height and width
+        // need to know the height and width of images in the dataset
         Rectangle imgs_ds_width_label_r = {
             .x = ds_type_r.x,
             .y = ds_type_r.y + ds_type_r.height + 10,
@@ -247,7 +249,9 @@ void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
     }
 }
 
+// must be an image dataset
 void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r, Rectangle file_viewer_r) {
+    // don't display dataset if no dataset is chosen
     if (draw_args->sel_dataset_index == -1 || draw_args->current_dataset.type != DATASET_IMAGES) {
         return;
     }
@@ -267,6 +271,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
             .x = ds_display_r.x, .y = ds_display_r.y + 60 * i, .width = 50, .height = 50
         };
 
+        // check if user selected image from the dataset display
         bool is_mouse_over = CheckCollisionPointRec(GetMousePosition(), img_display_r);
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && is_mouse_over) {
             if (draw_args->sel_dataset_image_index == i) {
@@ -278,6 +283,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
             }
         }
 
+        // draw the preview images of the dataset
         DrawTexturePro(vis->displayed_images[i],
                 (Rectangle) {.x = 0, .y = 0, .width = img_ds->uniform_width, .height = img_ds->uniform_height},
                 img_display_r, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
@@ -287,9 +293,10 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
 
     // draw the arrows on the top and bottom only if there is more images than the number of displayed images
     if (img_ds->count > vis->number_displayed) {
-        // move images down faster if shift is pressed
+        // move display images faster if shift is pressed
         bool shift_is_down = IsKeyDown(KEY_LEFT_SHIFT);
         
+        // move up
         if (vis->left_image_index > 0) {
             if (GuiButton((Rectangle) {.x = ds_display_r.x + ds_display_r.width/2 - 24, .y = ds_display_r.y - 28, .width = 48, .height = 20}, "")) {
                 printf("Moving Display Images Up\n");
@@ -298,6 +305,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
             GuiDrawIcon(ICON_ARROW_UP_FILL, ds_display_r.x + ds_display_r.width/2 - 8, ds_display_r.y - 26, 1, BLACK);
         }
 
+        // move down
         if (vis->left_image_index < img_ds->count - NUMBER_DISPLAYED_IMAGES) {
             if (GuiButton((Rectangle) {.x = ds_display_r.x + ds_display_r.width/2 - 24, .y = ds_display_r.y + ds_display_r.height + 4, .width = 48, .height = 20}, "")) {
                 printf("Moving Display Images Down\n");
@@ -306,6 +314,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
             GuiDrawIcon(ICON_ARROW_DOWN_FILL, ds_display_r.x + ds_display_r.width/2 - 8, ds_display_r.y + ds_display_r.height + 6, 1, BLACK);
         }
         
+        // update currently selected label
         if (draw_args->sel_dataset_image_index != -1) {
             draw_args->sel_label_index = vis->displayed_images_nodes[draw_args->sel_dataset_image_index]->label;
         }
@@ -399,7 +408,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
             printf("Deleted image from %s", dataset->file_path);
 
             DataSetRemoveImage(dataset, vis->left_image_index + draw_args->sel_dataset_image_index);
-            if (draw_args->sel_dataset_image_index + NUMBER_DISPLAYED_IMAGES >= img_ds->count) {
+            if (vis->left_image_index + NUMBER_DISPLAYED_IMAGES >= img_ds->count) {
                 vis->left_image_index = img_ds->count - NUMBER_DISPLAYED_IMAGES;
                 if (vis->left_image_index < 0) {
                     vis->left_image_index = 0;

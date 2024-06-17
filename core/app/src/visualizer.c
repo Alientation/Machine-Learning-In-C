@@ -37,20 +37,74 @@ static visualizer_state_t vis_state = {
     .is_window_open = false,
 }; 
 
-
 //===========================================================================
+int compute_network_width() {
+    layer_t *cur_layer = vis_state.vis_args.model->input_layer;
+    int network_width = LAYER_GAP * (vis_state.vis_args.model->num_layers - 1);
+    for (int i = 0; i < vis_state.vis_args.model->num_layers; i++) {
+        mymatrix_t neurons = layer_get_neurons(cur_layer);
+        int num_nodes = neurons.r * neurons.c;
+        vis_state.node_positions[i] = malloc(num_nodes * sizeof(Vector2));
+        
+        int nodes_per_section = HIDDEN_LAYER_NODES_HEIGHT;
+        if (cur_layer->type == INPUT) {
+            nodes_per_section = INPUT_LAYER_NODES_HEIGHT;
+        }
 
-void* window_run(void *vargp) {    
-    assert(!vis_state.is_window_open);
-    // SetTraceLogLevel(LOG_ERROR); 
+        int num_sections = (num_nodes + nodes_per_section - 1) / nodes_per_section;
+        network_width += (NODE_RADIUS * 2) * num_sections + NODE_GAP * (num_sections - 1);
+        cur_layer = cur_layer->next;
+    }
+    return network_width;
+}
 
-    visualizer_argument_t *vis_args = (visualizer_argument_t*) vargp;
+void construct_node_positions() {
+    // TODO in future move all information about layer drawing to separate file
+    vis_state.node_positions = malloc(vis_state.vis_args.model->num_layers * sizeof(Vector2*));
+    
+    // compute the width of the whole neural network to center it in the screen
+    layer_t *cur_layer = vis_state.vis_args.model->input_layer;
+    int network_width = compute_network_width();
+
+    // center
+    int network_x = MODEL_X + MODEL_WIDTH/2 - network_width/2;
+    
+    int layer_x = network_x;
+    cur_layer = vis_state.vis_args.model->input_layer;
+    for (int i = 0 ; i < vis_state.vis_args.model->num_layers; i++) {
+        mymatrix_t neurons = layer_get_neurons(cur_layer);
+        int num_nodes = neurons.r * neurons.c;
+        int nodes_per_section = cur_layer->type == INPUT ? INPUT_LAYER_NODES_HEIGHT : HIDDEN_LAYER_NODES_HEIGHT;
+        if (nodes_per_section > num_nodes) {
+            nodes_per_section = num_nodes;
+        }
+
+        // round up how many sections are needed with nodes_per_section nodes vertically
+        int num_sections = (num_nodes + nodes_per_section - 1) / nodes_per_section;
+        
+        // center
+        int layer_height = (NODE_RADIUS * 2) * nodes_per_section + (NODE_GAP) * (nodes_per_section - 1);
+        int layer_y = MODEL_Y + MODEL_HEIGHT/2 - layer_height/2;
+        for (int sec = 0; sec < num_sections; sec++) {
+            for (int node = 0; node < nodes_per_section; node++) {
+                // todo comment
+                int node_index = sec * nodes_per_section + node;
+                vis_state.node_positions[i][node_index].x = layer_x + sec * (NODE_RADIUS*2 + NODE_GAP) + NODE_RADIUS;
+                vis_state.node_positions[i][node_index].y = layer_y + node * (NODE_RADIUS*2 + NODE_GAP) + NODE_RADIUS;
+            }
+        }
+
+        // width of layer + gap between layers
+        layer_x += (NODE_RADIUS * 2) * num_sections + NODE_GAP * (num_sections - 1);
+        layer_x += LAYER_GAP;
+
+        cur_layer = cur_layer->next;
+    }
+}
+
+void initialize_visualizer(visualizer_argument_t *vis_args) {
     vis_state.vis_args = *vis_args;
     vis_state.is_window_open = true;
-
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, TextFormat("%s Visualizer", vis_args->model_name));
-    SetTargetFPS(60);
-
     vis_state.draw_args = (drawing_panel_args_t) {
         .vis_args = vis_args,
 
@@ -67,20 +121,25 @@ void* window_run(void *vargp) {
         .segments_list_cur = NULL,
         .segments_list_size = 0,
 
-        .dataset_directory = vis_args->default_dataset_directory,
         .is_save_popup_open = false,
         .is_dataset_viewer_open = false,
+        
+        .dataset_directory = vis_args->default_dataset_directory,
         .sel_dataset_index = -1,
         .sel_label_index = -1,
+        .current_dataset = {0},
+        .image_dataset_visualizer = {0},
         .dataset_list_scroll_index = 0, 
+        .sel_dataset_image_index = -1,
+        
         .add_dataset_file_name = malloc((FILE_NAME_BUFFER_SIZE + 1) * sizeof(char)),
         .add_dataset_type = 0,
+        
         .images_dataset_width_option_active = false,
         .images_dataset_width_input = malloc((NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char)),
         .images_dataset_height_option_active = false,
         .images_dataset_height_input = malloc((NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char)),
         .is_editing_dataset_file_name = false,
-        .sel_dataset_image_index = -1,
 
         .num_labels = vis_args->num_labels,
         .label_names = vis_args->output_labels,
@@ -93,95 +152,20 @@ void* window_run(void *vargp) {
         .buffer_width = 28,
         .buffer_height = 28,
         .output_buffer = malloc(sizeof(float) * 28 * 28),
-
-        .label_guess = vis_args->label_guess,
     };
+
+    // text box input buffers
     memset(vis_state.draw_args.add_dataset_file_name, 0, (FILE_NAME_BUFFER_SIZE + 1) * sizeof(char));
     memset(vis_state.draw_args.images_dataset_width_input, 0, (NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char));
     vis_state.draw_args.images_dataset_width_input[0] = '2';
     vis_state.draw_args.images_dataset_width_input[1] = '8';
     memset(vis_state.draw_args.images_dataset_height_input, 0, (NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char));
     vis_state.draw_args.images_dataset_height_input[0] = '2';
-    vis_state.draw_args.images_dataset_height_input[1] = '8';
-    
-    SetTextureFilter(vis_state.draw_args.draw_texture.texture, TEXTURE_FILTER_TRILINEAR);
+    vis_state.draw_args.images_dataset_height_input[1] = '8';    
+}
 
-    BeginTextureMode(vis_state.draw_args.draw_texture);
-    {
-        ClearBackground(WHITE);
-    }
-    EndTextureMode();
-    DrawingPanelAdd(&vis_state.draw_args);
-
-    // preload circle textures for nodes
-    vis_state.node_texture = LoadRenderTexture(2*NODE_RADIUS, 2*NODE_RADIUS);
-    BeginTextureMode(vis_state.node_texture);
-        DrawCircle(NODE_RADIUS, NODE_RADIUS, NODE_RADIUS, WHITE);
-    EndTextureMode();
-    vis_state.node_outline_texture = LoadRenderTexture(2*NODE_RADIUS, 2*NODE_RADIUS);
-    BeginTextureMode(vis_state.node_outline_texture);
-        DrawCircleLines(NODE_RADIUS, NODE_RADIUS, NODE_RADIUS, BLACK);
-    EndTextureMode();
-
-
-    // TODO construct information about the location of each node and layer
-    // in future move all information about layer drawing to separate file
-
-    vis_state.node_positions = malloc(vis_args->model->num_layers * sizeof(Vector2*));
-    layer_t *cur_layer = vis_args->model->input_layer;
-    int network_width = LAYER_GAP * (vis_args->model->num_layers - 1);
-    for (int i = 0; i < vis_args->model->num_layers; i++) {
-        mymatrix_t neurons = layer_get_neurons(cur_layer);
-        int num_nodes = neurons.r * neurons.c;
-        vis_state.node_positions[i] = malloc(num_nodes * sizeof(Vector2));
-        
-        int nodes_per_section = HIDDEN_LAYER_NODES_HEIGHT;
-        if (cur_layer->type == INPUT) {
-            nodes_per_section = INPUT_LAYER_NODES_HEIGHT;
-        }
-
-        int num_sections = (num_nodes + nodes_per_section - 1) / nodes_per_section;
-        network_width += (NODE_RADIUS * 2) * num_sections + NODE_GAP * (num_sections - 1);
-        cur_layer = cur_layer->next;
-    }
-
-    int network_x = MODEL_X + MODEL_WIDTH/2 - network_width/2;
-    int layer_x = network_x;
-
-    cur_layer = vis_args->model->input_layer;
-    for (int i = 0 ; i < vis_args->model->num_layers; i++) {
-        mymatrix_t neurons = layer_get_neurons(cur_layer);
-        int num_nodes = neurons.r * neurons.c;
-        int nodes_per_section = HIDDEN_LAYER_NODES_HEIGHT;
-        if (cur_layer->type == INPUT) {
-            nodes_per_section = INPUT_LAYER_NODES_HEIGHT;
-        }
-        if (nodes_per_section > num_nodes) {
-            nodes_per_section = num_nodes;
-        }
-
-        int num_sections = (num_nodes + nodes_per_section - 1) / nodes_per_section;
-        int layer_height = (NODE_RADIUS * 2) * nodes_per_section + (NODE_GAP) * (nodes_per_section - 1);
-        int layer_y = MODEL_Y + MODEL_HEIGHT/2 - layer_height/2;
-
-        for (int sec = 0; sec < num_sections; sec++) {
-            for (int node = 0; node < nodes_per_section; node++) {
-                int node_index = sec * nodes_per_section + node;
-                vis_state.node_positions[i][node_index].x = layer_x + sec * (NODE_RADIUS*2 + NODE_GAP) + NODE_RADIUS;
-                vis_state.node_positions[i][node_index].y = layer_y + node * (NODE_RADIUS*2 + NODE_GAP) + NODE_RADIUS;
-            }
-        }
-
-        layer_x += (NODE_RADIUS * 2) * num_sections + NODE_GAP * (num_sections - 1);
-        layer_x += LAYER_GAP;
-
-        cur_layer = cur_layer->next;
-    }
-
-    // RUNNER
-    window_keep_open(vis_args->model, 0);
-
-    // CLEAN UP
+void end_visualizer() {
+    // save the currently open dataset
     if (vis_state.draw_args.sel_dataset_index != -1) {
         WriteDataSet(vis_state.draw_args.current_dataset);
 
@@ -200,10 +184,50 @@ void* window_run(void *vargp) {
     free(vis_state.draw_args.images_dataset_width_input);
     free(vis_state.draw_args.images_dataset_height_input);
     
-    for (int i = 0; i < vis_args->model->num_layers; i++) {
+    for (int i = 0; i < vis_state.vis_args.model->num_layers; i++) {
         free(vis_state.node_positions[i]);
     }
     free(vis_state.node_positions);
+}
+
+void* window_run(void *vargp) {    
+    assert(!vis_state.is_window_open);
+    // SetTraceLogLevel(LOG_ERROR);
+
+    visualizer_argument_t *vis_args = (visualizer_argument_t*) vargp;
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, TextFormat("%s Visualizer", vis_args->model_name));
+    SetTargetFPS(60);
+
+    initialize_visualizer(vis_args);
+    
+    // smoother rescaling textures for the drawing panel images to input into the model
+    SetTextureFilter(vis_state.draw_args.draw_texture.texture, TEXTURE_FILTER_TRILINEAR);
+
+    // set initial background of drawing to white
+    BeginTextureMode(vis_state.draw_args.draw_texture);
+    {
+        ClearBackground(WHITE);
+    }
+    EndTextureMode();
+    DrawingPanelAdd(&vis_state.draw_args);
+
+    // preload circle textures for nodes
+    vis_state.node_texture = LoadRenderTexture(2*NODE_RADIUS, 2*NODE_RADIUS);
+    BeginTextureMode(vis_state.node_texture);
+        DrawCircle(NODE_RADIUS, NODE_RADIUS, NODE_RADIUS, WHITE);
+    EndTextureMode();
+    vis_state.node_outline_texture = LoadRenderTexture(2*NODE_RADIUS, 2*NODE_RADIUS);
+    BeginTextureMode(vis_state.node_outline_texture);
+        DrawCircleLines(NODE_RADIUS, NODE_RADIUS, NODE_RADIUS, BLACK);
+    EndTextureMode();
+
+    construct_node_positions();
+    
+    // RUNNER
+    window_keep_open(vis_args->model, 0);
+
+    // CLEAN UP
+    end_visualizer();
 }
 
 void* train_run(void *vargp) {
@@ -301,8 +325,6 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 prev_pos.x += NODE_RADIUS;
                 float ratio = max_weight != 0 ? 1 - fabs(weights.matrix[r2][r1]) / max_weight : 0.5;
                 
-                // todo future, draw lines with thickness relative to its weight instead of color
-                // it is kind of hard to distinguish between colors especially when weight lines are extremely thin
                 int cval = (int) (255 * ratio);
                 Color color = {
                     .a = 255,
@@ -328,12 +350,16 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
             prev_pos.x += NODE_RADIUS;
             
             for (int dot = 1; dot <= WEIGHT_DOTTED_LINES; dot+=2) {
-                Vector2 draw_end;
-                draw_end.x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * (dot / (float) WEIGHT_DOTTED_LINES));
-                draw_end.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * (dot / (float) WEIGHT_DOTTED_LINES));
-                Vector2 draw_start;
-                draw_start.x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * ((dot-1) / (float) WEIGHT_DOTTED_LINES));
-                draw_start.y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * ((dot-1) / (float) WEIGHT_DOTTED_LINES));
+                Vector2 draw_end = {
+                    .x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * (dot / (float) WEIGHT_DOTTED_LINES)),
+                    .y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * (dot / (float) WEIGHT_DOTTED_LINES)),
+                };
+                
+                Vector2 draw_start = {
+                    .x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * ((dot-1) / (float) WEIGHT_DOTTED_LINES)),
+                    .y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * ((dot-1) / (float) WEIGHT_DOTTED_LINES)),
+                };
+                
                 DrawLineV(draw_start, draw_end, BLACK);
             }
         }
@@ -357,13 +383,11 @@ void DrawLayerInformation(int layer_index, layer_t *layer) {
     int layer_info_font_size = LAYER_DISPLAY_FONTSIZE - 4;
     DrawOutlinedCenteredText(get_layer_name(layer), layer_x, layer_name_y, LAYER_DISPLAY_FONTSIZE, BLACK, 0, BLACK);
     if (layer->type == ACTIVATION) {
-        DrawOutlinedCenteredText(get_activation_function_name(&layer->layer.activation), layer_x, 
-                layer_function_name_y, layer_info_font_size, BLACK, 0, BLACK);
+        DrawOutlinedCenteredText(get_activation_function_name(&layer->layer.activation), layer_x, layer_function_name_y, layer_info_font_size, BLACK, 0, BLACK);
     } else if (layer->type == OUTPUT) {
-        DrawOutlinedCenteredText(get_output_function_name(&layer->layer.output), layer_x, 
-                layer_function_name_y, layer_info_font_size, BLACK, 0, BLACK);
-        DrawOutlinedCenteredText(get_output_guess_function_name(&layer->layer.output), layer_x, 
-                layer_function_name_y + (3 * LAYER_DISPLAY_FONTSIZE) / 2, layer_info_font_size, BLACK, 0, BLACK);
+        DrawOutlinedCenteredText(get_output_function_name(&layer->layer.output), layer_x, layer_function_name_y, layer_info_font_size, BLACK, 0, BLACK);
+        int gap = (3 * LAYER_DISPLAY_FONTSIZE) / 2;
+        DrawOutlinedCenteredText(get_output_guess_function_name(&layer->layer.output), layer_x, layer_function_name_y + gap, layer_info_font_size, BLACK, 0, BLACK);
     }
 }
 
@@ -385,7 +409,6 @@ void DrawLayer(int layer_index, layer_t *layer) {
     }
 
     // draw each neuron
-    
     for (int r = 0; r < nodes.r; r++) {
         // draw node with color respective to its value
         float ratio = .5;
@@ -404,16 +427,16 @@ void DrawLayer(int layer_index, layer_t *layer) {
         if (vis_state.playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, MOUSE_HOVER_DISTANCE_TO_NODE)
                 && !vis_state.draw_args.is_open) {
             // check if too small
+            bool model_needs_update = false;
             if (NODE_RADIUS < MIN_NODE_RADIUS_FOR_SLIDER_BAR) {
+                // shortcut to set node values
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-                    // show node's details in a pop up window with a slider
-
                     nodes.matrix[r][0] = 1;
+                    model_needs_update = true;
                 } else if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-
                     nodes.matrix[r][0] = 0;
+                    model_needs_update = true;
                 }
-                
             } else {
                 int rec_x = pos.x - NODE_RADIUS - 6;
                 int rec_y = pos.y + NODE_DISPLAY_FONTSIZE - 4;
@@ -425,8 +448,11 @@ void DrawLayer(int layer_index, layer_t *layer) {
                 GuiSlider((Rectangle) {.x = pos.x - 3 * NODE_RADIUS / 4, .y = pos.y + NODE_DISPLAY_FONTSIZE, .width = 3 * NODE_RADIUS / 2, .height = NODE_DISPLAY_FONTSIZE},
                         "0", "1", &nodes.matrix[r][0], 0, 1);
 
-                // todo this should most likely be ran on a separate thread, perhaps just have one thread always running
-                // that detects changes to the model's inputs when not currently training or testing and recalculates the corresponding output
+                // run model on the changed inputs
+                model_needs_update = true;
+            }
+
+            if (model_needs_update) {
                 mymatrix_t output = model_calculate(vis_state.vis_args.training_info->model);
             }
         }
@@ -499,7 +525,6 @@ void DrawWindow(neural_network_model_t *model) {
             vis_state.playground_state = false;
         }
 
-        // TODO dont add drawing panel if model does not accept drawings as input
         if (vis_state.vis_args.allow_drawing_panel_as_model_input) {
             if (GuiButton((Rectangle) {.x = MODEL_X + 390, .y = control_y, .height = 30, .width = 120}, "Drawing Panel") && !vis_state.draw_args.is_open) {
                 vis_state.draw_args.is_open = true;

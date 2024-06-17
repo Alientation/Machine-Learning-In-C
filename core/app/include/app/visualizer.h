@@ -97,8 +97,6 @@ typedef struct VisualizerArgument {
     int num_labels;
     const char **output_labels; // one hot encoded
     char *default_dataset_directory; // input data
-
-    label_guesses_t (*label_guess)(mymatrix_t model_guess);
 } visualizer_argument_t;
 
 typedef struct SegmentListNode {
@@ -111,53 +109,56 @@ typedef struct SegmentListNode {
 typedef struct DrawingPanelArgs {
     visualizer_argument_t *vis_args;
 
-    bool is_open;
-    float brush_size;
-    Vector3 brush_color; // in HSV
+    bool is_open;           // Is drawing panel window open
+    float brush_size;       // radius of drawn circle
+    Vector3 brush_color;    // drawing color stored in HSV
 
-    Vector2 prev_draw_pos;
-    bool is_dragged;
-    bool is_drawing;
-    RenderTexture2D draw_texture;
+    Vector2 prev_draw_pos;          // position of the last circle drawn, used to connect the two positions to smooth the drawing out
+    bool is_dragged;                // whether the mouse is being dragged, when the mouse just recently left the drawing window continue to draw the line segment out
+    bool is_drawing;                // whether stuff was drawn in the last frame to detect when drawing stops and saving the current state to the history buffer
+    RenderTexture2D draw_texture;   // stores the drawing
 
-    segment_list_node_t *segments_list_head;
-    segment_list_node_t *segments_list_cur;
+    // TODO perhaps limit the size of history stored
+    segment_list_node_t *segments_list_head;    // history buffer to allow undoing/redoing, stored as a linked list
+    segment_list_node_t *segments_list_cur;     // points to the current state in the list
     int segments_list_size;
 
     // TODO SAVE THESE IN A SEPARATE STRUCT FOR THE SAVE WINDOW
     // save popup
-    char *dataset_directory;
-    bool is_save_popup_open;
+    bool is_save_popup_open;    
     bool is_dataset_viewer_open;
-    int sel_dataset_index;
-    int sel_label_index;
-    dataset_t current_dataset;
-    image_dataset_visualizer_t image_dataset_visualizer;
-    int dataset_list_scroll_index;
+    
+    // dataset picker
+    char *dataset_directory;    // the relative path to the directory storing the datasets
+    int sel_dataset_index;      // index of the file in the directory, -1 if nothing is selected
+    int sel_label_index;        // index of the label for the current image, -1 if nothing is selected
+    dataset_t current_dataset;  // information about the currently selected dataset
+    image_dataset_visualizer_t image_dataset_visualizer; // visualizer for the dataset
+    int dataset_list_scroll_index; //
+    int sel_dataset_image_index;
+
+    // create a new dataset
     char *add_dataset_file_name;
     int add_dataset_type;
+
+    // create a new image dataset
     bool images_dataset_width_option_active;
     char *images_dataset_width_input;
     bool images_dataset_height_option_active;
     char *images_dataset_height_input;
     bool is_editing_dataset_file_name;
-    int sel_dataset_image_index;
 
     int num_labels;
     const char** label_names;
 
-    // scaled down
-    bool updated;
-    int update_frames; // how many frames before each update
-    int cur_frames;
-    RenderTexture2D input_texture;
-    bool gray_scale;
-    int buffer_width;
-    int buffer_height;
-    float *output_buffer;
-
-    // should be same as vis_args
-    label_guesses_t (*label_guess)(mymatrix_t model_guess);
+    bool updated;       // whether the drawing was updated
+    int update_frames;  // how many frames before each update
+    int cur_frames;     // frames since last update
+    RenderTexture2D input_texture;  // scaled down texture of the drawn image, to be input into the model
+    bool gray_scale;    // whether the model takes in a gray scaled image
+    int buffer_width;   // width dim of model's input
+    int buffer_height;  // height dim of model's input
+    float *output_buffer; // store the model's input in a linear array
 } drawing_panel_args_t; 
 
 typedef struct VisualizerState {

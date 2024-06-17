@@ -44,7 +44,6 @@ int main(void) {
         .default_dataset_directory = "images\\digits",
         .allow_drawing_panel_as_model_input = true,
         // .allow_drawing_panel_as_model_input = false,
-        .label_guess = NULL,
     };
 
     pthread_create(&thread_id, NULL, window_run, &vis_args);

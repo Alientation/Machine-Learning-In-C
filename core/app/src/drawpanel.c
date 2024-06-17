@@ -101,54 +101,9 @@ void DrawingPanelClear(drawing_panel_args_t *draw_args) {
     draw_args->updated = true;
 }
 
-// IDEAS
-// Open datasets on the left list panel,
-// currently opened dataset will display a list of images contained within on the right side
-// display dataset information on a panel next to the dataset list
-// ability to edit dataset's images like adding new images, relabeling prev images, and deleting prev images
-void GuiSavePopup(drawing_panel_args_t *draw_args) {
-    if (!draw_args->is_save_popup_open) {
-        draw_args->is_dataset_viewer_open = false;
-        return;
-    }
 
-    // darken background
-    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ColorAlpha(BLACK, 0.5));
-
-    Rectangle save_window_r = {
-        .x = 200,
-        .y = 150,
-        .width = SCREEN_WIDTH - 2 * 200,
-        .height = SCREEN_HEIGHT - 2 * 150,
-    };   
-    
-    draw_args->is_save_popup_open = !GuiWindowBox(save_window_r, "Save Drawing");
-
-    // TODO, since looking up what files exist in the save folder will probably be slow, instead
-    // look it up once at the start, and then keep information about the saved files in memory
-
-    Rectangle img_preview_r = {
-        .x = save_window_r.x + save_window_r.width/2 - 100,
-        .y = save_window_r.y + save_window_r.height/2 - 100,
-        .width = 200,
-        .height = 200,
-    };
-
-    Texture2D input_texture = draw_args->sel_dataset_image_index != -1 ? draw_args->image_dataset_visualizer.displayed_images[draw_args->sel_dataset_image_index] : draw_args->input_texture.texture;
-    DrawTexturePro(input_texture, (Rectangle) {.x = 0, .y = 0, .width = input_texture.width, .height = input_texture.height}, 
-            img_preview_r, (Vector2) {0, 0}, 0, WHITE);
-    DrawRectangleLines(img_preview_r.x - 1, img_preview_r.y - 1, img_preview_r.width + 2, img_preview_r.height + 2, BLACK);
-
-
-    Rectangle file_viewer_r = {
-        .x = save_window_r.x + 30, 
-        .y = save_window_r.y + 45, 
-        .width = 200, 
-        .height = 300,
-    };
-
-    DrawCenteredText(draw_args->dataset_directory, file_viewer_r.x + file_viewer_r.width/2, file_viewer_r.y - 10, 12, BLACK);
-    
+void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
+    // display all dataset files in directory
     char *dir_path = strdup(concat(3, GetWorkingDirectory(), "\\", draw_args->dataset_directory));
     if (IsFileDropped()) {
         FilePathList dropped_files = LoadDroppedFiles();
@@ -187,7 +142,7 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
         if (prev_selected_file != -1) {
             WriteDataSet(draw_args->current_dataset);
             UnloadDataSet(draw_args->current_dataset);
-            UnloadImageDataSetVisualizer(draw_args->image_dataset_visualizer);
+            UnloadImageDataSetVisualizer(draw_args->img_dataset_vis);
         }
 
         draw_args->sel_dataset_image_index = -1;
@@ -200,12 +155,14 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
                 printf("Invalid dataset selected \'%s\'\n", data_files.paths[draw_args->sel_dataset_index]);
                 draw_args->sel_dataset_index = -1;
             } else {
-                draw_args->image_dataset_visualizer = LoadImageDataSetVisualizer(&draw_args->current_dataset);
+                draw_args->img_dataset_vis = LoadImageDataSetVisualizer(&draw_args->current_dataset);
             }
         }
     }
     UnloadDirectoryFiles(data_files);
+}
 
+void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
     Rectangle name_ds_r = {
         .x = file_viewer_r.x,
         .y = file_viewer_r.y + file_viewer_r.height + 40,
@@ -288,6 +245,14 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
     } else {
         assert(0);
     }
+}
+
+void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r, Rectangle file_viewer_r) {
+    if (draw_args->sel_dataset_index == -1 || draw_args->current_dataset.type != DATASET_IMAGES) {
+        return;
+    }
+    dataset_t *dataset = &draw_args->current_dataset;
+    struct DataSetData_Images *img_ds = &draw_args->current_dataset.data.image_dataset;
 
     Rectangle ds_display_r = {
         .x = img_preview_r.x + img_preview_r.width + 10,
@@ -295,165 +260,193 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
         .width = 50,
         .height = 60 * NUMBER_DISPLAYED_IMAGES - 10
     };
-    
-    if (draw_args->sel_dataset_index != -1) {
-        if (draw_args->current_dataset.type == DATASET_IMAGES) {
-            image_dataset_visualizer_t *vis = &draw_args->image_dataset_visualizer;
-            for (int i = 0; i < vis->number_displayed; i++) {
-                Rectangle img_display_r = {
-                    .x = ds_display_r.x, .y = ds_display_r.y + 60 * i, .width = 50, .height = 50
-                };
 
-                bool is_mouse_over = CheckCollisionPointRec(GetMousePosition(), img_display_r);
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && is_mouse_over) {
-                    if (draw_args->sel_dataset_image_index == i) {
-                        draw_args->sel_dataset_image_index = -1;
-                        draw_args->sel_label_index = -1;
-                    } else {
-                        draw_args->sel_label_index = vis->displayed_images_nodes[i]->label;
-                        draw_args->sel_dataset_image_index = i;
-                    }
-                }
+    image_dataset_visualizer_t *vis = &draw_args->img_dataset_vis;
+    for (int i = 0; i < vis->number_displayed; i++) {
+        Rectangle img_display_r = {
+            .x = ds_display_r.x, .y = ds_display_r.y + 60 * i, .width = 50, .height = 50
+        };
 
-                DrawTexturePro(vis->displayed_images[i],
-                        (Rectangle) {.x = 0, .y = 0, .width = draw_args->current_dataset.data.image_dataset.uniform_width, .height = draw_args->current_dataset.data.image_dataset.uniform_height},
-                        img_display_r, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
-                DrawRectangleLinesEx((Rectangle) {.x = img_display_r.x-1, .y = img_display_r.y-1, .width = img_display_r.width, .height = img_display_r.height},
-                        2, (draw_args->sel_dataset_image_index == i || is_mouse_over) ? BLUE : DARKGRAY);
-            } 
-
-            // draw the arrows on the top and bottom only if there is more images than the number of displayed images
-            if (vis->dataset->data.image_dataset.count > vis->number_displayed) {
-                // move images down faster if shift is pressed
-                bool shift_is_down = IsKeyDown(KEY_LEFT_SHIFT);
-                
-                if (vis->left_image_index > 0) {
-                    if (GuiButton((Rectangle) {.x = ds_display_r.x + ds_display_r.width/2 - 24, .y = ds_display_r.y - 28, .width = 48, .height = 20}, "")) {
-                        printf("Moving Display Images Up\n");
-                        MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? -NUMBER_DISPLAYED_IMAGES : -1);
-                    }
-                    GuiDrawIcon(ICON_ARROW_UP_FILL, ds_display_r.x + ds_display_r.width/2 - 8, ds_display_r.y - 26, 1, BLACK);
-                }
-
-                if (vis->left_image_index < vis->dataset->data.image_dataset.count - NUMBER_DISPLAYED_IMAGES) {
-                    if (GuiButton((Rectangle) {.x = ds_display_r.x + ds_display_r.width/2 - 24, .y = ds_display_r.y + ds_display_r.height + 4, .width = 48, .height = 20}, "")) {
-                        printf("Moving Display Images Down\n");
-                        MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? NUMBER_DISPLAYED_IMAGES : 1);
-                    }
-                    GuiDrawIcon(ICON_ARROW_DOWN_FILL, ds_display_r.x + ds_display_r.width/2 - 8, ds_display_r.y + ds_display_r.height + 6, 1, BLACK);
-                }
-                
-                if (draw_args->sel_dataset_image_index != -1) {
-                    draw_args->sel_label_index = vis->displayed_images_nodes[draw_args->sel_dataset_image_index]->label;
-                }
+        bool is_mouse_over = CheckCollisionPointRec(GetMousePosition(), img_display_r);
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && is_mouse_over) {
+            if (draw_args->sel_dataset_image_index == i) {
+                draw_args->sel_dataset_image_index = -1;
+                draw_args->sel_label_index = -1;
+            } else {
+                draw_args->sel_label_index = vis->displayed_images_nodes[i]->label;
+                draw_args->sel_dataset_image_index = i;
             }
-
-            // display currently selected dataset info
-            Rectangle ds_info_r = {
-                .x = file_viewer_r.x + file_viewer_r.width + 20,
-                .y = file_viewer_r.y,
-                .width = 200,
-                .height = 400,
-            };
-            
-            DrawOutlinedRectangleRec(ds_info_r, RAYWHITE, 2, BLACK);
-            DrawOutlinedRectangle(ds_info_r.x, ds_info_r.y, ds_info_r.width, 40, GRAY, 2, BLACK);
-            DrawOutlinedCenteredText("Image Dataset", ds_info_r.x + ds_info_r.width/2, ds_info_r.y + 20, 20, WHITE, 1, BLACK);
-
-            DrawText(TextFormat("number of images: %d", vis->dataset->data.image_dataset.count), ds_info_r.x + 10, ds_info_r.y + 50, 16, BLACK);
-            DrawText(TextFormat("image width: %d", vis->dataset->data.image_dataset.uniform_width), ds_info_r.x + 10, ds_info_r.y + 70, 16, BLACK);
-            DrawText(TextFormat("image height: %d", vis->dataset->data.image_dataset.uniform_height), ds_info_r.x + 10, ds_info_r.y + 90, 16, BLACK);
-            DrawText(TextFormat("num labels: %d", vis->dataset->data.image_dataset.num_labels), ds_info_r.x + 10, ds_info_r.y + 110, 16, BLACK);
-            for (int i = 0; i < vis->dataset->data.image_dataset.num_labels; i++) {
-                DrawText(TextFormat("label %d)  %s", i+1, vis->dataset->data.image_dataset.label_names[i]), ds_info_r.x + 20, ds_info_r.y + 130 + i * 15, 12, DARKGRAY);
-            }
-
-            if (GuiButton((Rectangle) {.x = ds_info_r.x, .y = ds_info_r.y + ds_info_r.height + 10, 80, 30}, "Use")) {
-                training_info_free(draw_args->vis_args->training_info);
-                DataSetConvertToTraining(draw_args->vis_args->training_info, &draw_args->current_dataset);
-            }
-
-            // display currently selected image info
-            Rectangle img_info_r = {
-                .x = ds_display_r.x + ds_display_r.width + 20,
-                .y = img_preview_r.y + img_preview_r.height/2 - (26 * vis->dataset->data.image_dataset.num_labels - 3)/2,
-                .width = 20,
-                .height = 26 * vis->dataset->data.image_dataset.num_labels - 3,
-            };
-            // DrawOutlinedRectangleRec(img_info_r, RAYWHITE, 2, DARKGRAY);
-
-            for (int i = 0; i < vis->dataset->data.image_dataset.num_labels; i++) {
-                Rectangle label_selection_r = {
-                    .x = img_info_r.x,
-                    .y = img_info_r.y + 26 * i,
-                    .width = 20,
-                    .height = 20
-                };
-
-                bool is_mouse_over = CheckCollisionPointRec(GetMousePosition(), label_selection_r);
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && is_mouse_over) {
-                    draw_args->sel_label_index = i;
-                    if (draw_args->sel_dataset_image_index != -1) {
-                        vis->displayed_images_nodes[draw_args->sel_dataset_image_index]->label = i;
-                    }
-                }
-
-                Color color = LIGHTGRAY;
-                if (draw_args->sel_label_index == i) {
-                    color = ColorAlpha(BLUE, 0.2);
-                } else if (is_mouse_over) {
-                    color = ColorAlpha(BLUE, 0.4);
-                }
-                DrawOutlinedRectangleRec(label_selection_r, color, 2, (is_mouse_over || i == draw_args->sel_label_index) ? BLUE : DARKGRAY);
-                DrawCenteredText(vis->dataset->data.image_dataset.label_names[i], label_selection_r.x + label_selection_r.width/2, label_selection_r.y + label_selection_r.height/2, 10, BLACK);
-            }
-        } else {
-            assert(0);
         }
 
+        DrawTexturePro(vis->displayed_images[i],
+                (Rectangle) {.x = 0, .y = 0, .width = img_ds->uniform_width, .height = img_ds->uniform_height},
+                img_display_r, (Vector2) {.x = 0, .y = 0}, 0, WHITE);
+        DrawRectangleLinesEx((Rectangle) {.x = img_display_r.x-1, .y = img_display_r.y-1, .width = img_display_r.width, .height = img_display_r.height},
+                2, (draw_args->sel_dataset_image_index == i || is_mouse_over) ? BLUE : DARKGRAY);
+    } 
 
-        if (draw_args->sel_dataset_index == -1) {
-
-        } else if (draw_args->sel_dataset_image_index == -1) {
-            Rectangle add_img_r = {
-                .x = img_preview_r.x + 50,
-                .y = img_preview_r.y + img_preview_r.height + 10,
-                .width = img_preview_r.width - 100,
-                .height = 30,
-            };
-            if (GuiButton(add_img_r, "Add to Dataset")) {
-                printf("Saved current image to %s\n", draw_args->current_dataset.file_path);
-
-                DataSetAddImage(&draw_args->current_dataset, LoadImageFromTexture(draw_args->input_texture.texture), draw_args->sel_label_index);
-                UpdateImageDataSetVisualizer(&draw_args->image_dataset_visualizer);
+    // draw the arrows on the top and bottom only if there is more images than the number of displayed images
+    if (img_ds->count > vis->number_displayed) {
+        // move images down faster if shift is pressed
+        bool shift_is_down = IsKeyDown(KEY_LEFT_SHIFT);
+        
+        if (vis->left_image_index > 0) {
+            if (GuiButton((Rectangle) {.x = ds_display_r.x + ds_display_r.width/2 - 24, .y = ds_display_r.y - 28, .width = 48, .height = 20}, "")) {
+                printf("Moving Display Images Up\n");
+                MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? -NUMBER_DISPLAYED_IMAGES : -1);
             }
+            GuiDrawIcon(ICON_ARROW_UP_FILL, ds_display_r.x + ds_display_r.width/2 - 8, ds_display_r.y - 26, 1, BLACK);
+        }
 
-            // todo add insert image option
-        } else if (draw_args->sel_dataset_image_index != -1) {
-            Rectangle delete_img_r = {
-                .x = img_preview_r.x + 50,
-                .y = img_preview_r.y + img_preview_r.height + 10,
-                .width = img_preview_r.width - 100,
-                .height = 30,
-            };
-
-            if (GuiButton(delete_img_r, "Delete")) {
-                printf("Deleted image from %s", draw_args->current_dataset.file_path);
-
-                DataSetRemoveImage(&draw_args->current_dataset, draw_args->image_dataset_visualizer.left_image_index + draw_args->sel_dataset_image_index);
-                if (draw_args->sel_dataset_image_index + NUMBER_DISPLAYED_IMAGES >= draw_args->current_dataset.data.image_dataset.count) {
-                    draw_args->image_dataset_visualizer.left_image_index = draw_args->current_dataset.data.image_dataset.count - NUMBER_DISPLAYED_IMAGES;
-                    if (draw_args->image_dataset_visualizer.left_image_index < 0) {
-                        draw_args->image_dataset_visualizer.left_image_index = 0;
-                    }
-                }
-                
-                UpdateImageDataSetVisualizer(&draw_args->image_dataset_visualizer);
-                draw_args->sel_dataset_image_index = -1;
+        if (vis->left_image_index < img_ds->count - NUMBER_DISPLAYED_IMAGES) {
+            if (GuiButton((Rectangle) {.x = ds_display_r.x + ds_display_r.width/2 - 24, .y = ds_display_r.y + ds_display_r.height + 4, .width = 48, .height = 20}, "")) {
+                printf("Moving Display Images Down\n");
+                MoveDisplayImageDataSetVisualizer(vis, shift_is_down ? NUMBER_DISPLAYED_IMAGES : 1);
             }
+            GuiDrawIcon(ICON_ARROW_DOWN_FILL, ds_display_r.x + ds_display_r.width/2 - 8, ds_display_r.y + ds_display_r.height + 6, 1, BLACK);
+        }
+        
+        if (draw_args->sel_dataset_image_index != -1) {
+            draw_args->sel_label_index = vis->displayed_images_nodes[draw_args->sel_dataset_image_index]->label;
         }
     }
+
+    // display currently selected dataset info
+    Rectangle ds_info_r = {
+        .x = file_viewer_r.x + file_viewer_r.width + 20,
+        .y = file_viewer_r.y,
+        .width = 200,
+        .height = 400,
+    };
     
+    DrawOutlinedRectangleRec(ds_info_r, RAYWHITE, 2, BLACK);
+    DrawOutlinedRectangle(ds_info_r.x, ds_info_r.y, ds_info_r.width, 40, GRAY, 2, BLACK);
+    DrawOutlinedCenteredText("Image Dataset", ds_info_r.x + ds_info_r.width/2, ds_info_r.y + 20, 20, WHITE, 1, BLACK);
+
+    DrawText(TextFormat("number of images: %d", img_ds->count), ds_info_r.x + 10, ds_info_r.y + 50, 16, BLACK);
+    DrawText(TextFormat("image width: %d", img_ds->uniform_width), ds_info_r.x + 10, ds_info_r.y + 70, 16, BLACK);
+    DrawText(TextFormat("image height: %d", img_ds->uniform_height), ds_info_r.x + 10, ds_info_r.y + 90, 16, BLACK);
+    DrawText(TextFormat("num labels: %d", img_ds->num_labels), ds_info_r.x + 10, ds_info_r.y + 110, 16, BLACK);
+    for (int i = 0; i < img_ds->num_labels; i++) {
+        DrawText(TextFormat("label %d)  %s", i+1, img_ds->label_names[i]), ds_info_r.x + 20, ds_info_r.y + 130 + i * 15, 12, DARKGRAY);
+    }
+
+    if (GuiButton((Rectangle) {.x = ds_info_r.x, .y = ds_info_r.y + ds_info_r.height + 10, 80, 30}, "Use")) {
+        training_info_free(draw_args->vis_args->training_info);
+        DataSetConvertToTraining(draw_args->vis_args->training_info, dataset);
+    }
+
+    // display currently selected image info
+    Rectangle img_info_r = {
+        .x = ds_display_r.x + ds_display_r.width + 20,
+        .y = img_preview_r.y + img_preview_r.height/2 - (26 * img_ds->num_labels - 3)/2,
+        .width = 20,
+        .height = 26 * img_ds->num_labels - 3,
+    };
+
+    for (int i = 0; i < img_ds->num_labels; i++) {
+        Rectangle label_selection_r = {
+            .x = img_info_r.x,
+            .y = img_info_r.y + 26 * i,
+            .width = 20,
+            .height = 20
+        };
+
+        bool is_mouse_over = CheckCollisionPointRec(GetMousePosition(), label_selection_r);
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && is_mouse_over) {
+            draw_args->sel_label_index = i;
+            if (draw_args->sel_dataset_image_index != -1) {
+                vis->displayed_images_nodes[draw_args->sel_dataset_image_index]->label = i;
+            }
+        }
+
+        Color color = LIGHTGRAY;
+        if (draw_args->sel_label_index == i) {
+            color = ColorAlpha(BLUE, 0.2);
+        } else if (is_mouse_over) {
+            color = ColorAlpha(BLUE, 0.4);
+        }
+        DrawOutlinedRectangleRec(label_selection_r, color, 2, (is_mouse_over || i == draw_args->sel_label_index) ? BLUE : DARKGRAY);
+        DrawCenteredText(img_ds->label_names[i], label_selection_r.x + label_selection_r.width/2, label_selection_r.y + label_selection_r.height/2, 10, BLACK);
+    }
+
+
+    // image options for the currently selected image from the dataset or the drawn image in the drawing panel
+    if (draw_args->sel_dataset_image_index == -1) {
+        Rectangle add_img_r = {
+            .x = img_preview_r.x + 50,
+            .y = img_preview_r.y + img_preview_r.height + 10,
+            .width = img_preview_r.width - 100,
+            .height = 30,
+        };
+        if (GuiButton(add_img_r, "Add to Dataset")) {
+            printf("Saved current image to %s\n", dataset->file_path);
+
+            DataSetAddImage(dataset, LoadImageFromTexture(draw_args->input_texture.texture), draw_args->sel_label_index);
+            UpdateImageDataSetVisualizer(&draw_args->img_dataset_vis);
+        }
+
+        // todo add insert image option
+    } else if (draw_args->sel_dataset_image_index != -1) {
+        Rectangle delete_img_r = {
+            .x = img_preview_r.x + 50,
+            .y = img_preview_r.y + img_preview_r.height + 10,
+            .width = img_preview_r.width - 100,
+            .height = 30,
+        };
+
+        if (GuiButton(delete_img_r, "Delete")) {
+            printf("Deleted image from %s", dataset->file_path);
+
+            DataSetRemoveImage(dataset, vis->left_image_index + draw_args->sel_dataset_image_index);
+            if (draw_args->sel_dataset_image_index + NUMBER_DISPLAYED_IMAGES >= img_ds->count) {
+                vis->left_image_index = img_ds->count - NUMBER_DISPLAYED_IMAGES;
+                if (vis->left_image_index < 0) {
+                    vis->left_image_index = 0;
+                }
+            }
+            
+            UpdateImageDataSetVisualizer(vis);
+            draw_args->sel_dataset_image_index = -1;
+        }
+    }
+}
+
+void GuiSavePopup(drawing_panel_args_t *draw_args) {
+    if (!draw_args->is_save_popup_open) {
+        draw_args->is_dataset_viewer_open = false;
+        return;
+    }
+
+    // darken background
+    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ColorAlpha(BLACK, 0.5));
+
+    Rectangle save_window_r = RecCenteredMargin(SCREEN_WIDTH, SCREEN_HEIGHT, 200, 150);
+    draw_args->is_save_popup_open = !GuiWindowBox(save_window_r, "Save Drawing");
+
+    // TODO, since looking up what files exist in the save folder will probably be slow, instead
+    // look it up once at the start, and then keep information about the saved files in memory
+
+    Rectangle img_preview_r = RecCenteredRecDimV(save_window_r, Vec2DExtend(200));
+    image_dataset_visualizer_t *ds_vis = &draw_args->img_dataset_vis;
+
+    // model input is either the selected image from the dataset or the drawn image in the drawing panel
+    Texture2D input_texture = draw_args->sel_dataset_image_index != -1 ? ds_vis->displayed_images[draw_args->sel_dataset_image_index] : draw_args->input_texture.texture;
+    DrawTexturePro(input_texture, _REC_FROM_DIM(0, 0, input_texture.width, input_texture.height), img_preview_r, Vec2DExtend(0), 0, WHITE);
+    DrawRectangleLines(_UNPACK_REC(RecCenteredRecMargin(img_preview_r, -1, -1)), BLACK);
+
+    Rectangle file_viewer_r = {
+        .x = save_window_r.x + 30, 
+        .y = save_window_r.y + 45, 
+        .width = 200, 
+        .height = 300,
+    };
+    DrawCenteredText(draw_args->dataset_directory, file_viewer_r.x + file_viewer_r.width/2, file_viewer_r.y - 10, 12, BLACK);
+    GuiFileViewer(draw_args, file_viewer_r);
+
+    GuiAddDataset(draw_args, file_viewer_r);
+
+    GuiDisplayDataset(draw_args, img_preview_r, file_viewer_r);
 }
 
 
@@ -589,7 +582,6 @@ void GuiDrawPanel(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
         draw_args->prev_draw_pos = (Vector2) {.x = GetMousePosition().x - (draw_args->brush_size/2) - draw_panel_rec.x, 
                 .y = draw_args->draw_texture.texture.height - (GetMousePosition().y - (draw_args->brush_size/2) - draw_panel_rec.y)};
         
-
         // check if just stopped drawing, register segment
         if (draw_args->is_drawing) {
             DrawingPanelAdd(draw_args);

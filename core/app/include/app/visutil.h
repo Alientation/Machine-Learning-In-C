@@ -10,6 +10,9 @@
 #define _UNPACK_VEC3(vec3d) vec3d.x, vec3d.y, vec3d.z
 #define _UNPACK_REC_POS(rec) rec.x, rec.y
 #define _UNPACK_REC_DIM(rec) rec.width, rec.height
+#define _UNPACK_REC(rec) rec.x, rec.y, rec.width, rec.height
+
+#define _REC_FROM_DIM(_x,_y,_width,_height) (Rectangle) {.x = _x, .y = _y, .width = _width, .height = _height}
 
 void DrawCenteredText(const char* text, int centerx, int centery, int fontsize, Color fontcolor);
 void DrawOutlinedText(const char *text, int posX, int posY, int fontSize, Color color, int outlineSize, Color outlineColor);
@@ -40,5 +43,6 @@ double linear_to_sRGB(double y);
 Color gray_scale(int r, int g, int b);
 
 const char* concat(int count, ...);
+
 
 #endif // VISUTIL_H

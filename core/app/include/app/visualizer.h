@@ -133,7 +133,7 @@ typedef struct DrawingPanelArgs {
     int sel_dataset_index;      // index of the file in the directory, -1 if nothing is selected
     int sel_label_index;        // index of the label for the current image, -1 if nothing is selected
     dataset_t current_dataset;  // information about the currently selected dataset
-    image_dataset_visualizer_t image_dataset_visualizer; // visualizer for the dataset
+    image_dataset_visualizer_t img_dataset_vis; // visualizer for the dataset
     int dataset_list_scroll_index; //
     int sel_dataset_image_index;
 

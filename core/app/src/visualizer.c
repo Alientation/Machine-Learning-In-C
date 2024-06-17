@@ -128,7 +128,7 @@ void initialize_visualizer(visualizer_argument_t *vis_args) {
         .sel_dataset_index = -1,
         .sel_label_index = -1,
         .current_dataset = {0},
-        .image_dataset_visualizer = {0},
+        .img_dataset_vis = {0},
         .dataset_list_scroll_index = 0, 
         .sel_dataset_image_index = -1,
         
@@ -170,7 +170,7 @@ void end_visualizer() {
         WriteDataSet(vis_state.draw_args.current_dataset);
 
         if (vis_state.draw_args.current_dataset.type == DATASET_IMAGES) {
-            UnloadImageDataSetVisualizer(vis_state.draw_args.image_dataset_visualizer);
+            UnloadImageDataSetVisualizer(vis_state.draw_args.img_dataset_vis);
         }
         UnloadDataSet(vis_state.draw_args.current_dataset);
     }

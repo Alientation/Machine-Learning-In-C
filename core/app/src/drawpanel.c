@@ -457,44 +457,8 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
 }
 
 
-// GOALS
-// Set Brush Mode
-// Save image
-// Load image
-void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
-    if (!draw_args->is_open) {
-        draw_args->is_save_popup_open = false;
-        return;
-    }
-    
-    // darken background
-    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ColorAlpha(BLACK, 0.5));
-
-    // drawing panel
-    RenderTexture2D draw_texture = draw_args->draw_texture;
-    
-    Rectangle draw_window_rec = {
-        .x = 50,
-        .y = 50,
-        .width = SCREEN_WIDTH - 2 * 50,
-        .height = SCREEN_HEIGHT - 2 * 50,
-    };    
-
-    
-    const int line_thickness = 4;
-    Rectangle draw_panel_rec = {
-        .x = draw_window_rec.x + draw_window_rec.width/2 - draw_texture.texture.width/2 - line_thickness/4,
-        .y = draw_window_rec.y + draw_window_rec.height/2 - draw_texture.texture.height/2 - line_thickness/4,
-        .width = draw_texture.texture.width + line_thickness/2,
-        .height = draw_texture.texture.height + line_thickness/2,
-    };
-
-    draw_args->is_open = !GuiWindowBox(draw_window_rec, "Drawing Panel");
-    
-    DrawRectangleRec(draw_panel_rec, WHITE);
-    DrawRectangleRoundedLines(draw_panel_rec, .02, 10, line_thickness, BLACK);
-
-
+// Draw brush tools to assist with drawing
+void GuiDrawingTools(drawing_panel_args_t *draw_args, Rectangle draw_window_rec, Rectangle draw_panel_rec) {
     // Brush color picker
     Rectangle color_picker_rec = {
         .x = draw_panel_rec.x + draw_panel_rec.width + 40,
@@ -535,13 +499,14 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
     }
     DrawText("Brush Size", brush_size_picker_rec.x, brush_size_picker_rec.y - 20, 12, BLACK);
 
-    Vector2 brush_size_display_rec = {
+    Rectangle brush_size_display_rec = {
         .x = brush_size_picker_rec.x + brush_size_picker_rec.width + max_brush_size * 2 + 20,
-        .y = brush_size_picker_rec.y + brush_size_picker_rec.height/2
+        .y = brush_size_picker_rec.y + brush_size_picker_rec.height/2,
+        .width = max_brush_size * 2,
+        .height = max_brush_size * 2,
     };
-    DrawRectangleRoundedLines((Rectangle) {.x = brush_size_display_rec.x - max_brush_size, .y = brush_size_display_rec.y - max_brush_size, .width = max_brush_size*2, .height = max_brush_size*2}, 
-            0.02, 4, 2, BLACK);
-    DrawCircleV(brush_size_display_rec , draw_args->brush_size, ColorFromHSV(draw_args->brush_color.x, draw_args->brush_color.y, draw_args->brush_color.z));
+    DrawRectangleRoundedLines(RecCenteredRecDimV(brush_size_display_rec, Vec2DExtend(max_brush_size * 2)), 0.02, 4, 2, BLACK);
+    DrawCircleV(RecPos(brush_size_display_rec) , draw_args->brush_size, ColorFromHSV(_UNPACK_VEC3(draw_args->brush_color)));
 
 
     // Drawing Panel Options
@@ -575,7 +540,13 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
         DrawingPanelRedo(draw_args);
     }
 
+    // Save Image Button
+    if (GuiButton((Rectangle) {.x = draw_panel_rec.x + draw_panel_rec.width - 40, .y = draw_panel_undo_rec.y, .width = 40, .height = 20}, "Save")) {
+        draw_args->is_save_popup_open = true;
+    }
+}
 
+void GuiDrawPanel(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
     bool is_draw = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsGestureDetected(GESTURE_DRAG);
     bool is_erase = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
     bool just_off_panel = draw_args->is_dragged && !CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
@@ -583,10 +554,7 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
     should_draw |= just_off_panel;
     should_draw &= !draw_args->is_save_popup_open;
     if (should_draw) {
-        Color draw_color = ColorFromHSV(draw_args->brush_color.x, draw_args->brush_color.y, draw_args->brush_color.z);
-        if (is_erase) {
-            draw_color = WHITE;
-        }
+        Color draw_color = is_erase ? WHITE : ColorFromHSV(draw_args->brush_color.x, draw_args->brush_color.y, draw_args->brush_color.z);
 
         Vector2 size = {
             .x = draw_args->brush_size,
@@ -599,11 +567,9 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
         pos.x -= draw_panel_rec.x;
         pos.y -= draw_panel_rec.y;
 
-        pos.y = draw_texture.texture.height - pos.y; // texture drawing flips vertically because of opengl or smthn
-
-        BeginTextureMode(draw_texture);
+        pos.y = draw_args->draw_texture.texture.height - pos.y; // texture drawing flips vertically because of opengl
+        BeginTextureMode(draw_args->draw_texture);
         {
-            
             DrawCircleV(pos, draw_args->brush_size, draw_color);
             
             // to connect points since the refresh rate is 60 fps which causes gaps
@@ -621,7 +587,7 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
     } else {
         // is not drawing
         draw_args->prev_draw_pos = (Vector2) {.x = GetMousePosition().x - (draw_args->brush_size/2) - draw_panel_rec.x, 
-                .y = draw_texture.texture.height - (GetMousePosition().y - (draw_args->brush_size/2) - draw_panel_rec.y)};
+                .y = draw_args->draw_texture.texture.height - (GetMousePosition().y - (draw_args->brush_size/2) - draw_panel_rec.y)};
         
 
         // check if just stopped drawing, register segment
@@ -632,26 +598,19 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
     }
 
     draw_args->is_dragged = IsGestureDetected(GESTURE_DRAG) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
+}
 
-    DrawTexture(draw_texture.texture, draw_panel_rec.x + line_thickness/2, draw_panel_rec.y + line_thickness/2, WHITE);
-
-
-    // Draw what the model will see
-    Rectangle model_input_rec = {
-        .x = draw_panel_rec.x - 10 - (120 / draw_args->buffer_width) * draw_args->buffer_width,
-        .y = draw_panel_rec.y,
-        .width = (120 / draw_args->buffer_width) * draw_args->buffer_width,
-        .height = (120 / draw_args->buffer_height) * draw_args->buffer_height
-    };
-
+void GuiModelInfo(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
+    // draw image onto the texture the model will see, scaled down
     RenderTexture2D input_texture = draw_args->input_texture;
     BeginTextureMode(input_texture);
     {
-        DrawTexturePro(draw_texture.texture, (Rectangle) {.x = 0, .y = 0, .width = draw_texture.texture.width, .height = -draw_texture.texture.height}, 
+        DrawTexturePro(draw_args->draw_texture.texture, (Rectangle) {.x = 0, .y = 0, .width = draw_args->draw_texture.texture.width, .height = -draw_args->draw_texture.texture.height}, 
                 (Rectangle) {.x = 0, .y = 0,. width = input_texture.texture.width, .height = input_texture.texture.height}, (Vector2) {0, 0}, 0, WHITE);
     }
     EndTextureMode();
 
+    // check if we should update the model with information about the drawn image
     draw_args->cur_frames++;
     if (draw_args->updated && draw_args->update_frames <= draw_args->cur_frames) {
         draw_args->cur_frames = 0;
@@ -679,9 +638,19 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
         UnloadImage(input_image);
     }
 
+    // Draw what the model will see, make it a scaled multiple of the model's input to prevent rescaling issues
+    Rectangle model_input_rec = {
+        .x = draw_panel_rec.x - 10 - (120 / draw_args->buffer_width) * draw_args->buffer_width,
+        .y = draw_panel_rec.y,
+        .width = (120 / draw_args->buffer_width) * draw_args->buffer_width,
+        .height = (120 / draw_args->buffer_height) * draw_args->buffer_height
+    };
+
+    // display what the model with see on the side
     DrawTexturePro(input_texture.texture, (Rectangle) {.x = 0, .y = 0, .width = input_texture.texture.width, .height = input_texture.texture.height}, 
             model_input_rec, (Vector2) {0, 0}, 0, WHITE);
 
+    // run the model
     neural_network_model_t *model = draw_args->vis_args->training_info->model;
     mymatrix_t output = model->output_layer->layer.output.output_values;
     int highest_guess = 0;
@@ -690,12 +659,46 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
             highest_guess = i;
         }
     }
+
+    // show the model's prediction and confidence
     DrawCenteredText(TextFormat("%d (%f)", highest_guess, output.matrix[highest_guess][0]), 
             model_input_rec.x + model_input_rec.width/2, model_input_rec.y + model_input_rec.height + 10, 12, BLACK);
+    
+    // TODO show all confidences of each label on the side
+}
 
-    // Save Image Button
-    if (GuiButton((Rectangle) {.x = draw_panel_rec.x + draw_panel_rec.width - 40, .y = draw_panel_undo_rec.y, .width = 40, .height = 20}, "Save")) {
-        draw_args->is_save_popup_open = true;
+// GOALS
+// Set Brush Mode
+// Save image
+// Load image
+static const int line_thickness = 4;
+void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
+    if (!draw_args->is_open) {
+        draw_args->is_save_popup_open = false;
+        return;
     }
+    
+    // darken background
+    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ColorAlpha(BLACK, 0.5));
+
+    // drawing panel
+    Rectangle draw_window_rec = RecCenteredMargin(SCREEN_WIDTH, SCREEN_HEIGHT, 50, 50);
+    Rectangle draw_panel_rec = RecCenteredRecDimV(draw_window_rec, VecAddC(RenderTextureDim(draw_args->draw_texture), line_thickness/2));
+    draw_args->is_open = !GuiWindowBox(draw_window_rec, "Drawing Panel");
+
+    DrawRectangleRec(draw_panel_rec, WHITE);
+    DrawRectangleRoundedLines(draw_panel_rec, .02, 10, line_thickness, BLACK);
+
+    // brush tools
+    GuiDrawingTools(draw_args, draw_window_rec, draw_panel_rec);
+
+    // drawing panel
+    GuiDrawPanel(draw_args, draw_panel_rec);
+    DrawTexture(draw_args->draw_texture.texture, draw_panel_rec.x + line_thickness/2, draw_panel_rec.y + line_thickness/2, WHITE);
+
+    // model input image and output labels
+    GuiModelInfo(draw_args, draw_panel_rec);
+
+    // draw save window if it should be shown
     GuiSavePopup(draw_args);
 }

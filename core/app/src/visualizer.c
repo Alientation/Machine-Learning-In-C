@@ -291,7 +291,6 @@ void OpenTooltip(const char* msg, float priority, float *weight_value) {
     vis_state.tooltip_weight_value = weight_value;
 }
 
-// todo, in future, don't draw redundant Activation/Output layer neurons, group all activation/output layers after a dense layer together
 void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
     mymatrix_t this_neurons = layer_get_neurons(layer);
     mymatrix_t prev_neurons = layer_get_neurons(prev);

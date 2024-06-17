@@ -62,6 +62,9 @@ void DataSetRemoveImage(dataset_t *dataset, int index);
 void DataSetRemoveImages(dataset_t *dataset, int from_index, int to_index);
 void DataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset);
 
+void convert_image_to_mymatrix(mymatrix_t* mymatrix, Image image);
+void one_hot_encode_matrix(mymatrix_t *mymatrix, int label);
+
 void UnloadDataSet(dataset_t dataset);
 
 

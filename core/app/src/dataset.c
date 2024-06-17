@@ -132,6 +132,7 @@ dataset_t ConstructImageDataSet(const char* file_path, int width, int height, in
     return dataset;
 }
 
+// TODO make loading images from data multi threaded
 dataset_t LoadDataSet(const char* file_path) {
     int file_size = 0;
     unsigned char* data = LoadFileData(file_path, &file_size);

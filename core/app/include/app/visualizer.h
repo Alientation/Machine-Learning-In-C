@@ -85,7 +85,6 @@ static const int FILE_NAME_BUFFER_SIZE = 40;
 static const int NUMBER_INPUT_BUFFER_SIZE = 10;
 
 typedef struct LabelGuesses {
-    char **labels;
     float *confidences;
 } label_guesses_t;
 

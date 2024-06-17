@@ -672,19 +672,26 @@ void GuiDrawingPanelPopup(drawing_panel_args_t *draw_args) {
                 draw_args->output_buffer[r * input_image.height + c] = color.r;
             }
         }
-        UnloadImage(input_image);
         
-        // TODO run the model on the new input
+        neural_network_model_t *model = draw_args->vis_args->training_info->model;
+        convert_image_to_mymatrix(&model->input_layer->layer.input.input_values, input_image);
+        mymatrix_t output = model_calculate(model);
+        UnloadImage(input_image);
     }
 
     DrawTexturePro(input_texture.texture, (Rectangle) {.x = 0, .y = 0, .width = input_texture.texture.width, .height = input_texture.texture.height}, 
             model_input_rec, (Vector2) {0, 0}, 0, WHITE);
 
-    // TODO draw the model's output
-
-
-
-
+    neural_network_model_t *model = draw_args->vis_args->training_info->model;
+    mymatrix_t output = model->output_layer->layer.output.output_values;
+    int highest_guess = 0;
+    for (int i = 0; i < draw_args->vis_args->num_labels; i++) {
+        if (output.matrix[i][0] > output.matrix[highest_guess][0]) {
+            highest_guess = i;
+        }
+    }
+    DrawCenteredText(TextFormat("%d (%f)", highest_guess, output.matrix[highest_guess][0]), 
+            model_input_rec.x + model_input_rec.width/2, model_input_rec.y + model_input_rec.height + 10, 12, BLACK);
 
     // Save Image Button
     if (GuiButton((Rectangle) {.x = draw_panel_rec.x + draw_panel_rec.width - 40, .y = draw_panel_undo_rec.y, .width = 40, .height = 20}, "Save")) {

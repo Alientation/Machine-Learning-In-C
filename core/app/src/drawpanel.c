@@ -338,6 +338,9 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
         DrawText(TextFormat("label %d)  %s", i+1, img_ds->label_names[i]), ds_info_r.x + 20, ds_info_r.y + 130 + i * 15, 12, DARKGRAY);
     }
 
+    // load dataset into training info for the model to run on
+    // TODO add more options like selecting what kinds of image transformations to apply to
+    // expand the amount of data and generate variety
     if (GuiButton((Rectangle) {.x = ds_info_r.x, .y = ds_info_r.y + ds_info_r.height + 10, 80, 30}, "Use")) {
         training_info_free(draw_args->vis_args->training_info);
         DataSetConvertToTraining(draw_args->vis_args->training_info, dataset);

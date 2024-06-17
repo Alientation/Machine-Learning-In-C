@@ -430,7 +430,7 @@ void DrawLayer(int layer_index, layer_t *layer) {
             if (NODE_RADIUS < MIN_NODE_RADIUS_FOR_SLIDER_BAR) {
                 // shortcut to set node values
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-                    nodes.matrix[r][0] = 1;
+                    nodes.matrix[r][0] = IsKeyDown(KEY_LEFT_SHIFT) ? -1 : 1;
                     model_needs_update = true;
                 } else if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
                     nodes.matrix[r][0] = 0;

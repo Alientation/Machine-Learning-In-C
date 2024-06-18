@@ -192,7 +192,7 @@ void end_visualizer() {
 
 void* window_run(void *vargp) {    
     assert(!vis_state.is_window_open);
-    // SetTraceLogLevel(LOG_ERROR);
+    SetTraceLogLevel(LOG_ERROR);
 
     visualizer_argument_t *vis_args = (visualizer_argument_t*) vargp;
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, TextFormat("%s Visualizer", vis_args->model_name));

@@ -7,14 +7,6 @@
 #include <util/profiler.h>
 #include <util/debug_memory.h>
 
-void free_matrix_list(mymatrix_t *matrix_list, int size) {
-    for (int i = 0; i < size; i++) {
-        matrix_free(matrix_list[i]);
-    }
-
-    free(matrix_list);
-}
-
 static const char* digit_outputs[10] = {
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
 };
@@ -24,26 +16,34 @@ static const char* xor_outputs[2] = {"0", "1"};
 int main(void) {
     CLOCK_MARK
     neural_network_model_t nnmodel;
+    pthread_t thread_id;
     // todo, app should connect to visualizer's start button and only start the training process when it is clicked
 
     // training_info_t training_info = nn_XOR(&nnmodel);
+    // training_info.model = &nnmodel;
+    // model_calculate(&nnmodel);
+    // visualizer_argument_t vis_args = {
+    //     .model = &nnmodel,
+    //     .training_info = &training_info,
+    //     .model_name = "XOR",
+    //     .output_labels = xor_outputs,
+    //     .num_labels = 2,
+    //     .default_dataset_directory = "",
+    //     .allow_drawing_panel_as_model_input = false,
+    // };
+    
     training_info_t training_info = nn_digit_recognizer(&nnmodel);
     training_info.model = &nnmodel;
     model_calculate(&nnmodel);
 
-    pthread_t thread_id;
     visualizer_argument_t vis_args = {
         .model = &nnmodel,
         .training_info = &training_info,
         .model_name = "Digit Recognizer",
-        // .model_name = "XOR",
         .output_labels = digit_outputs,
-        // .output_labels = xor_outputs,
         .num_labels = 10,
-        // .num_labels = 2,
         .default_dataset_directory = "images\\digits",
         .allow_drawing_panel_as_model_input = true,
-        // .allow_drawing_panel_as_model_input = false,
     };
 
     pthread_create(&thread_id, NULL, window_run, &vis_args);

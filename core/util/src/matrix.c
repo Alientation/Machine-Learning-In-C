@@ -7,6 +7,14 @@
 
 #include <util/debug_memory.h>
 
+void free_matrix_list(mymatrix_t *matrix_list, int size) {
+    for (int i = 0; i < size; i++) {
+        matrix_free(matrix_list[i]);
+    }
+
+    free(matrix_list);
+}
+
 mymatrix_t matrix_allocator(int r, int c) {
     mymatrix_t m;
     m.r = r;

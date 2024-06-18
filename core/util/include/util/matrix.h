@@ -18,6 +18,8 @@ typedef struct MyMatrix {
     bool transposed; // todo
 } mymatrix_t;
 
+void free_matrix_list(mymatrix_t *matrix_list, int size);
+
 mymatrix_t matrix_allocator(int r, int c);
 mymatrix_t matrix_constructor(int r, int c, float** matrix);
 

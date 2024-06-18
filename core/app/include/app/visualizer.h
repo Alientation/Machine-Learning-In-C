@@ -137,6 +137,18 @@ typedef struct DrawingPanelArgs {
     int dataset_list_scroll_index; //
     int sel_dataset_image_index;
 
+    // convert to training data options
+    int num_transformations;        // number of times each of the below transformations are applied on a single dataset image, ie there will be num_transformations * num_images extra examples in training/testing dataset
+    bool is_transformations_active;
+    float max_rotation_degree;      // rotate the image clockwise or counterclockwise a random degree, the maximum magnitude of which is specified here
+    bool is_rotations_active;
+    float max_translations_pixels_x;    // maximum movement horizontally // TODO translations should be limited to not cause the drawing to off the image bounds
+    bool is_translations_x_active;
+    float max_translations_pixels_y;    // maximum movement vertically
+    bool is_translations_y_active;
+    float max_artifacts;            // percentage of the image that will have a random artifact (ie, a random pixel shaded in with a random value)
+    bool is_artifacts_active;
+
     // create a new dataset
     char *add_dataset_file_name;
     int add_dataset_type;

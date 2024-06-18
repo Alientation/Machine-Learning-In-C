@@ -131,6 +131,17 @@ void initialize_visualizer(visualizer_argument_t *vis_args) {
         .img_dataset_vis = {0},
         .dataset_list_scroll_index = 0, 
         .sel_dataset_image_index = -1,
+
+        .num_transformations = 0,
+        .is_transformations_active = false,
+        .max_rotation_degree = 0,
+        .is_rotations_active = false,
+        .max_translations_pixels_x = 0,
+        .is_translations_x_active = false,
+        .max_translations_pixels_y = 0,
+        .is_translations_y_active = false,
+        .max_artifacts = 0,
+        .is_artifacts_active = false,
         
         .add_dataset_file_name = malloc((FILE_NAME_BUFFER_SIZE + 1) * sizeof(char)),
         .add_dataset_type = 0,
@@ -155,11 +166,11 @@ void initialize_visualizer(visualizer_argument_t *vis_args) {
     };
 
     // text box input buffers
-    memset(vis_state.draw_args.add_dataset_file_name, 0, (FILE_NAME_BUFFER_SIZE + 1) * sizeof(char));
-    memset(vis_state.draw_args.images_dataset_width_input, 0, (NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char));
+    memset(vis_state.draw_args.add_dataset_file_name, 0, FILE_NAME_BUFFER_SIZE * sizeof(char));
+    memset(vis_state.draw_args.images_dataset_width_input, 0, NUMBER_INPUT_BUFFER_SIZE * sizeof(char));
     vis_state.draw_args.images_dataset_width_input[0] = '2';
     vis_state.draw_args.images_dataset_width_input[1] = '8';
-    memset(vis_state.draw_args.images_dataset_height_input, 0, (NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char));
+    memset(vis_state.draw_args.images_dataset_height_input, 0, NUMBER_INPUT_BUFFER_SIZE * sizeof(char));
     vis_state.draw_args.images_dataset_height_input[0] = '2';
     vis_state.draw_args.images_dataset_height_input[1] = '8';    
 }
@@ -444,11 +455,12 @@ void DrawLayer(int layer_index, layer_t *layer) {
 
                 DrawRectangle(rec_x, rec_y, rec_width, rec_height, TOOLTIP_BACKGROUND_COLOR);
                 DrawRectangleLines(rec_x, rec_y, rec_width, rec_height, BLACK);
+                float prevValue = nodes.matrix[r][0];
                 GuiSlider((Rectangle) {.x = pos.x - 3 * NODE_RADIUS / 4, .y = pos.y + NODE_DISPLAY_FONTSIZE, .width = 3 * NODE_RADIUS / 2, .height = NODE_DISPLAY_FONTSIZE},
                         "0", "1", &nodes.matrix[r][0], 0, 1);
 
                 // run model on the changed inputs
-                model_needs_update = true;
+                model_needs_update = prevValue != nodes.matrix[r][0];
             }
 
             if (model_needs_update) {

@@ -2,34 +2,34 @@
 
 #include <math.h>
 
-void DrawCenteredText(const char* text, int centerx, int centery, int fontsize, Color fontcolor) {
-    int width = MeasureText(text, fontsize);
-    DrawText(text, centerx - width / 2, centery - fontsize/2, fontsize, fontcolor);
+void DrawCenteredText(const char* text, int center_x, int center_y, int font_size, Color font_color) {
+    int width = MeasureText(text, font_size);
+    DrawText(text, center_x - width / 2, center_y - font_size/2, font_size, font_color);
 }
 
-void DrawOutlinedText(const char *text, int posX, int posY, int fontSize, Color color, int outlineSize, Color outlineColor) {
-    DrawText(text, posX - outlineSize, posY - outlineSize, fontSize, outlineColor);
-    DrawText(text, posX + outlineSize, posY - outlineSize, fontSize, outlineColor);
-    DrawText(text, posX - outlineSize, posY + outlineSize, fontSize, outlineColor);
-    DrawText(text, posX + outlineSize, posY + outlineSize, fontSize, outlineColor);
-    DrawText(text, posX, posY, fontSize, color);
+void DrawOutlinedText(const char *text, int pos_x, int pos_y, int font_size, Color color, int outline_size, Color outline_color) {
+    DrawText(text, pos_x - outline_size, pos_y - outline_size, font_size, outline_color);
+    DrawText(text, pos_x + outline_size, pos_y - outline_size, font_size, outline_color);
+    DrawText(text, pos_x - outline_size, pos_y + outline_size, font_size, outline_color);
+    DrawText(text, pos_x + outline_size, pos_y + outline_size, font_size, outline_color);
+    DrawText(text, pos_x, pos_y, font_size, color);
 }
 
-void DrawOutlinedCenteredText(const char* text, int posX, int posY, int fontSize, Color color, int outlineSize, Color outlineColor) {
-    DrawCenteredText(text, posX - outlineSize, posY - outlineSize, fontSize, outlineColor);
-    DrawCenteredText(text, posX + outlineSize, posY - outlineSize, fontSize, outlineColor);
-    DrawCenteredText(text, posX - outlineSize, posY + outlineSize, fontSize, outlineColor);
-    DrawCenteredText(text, posX + outlineSize, posY + outlineSize, fontSize, outlineColor);
-    DrawCenteredText(text, posX, posY, fontSize, color);
+void DrawOutlinedCenteredText(const char* text, int pos_x, int pos_y, int font_size, Color color, int outline_size, Color outline_color) {
+    DrawCenteredText(text, pos_x - outline_size, pos_y - outline_size, font_size, outline_color);
+    DrawCenteredText(text, pos_x + outline_size, pos_y - outline_size, font_size, outline_color);
+    DrawCenteredText(text, pos_x - outline_size, pos_y + outline_size, font_size, outline_color);
+    DrawCenteredText(text, pos_x + outline_size, pos_y + outline_size, font_size, outline_color);
+    DrawCenteredText(text, pos_x, pos_y, font_size, color);
 }
 
-void DrawOutlinedRectangle(int x, int y, int width, int height, Color color, int outlineSize, Color outlineColor) {
+void DrawOutlinedRectangle(int x, int y, int width, int height, Color color, int outline_size, Color outline_color) {
     DrawRectangle(x, y, width, height, color);
-    DrawRectangleLines(x - outlineSize/2.0, y - outlineSize/2.0, width, height, outlineColor);
+    DrawRectangleLines(x - outline_size/2.0, y - outline_size/2.0, width, height, outline_color);
 }
 
-void DrawOutlinedRectangleRec(Rectangle rec, Color color, int outlineSize, Color outlineColor) {
-    DrawOutlinedRectangle(rec.x, rec.y, rec.width, rec.height, color, outlineSize, outlineColor);
+void DrawOutlinedRectangleRec(Rectangle rec, Color color, int outline_size, Color outline_color) {
+    DrawOutlinedRectangle(rec.x, rec.y, rec.width, rec.height, color, outline_size, outline_color);
 }
 
 
@@ -54,8 +54,19 @@ Vector2 Vec2DExtend(float c) {
 }
 
 
-Rectangle RecCenteredRecMargin(Rectangle window, int marginx, int marginy) {
-    return RecOffsetV(RecCenteredMarginV(RecDim(window), (Vector2) {.x = marginx, .y = marginy}), RecPos(window));
+Rectangle RecShift(Rectangle rec, int shift_x, int shift_y) {
+    rec.x += shift_x;
+    rec.y += shift_y;
+    return rec;
+}
+
+Rectangle RecShiftV(Rectangle rec, Vector2 shift) {
+    return RecShift(rec, shift.x, shift.y);
+}
+
+
+Rectangle RecCenteredRecMargin(Rectangle window, int margin_x, int margin_y) {
+    return RecOffsetV(RecCenteredMarginV(RecDim(window), (Vector2) {.x = margin_x, .y = margin_y}), RecPos(window));
 }
 
 Rectangle RecCenteredRecMarginV(Rectangle window, Vector2 margins) {
@@ -70,8 +81,8 @@ Rectangle RecCenteredRecDimV(Rectangle window, Vector2 dims) {
     return RecCenteredRecDim(window, _UNPACK_VEC2(dims));
 }
 
-Rectangle RecCenteredMargin(int window_width, int window_height, int marginx, int marginy) {
-    return (Rectangle) {.x = marginx, .y = marginy, .width = window_width - 2 * marginx, .height = window_height - 2 * marginy};
+Rectangle RecCenteredMargin(int window_width, int window_height, int margin_x, int margin_y) {
+    return (Rectangle) {.x = margin_x, .y = margin_y, .width = window_width - 2 * margin_x, .height = window_height - 2 * margin_y};
 }
 
 Rectangle RecCenteredMarginV(Vector2 window_dim, Vector2 margins) {

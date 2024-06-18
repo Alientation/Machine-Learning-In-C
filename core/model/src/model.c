@@ -402,7 +402,8 @@ mymatrix_t model_predict(neural_network_model_t *model, mymatrix_t input,
     
     layer_t *current = model->input_layer;
     mymatrix_t prev_output = input;
-    for (int layer_i = 0; layer_i < model->num_layers-1; layer_i++) {
+    int num_iterations = model->num_layers-1;
+    for (int layer_i = 0; layer_i < num_iterations; layer_i++) {
         assert(current->type != OUTPUT);
         
         // since the different layer structs are arranged in a way that the function pointers are in the same "locations"

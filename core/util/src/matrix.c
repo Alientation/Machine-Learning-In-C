@@ -94,6 +94,21 @@ void matrix_multiply(mymatrix_t m1, mymatrix_t m2,
             result.matrix[r][c] = dot;
         }
     }
+    
+    // for (int r = 0; r < result.r; r++) {
+    //     for (int c = 0; c < result.c; c++) {
+    //         result.matrix[r][c] = 0;
+    //     }
+    //     // use memset TODO
+    // }
+
+    // for (int r = 0; r < result.r; r++) {
+    //     for (int i = 0; i < m1.c; i++) {
+    //         for (int c = 0; c < result.c; c++) {
+    //             result.matrix[r][c] += m1.matrix[r][i] * m2.matrix[i][c];
+    //         }
+    //     }
+    // }
 }
 
 void matrix_multiply_scalar(mymatrix_t m1, float scalar,

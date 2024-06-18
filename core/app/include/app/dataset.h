@@ -60,7 +60,7 @@ void WriteDataSet(dataset_t dataset);
 void DataSetAddImage(dataset_t *dataset, Image image, long label);
 void DataSetRemoveImage(dataset_t *dataset, int index);
 void DataSetRemoveImages(dataset_t *dataset, int from_index, int to_index);
-void DataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset);
+void DataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts);
 
 void convert_image_to_mymatrix(mymatrix_t* mymatrix, Image image);
 void one_hot_encode_matrix(mymatrix_t *mymatrix, int label);

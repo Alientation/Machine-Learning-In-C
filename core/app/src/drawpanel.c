@@ -323,7 +323,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
         .x = file_viewer_r.x + file_viewer_r.width + 20,
         .y = file_viewer_r.y,
         .width = 200,
-        .height = 400,
+        .height = 300,
     };
     
     DrawOutlinedRectangleRec(ds_info_r, RAYWHITE, 2, BLACK);
@@ -338,12 +338,53 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
         DrawText(TextFormat("label %d)  %s", i+1, img_ds->label_names[i]), ds_info_r.x + 20, ds_info_r.y + 130 + i * 15, 12, DARKGRAY);
     }
 
-    // load dataset into training info for the model to run on
     // TODO add more options like selecting what kinds of image transformations to apply to
     // expand the amount of data and generate variety
-    if (GuiButton((Rectangle) {.x = ds_info_r.x, .y = ds_info_r.y + ds_info_r.height + 10, 80, 30}, "Use")) {
+    Rectangle transformation_label_r = {
+        .x = ds_info_r.x, .y = ds_info_r.y + ds_info_r.height + 10, .width = 90, .height = 20
+    };
+    Rectangle transformation_picker_r = {
+        .x = transformation_label_r.x + transformation_label_r.width + 10, .y = transformation_label_r.y, .width = ds_info_r.width - transformation_label_r.width - 10, .height = 20
+    };
+
+    const int TEXT_INPUT_BUFFER_SIZE = 10;
+    char TEXT_INPUT_BUFFER[TEXT_INPUT_BUFFER_SIZE];
+    strcpy(TEXT_INPUT_BUFFER, TextFormat("%d", draw_args->num_transformations));
+
+    DrawCenteredText("# Applied:", _UNPACK_REC_CENTER(transformation_label_r), 10, BLACK);
+    if (GuiTextBox(transformation_picker_r, TEXT_INPUT_BUFFER, TEXT_INPUT_BUFFER_SIZE, draw_args->is_transformations_active)) {
+        draw_args->is_transformations_active = !draw_args->is_transformations_active;
+    }
+    draw_args->num_transformations = TextToInteger(TEXT_INPUT_BUFFER);
+
+    Rectangle rotation_label_r = RecShift(transformation_label_r, 0, 25);
+    Rectangle rotation_picker_r = RecShift(transformation_picker_r, 0, 25);
+    DrawCenteredText(TextFormat("Rot: %d", (int) draw_args->max_rotation_degree), _UNPACK_REC_CENTER(rotation_label_r), 10, BLACK);
+    GuiSlider(rotation_picker_r, "0", "180", &draw_args->max_rotation_degree, 0, 180);
+    
+    Rectangle translation_x_label_r = RecShift(rotation_label_r, 0, 25);
+    Rectangle translation_x_picker_r = RecShift(rotation_picker_r, 0, 25);
+    DrawCenteredText(TextFormat("Shift X: %d", (int) draw_args->max_translations_pixels_x), _UNPACK_REC_CENTER(translation_x_label_r), 10, BLACK);
+    GuiSlider(translation_x_picker_r, "0", "20", &draw_args->max_translations_pixels_x, 0, 20);
+    
+    Rectangle translation_y_label_r = RecShift(translation_x_label_r, 0, 25);
+    Rectangle translation_y_picker_r = RecShift(translation_x_picker_r, 0, 25);
+    DrawCenteredText(TextFormat("Shift Y: %d", (int) draw_args->max_translations_pixels_y), _UNPACK_REC_CENTER(translation_y_label_r), 10, BLACK);
+    GuiSlider(translation_y_picker_r, "0", "20", &draw_args->max_translations_pixels_y, 0, 20);
+
+    Rectangle artifact_label_r = RecShift(translation_y_label_r, 0, 25);
+    Rectangle artifact_picker_r = RecShift(translation_y_picker_r, 0, 25);
+    DrawCenteredText(TextFormat("Artifacts: %.3f", draw_args->max_artifacts), _UNPACK_REC_CENTER(artifact_label_r), 10, BLACK);
+    GuiSlider(artifact_picker_r, "0", "1", &draw_args->max_artifacts, 0, 1);
+
+    // load dataset into training info for the model to run on
+    if (GuiButton((Rectangle) {.x = ds_info_r.x, .y = ds_info_r.y + ds_info_r.height + 150, .width = 80, .height = 30}, "Use")) {
         training_info_free(draw_args->vis_args->training_info);
-        DataSetConvertToTraining(draw_args->vis_args->training_info, dataset);
+        DataSetConvertToTraining(draw_args->vis_args->training_info, dataset, draw_args->num_transformations, 
+                draw_args->max_rotation_degree, draw_args->max_translations_pixels_x, draw_args->max_translations_pixels_y, draw_args->max_artifacts);
+        draw_args->is_dataset_viewer_open = false;
+        draw_args->is_save_popup_open = false;
+        draw_args->is_open = false;
     }
 
     // display currently selected image info
@@ -503,13 +544,13 @@ void GuiDrawingTools(drawing_panel_args_t *draw_args, Rectangle draw_window_rec,
     DrawText("Brush Size", brush_size_picker_rec.x, brush_size_picker_rec.y - 20, 12, BLACK);
 
     Rectangle brush_size_display_rec = {
-        .x = brush_size_picker_rec.x + brush_size_picker_rec.width + max_brush_size * 2 + 20,
-        .y = brush_size_picker_rec.y + brush_size_picker_rec.height/2,
+        .x = brush_size_picker_rec.x + brush_size_picker_rec.width + max_brush_size + 20,
+        .y = brush_size_picker_rec.y + brush_size_picker_rec.height/2 - max_brush_size,
         .width = max_brush_size * 2,
         .height = max_brush_size * 2,
     };
-    DrawRectangleRoundedLines(RecCenteredRecDimV(brush_size_display_rec, Vec2DExtend(max_brush_size * 2)), 0.02, 4, 2, BLACK);
-    DrawCircleV(RecPos(brush_size_display_rec) , draw_args->brush_size, ColorFromHSV(_UNPACK_VEC3(draw_args->brush_color)));
+    DrawRectangleRoundedLines(brush_size_display_rec, 0.02, 4, 2, BLACK);
+    DrawCircle(_UNPACK_REC_CENTER(brush_size_display_rec), draw_args->brush_size, ColorFromHSV(_UNPACK_VEC3(draw_args->brush_color)));
 
 
     // Drawing Panel Options

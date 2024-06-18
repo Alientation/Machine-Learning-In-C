@@ -324,7 +324,7 @@ void one_hot_encode_matrix(mymatrix_t *mymatrix, int label) {
     mymatrix->matrix[label][0] = 1;
 }
 
-void DataSetConvertToTraining(training_info_t* training_info, dataset_t *dataset) {
+void DataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts) {
     if (dataset->type == DATASET_IMAGES) {
         // TODO add option to select training/testing split, batch size, learning rate, target epochs, target accuracy
         const float train_test_split = 0.8;

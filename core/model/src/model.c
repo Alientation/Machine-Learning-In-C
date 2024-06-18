@@ -434,7 +434,6 @@ void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_out
 }
 
 float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, float learning_rate) {
-    // mymatrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
     mymatrix_t output = model->output_layer->layer.output.output_values;
     float avg_error = 0;
     for (int example_i = 0; example_i < num_examples; example_i++) {
@@ -444,12 +443,10 @@ float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t 
     }
     avg_error /= (float) num_examples;
     // printf("train avg error=%f", (float) avg_error);
-    // matrix_free(output);
     return avg_error;
 }
 
 void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_tests) {
-    // mymatrix_t output = matrix_copy(model->output_layer->layer.output.output_values);
     mymatrix_t output = model->output_layer->layer.output.output_values;
     int passed = 0;
     for (int test_i = 0; test_i < num_tests; test_i++) {
@@ -471,7 +468,6 @@ void model_test(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *e
     // 2 decimal places
     float accuracy = ((int)(100.0 * (float) passed / (float) num_tests)) / 100.0;
     printf("accuracy: %f  passed=%d, total=%d\n", accuracy, passed, num_tests);
-    // matrix_free(output);
 }
 
 mymatrix_t model_calculate(neural_network_model_t *model) {
@@ -507,8 +503,10 @@ void model_train_info(training_info_t *training_info) {
     unsigned int target_epochs = training_info->target_epochs;
     unsigned int *train_index = &training_info->train_index;
     unsigned int train_size = training_info->train_size;
+    float train_size_reciprocal = 1.0 / train_size;
     unsigned int *test_index = &training_info->test_index;
     unsigned int test_size = training_info->test_size;
+    float test_size_reciprocal = 1.0 / test_size;
 
     output_layer_t output_layer = model->output_layer->layer.output;
     mymatrix_t *train_x = training_info->train_x;
@@ -532,8 +530,8 @@ void model_train_info(training_info_t *training_info) {
                 passed_train++;
             }
         }
-        training_info->avg_train_error = avg_train_error / (float) train_size;
-        training_info->train_accuracy = ((int)(100.0 * (float) passed_train / (float) train_size)) / 100.0;
+        training_info->avg_train_error = avg_train_error * train_size_reciprocal;
+        training_info->train_accuracy = ((int)(100.0 * passed_train * train_size_reciprocal)) * 0.01;
 
         // perform test
         float avg_test_error = 0;
@@ -548,8 +546,8 @@ void model_train_info(training_info_t *training_info) {
             }
         }
 
-        training_info->avg_test_error = avg_test_error / (float) test_size;
-        training_info->test_accuracy = ((int)(100.0 * (float) passed_test / (float) test_size)) / 100.0;
+        training_info->avg_test_error = avg_test_error * test_size_reciprocal;
+        training_info->test_accuracy = ((int)(100.0 * passed_test * test_size_reciprocal)) * 0.01;
 
         if ((((*epoch) + 1) % print_every == 0 && *epoch != 0) || *epoch == target_epochs - 1) {
             // printf("==== Epoch %d ==== \ntrain_error: %f, train_accuracy: %f\ntest_error: %f, test_accuracy: %f\n\n", (*epoch) + 1, 

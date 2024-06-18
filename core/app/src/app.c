@@ -19,32 +19,32 @@ int main(void) {
     pthread_t thread_id;
     // todo, app should connect to visualizer's start button and only start the training process when it is clicked
 
-    // training_info_t training_info = nn_XOR(&nnmodel);
-    // training_info.model = &nnmodel;
-    // model_calculate(&nnmodel);
-    // visualizer_argument_t vis_args = {
-    //     .model = &nnmodel,
-    //     .training_info = &training_info,
-    //     .model_name = "XOR",
-    //     .output_labels = xor_outputs,
-    //     .num_labels = 2,
-    //     .default_dataset_directory = "",
-    //     .allow_drawing_panel_as_model_input = false,
-    // };
-    
-    training_info_t training_info = nn_digit_recognizer(&nnmodel);
+    training_info_t training_info = nn_XOR(&nnmodel);
     training_info.model = &nnmodel;
     model_calculate(&nnmodel);
-
     visualizer_argument_t vis_args = {
         .model = &nnmodel,
         .training_info = &training_info,
-        .model_name = "Digit Recognizer",
-        .output_labels = digit_outputs,
-        .num_labels = 10,
-        .default_dataset_directory = "images\\digits",
-        .allow_drawing_panel_as_model_input = true,
+        .model_name = "XOR",
+        .output_labels = xor_outputs,
+        .num_labels = 2,
+        .default_dataset_directory = "",
+        .allow_drawing_panel_as_model_input = false,
     };
+    
+    // training_info_t training_info = nn_digit_recognizer(&nnmodel);
+    // training_info.model = &nnmodel;
+    // model_calculate(&nnmodel);
+
+    // visualizer_argument_t vis_args = {
+    //     .model = &nnmodel,
+    //     .training_info = &training_info,
+    //     .model_name = "Digit Recognizer",
+    //     .output_labels = digit_outputs,
+    //     .num_labels = 10,
+    //     .default_dataset_directory = "images\\digits",
+    //     .allow_drawing_panel_as_model_input = true,
+    // };
 
     pthread_create(&thread_id, NULL, window_run, &vis_args);
 

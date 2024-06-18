@@ -12,15 +12,19 @@ that would normally go together just to be more verbose.
 
 ## Progress
 XOR trained model
-Basic visualizer in raylib
+digit recognizer trained on handdrawn dataset (only 100 examples, 10 per digit, which explains the model's low performance)
+model visualizer in raylib
+drawing panel for models that take in images, to create dataset files
+dataset file loader
 
 ## Goals
 - Train a model on MNIST
 - Optimize, currently sitting at 1.6 million examples a second for a model (2 -> 2 -> 1)
      - though it appears that after having the model run all the tests after each training epoch, the total time went up
-     marginally by a couple hundred ms
-- Improve UI of visualizer and add more features like manually tuning weights or giving inputs to the model
+     marginally by only a couple hundred ms
 - Add momentum, regularization, dropout, and warmup training
 - Download and use pretrained model
+- multi dimensional matrices (for convolution layers)
+- Add more types of layers like convolution, maxpooling, etc
 - Support mini batching
 - ..possibly use third party linear algebra libraries, but trying not to.. don't want to use any for this project other than raylib

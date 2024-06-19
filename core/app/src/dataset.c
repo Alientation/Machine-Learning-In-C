@@ -409,8 +409,8 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
 
     srand(2304093940);
     for (int i = 0; i < data.count * num_examples_per_image; i++) {
-        int s1 = random_uniform_range(1) * data.count;
-        int s2 = random_uniform_range(1) * data.count;
+        int s1 = random_uniform_range(1) * (data.count * num_examples_per_image);
+        int s2 = random_uniform_range(1) * (data.count * num_examples_per_image);
         if (s1 >= data.count) {
             s1 = data.count - 1;
         }

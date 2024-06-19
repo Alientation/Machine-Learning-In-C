@@ -435,6 +435,8 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
 
             DataSetAddImage(dataset, LoadImageFromTexture(draw_args->input_texture.texture), draw_args->sel_label_index);
             UpdateImageDataSetVisualizer(&draw_args->img_dataset_vis);
+
+            draw_args->is_save_popup_open = false;
         }
 
         // todo add insert image option
@@ -560,7 +562,7 @@ void GuiDrawingTools(drawing_panel_args_t *draw_args, Rectangle draw_window_rec,
         .width = 40,
         .height = 20,
     };
-    if (GuiButton(draw_panel_clear_rec, "Clear") && !draw_args->is_save_popup_open) {
+    if ((GuiButton(draw_panel_clear_rec, "Clear") || (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_C))) && !draw_args->is_save_popup_open) {
         DrawingPanelClear(draw_args);
     }
 
@@ -585,7 +587,8 @@ void GuiDrawingTools(drawing_panel_args_t *draw_args, Rectangle draw_window_rec,
     }
 
     // Save Image Button
-    if (GuiButton((Rectangle) {.x = draw_panel_rec.x + draw_panel_rec.width - 40, .y = draw_panel_undo_rec.y, .width = 40, .height = 20}, "Save")) {
+    if (GuiButton((Rectangle) {.x = draw_panel_rec.x + draw_panel_rec.width - 40, .y = draw_panel_undo_rec.y, .width = 40, .height = 20}, "Save") ||
+        (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S))) {
         draw_args->is_save_popup_open = true;
     }
 }

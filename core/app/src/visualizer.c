@@ -432,6 +432,10 @@ void DrawLayer(int layer_index, layer_t *layer) {
         
         DrawTexture(vis_state.node_texture.texture, pos.x - NODE_RADIUS, pos.y - NODE_RADIUS, shade);
         DrawTexture(vis_state.node_outline_texture.texture, pos.x - NODE_RADIUS, pos.y - NODE_RADIUS, WHITE);
+
+        if (layer->type == OUTPUT) {
+            DrawCenteredText(vis_state.vis_args.output_labels[r], pos.x + NODE_RADIUS + NODE_GAP + 5, pos.y, 10, BLACK);
+        }
         
         // edit input node values
         if (vis_state.playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, MOUSE_HOVER_DISTANCE_TO_NODE)
@@ -516,6 +520,9 @@ void DrawWindow(neural_network_model_t *model) {
 
         // draw model's training_info
         // TODO
+        
+
+
 
         // some model control buttons
         int control_y = MODEL_Y + 40;

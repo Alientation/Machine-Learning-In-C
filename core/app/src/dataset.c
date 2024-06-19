@@ -165,8 +165,10 @@ dataset_t LoadDataSet(const char* file_path) {
             byte += 8;
 
             // printf("loading image: image_bytes=%d, label=%d\n", image_bytes, image_label);
-
-            DataSetAddImage(&dataset, LoadImageFromMemory(".png", data + byte, image_bytes), image_label);
+            Image image = LoadImageFromMemory(".png", data + byte, image_bytes);
+            // // TODO THIS IS TEMPORARY TO REDUCE SIZE OF OLD DATASETS
+            // ImageColorGrayscale(&image);
+            DataSetAddImage(&dataset, image, image_label);
             
             byte += image_bytes;
         }

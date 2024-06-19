@@ -432,8 +432,11 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
         };
         if (GuiButton(add_img_r, "Add to Dataset")) {
             printf("Saved current image to %s\n", dataset->file_path);
-
-            DataSetAddImage(dataset, LoadImageFromTexture(draw_args->input_texture.texture), draw_args->sel_label_index);
+            Image image = LoadImageFromTexture(draw_args->input_texture.texture); // NO NEED TO UNLOAD SINCE IT IS STORED IN THE DATASET
+            if (draw_args->gray_scale) { // saves a lot of memory
+                ImageColorGrayscale(&image);
+            }
+            DataSetAddImage(dataset, image, draw_args->sel_label_index);
             UpdateImageDataSetVisualizer(&draw_args->img_dataset_vis);
 
             draw_args->is_save_popup_open = false;

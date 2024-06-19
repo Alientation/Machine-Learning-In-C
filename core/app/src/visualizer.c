@@ -295,7 +295,7 @@ void OpenTooltip(const char* msg, float priority, float *weight_value) {
     }
 
     int size = strlen(msg);
-    memcpy(vis_state.tooltip_msg, msg, size);
+    memcpy(vis_state.tooltip_msg, msg, size+1);
     vis_state.tooltip_msg[TOOLTIP_BUFFER_SIZE-1] = '\0'; // safety null character
     vis_state.show_tooltip = true;
     vis_state.tooltip_priority = priority;
@@ -371,6 +371,20 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 };
                 
                 DrawLineV(draw_start, draw_end, BLACK);
+            }
+
+            if (CheckCollisionPointLine(GetMousePosition(), prev_pos, this_pos, MOUSE_HOVER_DISTANCE_TO_WEIGHT)) {
+                if (layer->type == ACTIVATION) {
+                    // draw activated values
+                    char activated_values[NODE_DISPLAY_PRECISION];
+                    snprintf(activated_values, NODE_DISPLAY_PRECISION, "%f", layer->layer.activation.activated_values.matrix[r][0]);
+                    OpenTooltip(activated_values, 1 / (0.1 + sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2))), NULL);
+                } else if (layer->type == OUTPUT) {
+                    // draw activated values
+                    char output_values[NODE_DISPLAY_PRECISION];
+                    snprintf(output_values, NODE_DISPLAY_PRECISION, "%f", layer->layer.output.guess.matrix[r][0]);
+                    OpenTooltip(output_values, 1 / (0.1 + sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2))), NULL);
+                }
             }
         }
     }
@@ -563,6 +577,9 @@ void DrawWindow(neural_network_model_t *model) {
                 *vis_state.tooltip_weight_value += WEIGHT_VALUE_MOUSEWHEEL_SCALE * GetMouseWheelMove();
                 mymatrix_t output = model_calculate(vis_state.vis_args.training_info->model); // todo preferrably run on separate thread
             }
+
+            vis_state.show_tooltip = false;
+            vis_state.tooltip_priority = 0;
         }
     }
     EndDrawing();

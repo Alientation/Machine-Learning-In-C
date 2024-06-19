@@ -315,6 +315,7 @@ void convert_image_to_mymatrix(mymatrix_t* mymatrix, Image image) {
     for (int i = 0; i < image.height; i++) {
         for (int j = 0; j < image.width; j++) {
             // mymatrix->matrix[i * image.width + j][0] = 1 - GetImageColor(image, j, i).r / 256.0;
+            assert(image.height * image.width == mymatrix->r);
             mymatrix->matrix[j * image.height + i][0] = 1 - GetImageColor(image, j, i).r / 256.0;
         }
     }
@@ -324,76 +325,125 @@ void one_hot_encode_matrix(mymatrix_t *mymatrix, int label) {
     mymatrix->matrix[label][0] = 1;
 }
 
-void DataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts) {
-    if (dataset->type == DATASET_IMAGES) {
-        // TODO add option to select training/testing split, batch size, learning rate, target epochs, target accuracy
-        const float train_test_split = 0.8;
-        struct DataSetData_Images data = dataset->data.image_dataset;
+void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts) {
+    assert(dataset->type == DATASET_IMAGES);
 
-        training_info->in_progress = false;
-        training_info->train_size = 0;
-        training_info->train_x = NULL;
-        training_info->train_y = NULL;
-        training_info->test_size = 0;
-        training_info->test_x = NULL;
-        training_info->test_y = NULL;
+    // TODO add option to select training/testing split, batch size, learning rate, target epochs, target accuracy
+    const float train_test_split = 0.8;
+    struct DataSetData_Images data = dataset->data.image_dataset;
 
-        training_info->batch_size = 1;
-        training_info->learning_rate = 0.1;
-        training_info->target_epochs = 20;
-        training_info->target_accuracy = 1.5;
-        
-        training_info->train_size = data.count * train_test_split;
-        training_info->test_size = data.count - training_info->train_size;
+    training_info->in_progress = false;
+    training_info->train_size = 0;
+    training_info->train_x = NULL;
+    training_info->train_y = NULL;
+    training_info->test_size = 0;
+    training_info->test_x = NULL;
+    training_info->test_y = NULL;
 
-        training_info->train_x = malloc(training_info->train_size * sizeof(mymatrix_t));
-        training_info->train_y = malloc(training_info->train_size * sizeof(mymatrix_t));
-        training_info->test_x = malloc(training_info->test_size * sizeof(mymatrix_t));
-        training_info->test_y = malloc(training_info->test_size * sizeof(mymatrix_t));
+    training_info->batch_size = 1;
+    training_info->learning_rate = 0.005;
+    training_info->target_epochs = 20;
+    training_info->target_accuracy = 1.5;
+    
+    const int num_examples_per_image = num_transformations + 1;
+    
+    training_info->train_size = data.count * num_examples_per_image * train_test_split;
+    training_info->test_size = data.count * num_examples_per_image - training_info->train_size;
 
-        struct ImageListNode* shuffler[data.count];
-        const int input_size = data.uniform_width * data.uniform_width;
-        const int output_size = data.num_labels;
-        
-        struct ImageListNode *cur = data.image_list_head;
-        for (int i = 0; i < data.count; i++) {
-            shuffler[i] = cur;
-            cur = cur->next;
+    training_info->train_x = malloc(training_info->train_size * sizeof(mymatrix_t));
+    training_info->train_y = malloc(training_info->train_size * sizeof(mymatrix_t));
+    training_info->test_x = malloc(training_info->test_size * sizeof(mymatrix_t));
+    training_info->test_y = malloc(training_info->test_size * sizeof(mymatrix_t));
+
+    struct Example {
+        Image image;
+        int label;
+    };
+
+    struct Example shuffler[data.count * num_examples_per_image];
+    const int input_size = data.uniform_width * data.uniform_width;
+    const int output_size = data.num_labels;
+    
+    struct ImageListNode *cur = data.image_list_head;
+    for (int i = 0; i < data.count; i++) {
+        shuffler[i * num_examples_per_image] = (struct Example) {
+            .image = ImageCopy(cur->image),
+            .label = cur->label,
+        };
+
+        Image cur_image = ImageCopy(cur->image);
+        ImageColorInvert(&cur_image);
+
+        for (int j = 1; j < num_examples_per_image; j++) {
+            int rand_deg = GetRandomValue(-max_rot_deg, max_rot_deg);
+            int rand_transl_x = GetRandomValue(-max_transl_x, max_transl_x);
+            int rand_transl_y = GetRandomValue(-max_transl_y, max_transl_y);
+            float rand_artifacts = GetRandomValue(0, max_artifacts * 100) / 100.0;
+            
+            int bufferx = 2 * abs(rand_transl_x);
+            int buffery = 2 * abs(rand_transl_y);
+            Image image = GenImageColor(data.uniform_width*2 + bufferx*2, data.uniform_height*2 + buffery*2, BLACK);
+            Rectangle img_src_r = {
+                .x = 0, .y = 0, .width = data.uniform_width, .height = data.uniform_height
+            };
+            Rectangle img_dst_r = {
+                .x = data.uniform_width + rand_transl_x, .y = data.uniform_height + rand_transl_y, .width = data.uniform_width, .height = data.uniform_height
+            };
+
+            ImageDraw(&image, cur_image, img_src_r, img_dst_r, WHITE);
+            ImageRotate(&image, rand_deg);
+            ImageCrop(&image, img_dst_r);
+            ImageColorInvert(&image);
+
+            // TODO ADD RANDOM NOISE TO IMAGE
+
+            shuffler[i * num_examples_per_image + j] = (struct Example) {
+                .image = image,
+                .label = cur->label,
+            };
         }
+        UnloadImage(cur_image);
 
-        for (int i = 0; i < data.count; i++) {
-            int s1 = random_uniform_range(1) * data.count;
-            int s2 = random_uniform_range(1) * data.count;
-            if (s1 >= data.count) {
-                s1 = data.count - 1;
-            }
-            if (s2 >= data.count) {
-                s2 = data.count - 1;
-            }
-
-            struct ImageListNode *temp = shuffler[s1];
-            shuffler[s1] = shuffler[s2];
-            shuffler[s2] = temp; 
-        }
-
-        for (int i = 0; i < training_info->train_size; i++) {
-            training_info->train_x[i] = matrix_allocator(input_size, 1);
-            training_info->train_y[i] = matrix_allocator(output_size, 1);
-
-            convert_image_to_mymatrix(&training_info->train_x[i], shuffler[i]->image);
-            one_hot_encode_matrix(&training_info->train_y[i], shuffler[i]->label);
-        }
-
-        for (int i = 0; i < training_info->test_size; i++) {
-            training_info->test_x[i] = matrix_allocator(input_size, 1);
-            training_info->test_y[i] = matrix_allocator(output_size, 1);
-
-            convert_image_to_mymatrix(&training_info->test_x[i], shuffler[i + training_info->train_size]->image);
-            one_hot_encode_matrix(&training_info->test_y[i], shuffler[i + training_info->train_size]->label);
-        }
-    } else {
-        assert(0);
+        cur = cur->next;
     }
+
+    srand(2304093940);
+    for (int i = 0; i < data.count * num_examples_per_image; i++) {
+        int s1 = random_uniform_range(1) * data.count;
+        int s2 = random_uniform_range(1) * data.count;
+        if (s1 >= data.count) {
+            s1 = data.count - 1;
+        }
+        if (s2 >= data.count) {
+            s2 = data.count - 1;
+        }
+
+        struct Example temp = shuffler[s1];
+        shuffler[s1] = shuffler[s2];
+        shuffler[s2] = temp; 
+    }
+
+    for (int i = 0; i < training_info->train_size; i++) {
+        training_info->train_x[i] = matrix_allocator(input_size, 1);
+        training_info->train_y[i] = matrix_allocator(output_size, 1);
+
+        convert_image_to_mymatrix(&training_info->train_x[i], shuffler[i].image);
+        one_hot_encode_matrix(&training_info->train_y[i], shuffler[i].label);
+    }
+
+    for (int i = 0; i < training_info->test_size; i++) {
+        training_info->test_x[i] = matrix_allocator(input_size, 1);
+        training_info->test_y[i] = matrix_allocator(output_size, 1);
+
+        convert_image_to_mymatrix(&training_info->test_x[i], shuffler[i + training_info->train_size].image);
+        one_hot_encode_matrix(&training_info->test_y[i], shuffler[i + training_info->train_size].label);
+    }
+
+    for (int i = 0; i < data.count * num_examples_per_image; i++) {
+        UnloadImage(shuffler[i].image);
+    }
+
+    printf("Created training set with %d examples (%d training, %d testing)", data.count * num_examples_per_image, training_info->train_size, training_info->test_size);
 }
 
 

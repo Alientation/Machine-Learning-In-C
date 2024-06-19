@@ -380,7 +380,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
     // load dataset into training info for the model to run on
     if (GuiButton((Rectangle) {.x = ds_info_r.x, .y = ds_info_r.y + ds_info_r.height + 150, .width = 80, .height = 30}, "Use")) {
         training_info_free(draw_args->vis_args->training_info);
-        DataSetConvertToTraining(draw_args->vis_args->training_info, dataset, draw_args->num_transformations, 
+        ImageDataSetConvertToTraining(draw_args->vis_args->training_info, dataset, draw_args->num_transformations, 
                 draw_args->max_rotation_degree, draw_args->max_translations_pixels_x, draw_args->max_translations_pixels_y, draw_args->max_artifacts);
         draw_args->is_dataset_viewer_open = false;
         draw_args->is_save_popup_open = false;

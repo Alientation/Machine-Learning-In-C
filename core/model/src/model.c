@@ -551,10 +551,9 @@ void model_train_info(training_info_t *training_info) {
         training_info->test_accuracy = ((int)(100.0 * passed_test * test_size_reciprocal)) * 0.01;
 
         if ((((*epoch) + 1) % print_every == 0 && *epoch != 0) || *epoch == target_epochs - 1) {
-            // printf("==== Epoch %d ==== \ntrain_error: %f, train_accuracy: %f\ntest_error: %f, test_accuracy: %f\n\n", (*epoch) + 1, 
-                    // training_info->avg_train_error, training_info->train_accuracy, 
-                    // training_info->avg_test_error, training_info->test_accuracy);
-                    
+            printf("==== Epoch %d ==== \ntrain_error: %f, train_accuracy: %f\ntest_error: %f, test_accuracy: %f\n\n", (*epoch) + 1, 
+                    training_info->avg_train_error, training_info->train_accuracy, 
+                    training_info->avg_test_error, training_info->test_accuracy); 
         }
 
         // check if we can stop

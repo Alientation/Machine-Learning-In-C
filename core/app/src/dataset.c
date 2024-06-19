@@ -3,6 +3,7 @@
 
 #define PROFILER_DISABLE_FUNCTION_RETURN
 #include <util/profiler.h>
+#include <app/visutil.h>
 
 #include <pthread.h>
 #include <assert.h>
@@ -365,6 +366,8 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
     const int output_size = data.num_labels;
     
     struct ImageListNode *cur = data.image_list_head;
+    RenderTexture2D cur_tex = LoadRenderTexture(data.uniform_width, data.uniform_height);
+
     for (int i = 0; i < data.count; i++) {
         shuffler[i * num_examples_per_image] = (struct Example) {
             .image = ImageCopy(cur->image),
@@ -372,50 +375,62 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
         };
 
         Image cur_image = ImageCopy(cur->image);
-        ImageColorInvert(&cur_image);
+        ImageFlipVertical(&cur_image);
+
+        Texture2D tex = LoadTextureFromImage(cur_image);
 
         for (int j = 1; j < num_examples_per_image; j++) {
             int rand_deg = GetRandomValue(-max_rot_deg, max_rot_deg);
             int rand_transl_x = GetRandomValue(-max_transl_x, max_transl_x);
             int rand_transl_y = GetRandomValue(-max_transl_y, max_transl_y);
             float rand_artifacts = GetRandomValue(0, max_artifacts * 100) / 100.0;
-            
+
             int bufferx = 2 * abs(rand_transl_x);
             int buffery = 2 * abs(rand_transl_y);
-            Image image = GenImageColor(data.uniform_width*2 + bufferx*2, data.uniform_height*2 + buffery*2, BLACK);
+
+            int x = -rand_transl_x;
+            int y = -rand_transl_y;
+            int width = data.uniform_width;
+            int height = data.uniform_height;
+
             Rectangle img_src_r = {
-                .x = 0, .y = 0, .width = data.uniform_width, .height = data.uniform_height
+                .x = x, .y = y, .width = width, .height = height
             };
             Rectangle img_dst_r = {
-                .x = data.uniform_width + rand_transl_x, .y = data.uniform_height + rand_transl_y, .width = data.uniform_width, .height = data.uniform_height
+                .x = data.uniform_width/2, .y = data.uniform_height/2, .width = data.uniform_width, .height = data.uniform_height
             };
 
-            ImageDraw(&image, cur_image, img_src_r, img_dst_r, WHITE);
-            ImageRotate(&image, rand_deg);
-            ImageCrop(&image, img_dst_r);
-            ImageColorInvert(&image);
+            BeginTextureMode(cur_tex);
+            {
+                ClearBackground(WHITE);
+                DrawTexturePro(tex, img_src_r, img_dst_r, (Vector2) {data.uniform_width/2, data.uniform_height/2}, rand_deg, WHITE);
+            }
+            EndTextureMode();
 
             // TODO ADD RANDOM NOISE TO IMAGE
 
             shuffler[i * num_examples_per_image + j] = (struct Example) {
-                .image = image,
+                .image = LoadImageFromTexture(cur_tex.texture),
                 .label = cur->label,
             };
         }
         UnloadImage(cur_image);
+        UnloadTexture(tex);
 
         cur = cur->next;
     }
+    UnloadRenderTexture(cur_tex);
 
     srand(2304093940);
     for (int i = 0; i < data.count * num_examples_per_image; i++) {
-        int s1 = random_uniform_range(1) * (data.count * num_examples_per_image);
-        int s2 = random_uniform_range(1) * (data.count * num_examples_per_image);
-        if (s1 >= data.count) {
-            s1 = data.count - 1;
+        // int s1 = random_uniform_range(data.count * num_examples_per_image);
+        int s1 = i;
+        int s2 = i + rand() / (RAND_MAX / (data.count * num_examples_per_image - i) + 1);
+        if (s1 >= data.count * num_examples_per_image) {
+            s1 = data.count * num_examples_per_image - 1;
         }
-        if (s2 >= data.count) {
-            s2 = data.count - 1;
+        if (s2 >= data.count * num_examples_per_image) {
+            s2 = data.count * num_examples_per_image - 1;
         }
 
         struct Example temp = shuffler[s1];
@@ -443,7 +458,7 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
         UnloadImage(shuffler[i].image);
     }
 
-    printf("Created training set with %d examples (%d training, %d testing)", data.count * num_examples_per_image, training_info->train_size, training_info->test_size);
+    printf("Created training set with %d examples (%d training, %d testing)\n", data.count * num_examples_per_image, training_info->train_size, training_info->test_size);
 }
 
 

@@ -1,5 +1,6 @@
 #include <model/model.h>
 #include <util/math.h>
+#include <unistd.h>
 
 #include <stdio.h>
 #include <math.h>
@@ -516,7 +517,7 @@ void model_train_info(training_info_t *training_info) {
     mymatrix_t *test_y = training_info->test_y;
 
     mymatrix_t actual_output = matrix_allocator(output_layer.output_values.r, output_layer.output_values.c);
-    int print_every = target_epochs / 10;
+    int print_every = target_epochs < 10 ? 10 : target_epochs / 10;
     for (*epoch = 0; *epoch < target_epochs; (*epoch)++) {
         // perform training
         float avg_train_error = 0;
@@ -532,7 +533,7 @@ void model_train_info(training_info_t *training_info) {
             }
         }
         training_info->avg_train_error = avg_train_error * train_size_reciprocal;
-        training_info->train_accuracy = ((int)(100.0 * passed_train * train_size_reciprocal)) * 0.01;
+        training_info->train_accuracy = ((int)(100000.0 * passed_train * train_size_reciprocal)) * 0.00001;
 
         // perform test
         float avg_test_error = 0;
@@ -544,16 +545,27 @@ void model_train_info(training_info_t *training_info) {
             mymatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
             if (matrix_equal(test_y[*test_index], model_guess)) {
                 passed_test++;
+            } else {
+                // if (training_info->train_accuracy >= 0.5) {
+                //     printf("EXPECTED:\n");
+                //     matrix_print(test_y[*test_index]);
+                //     printf("GOT:\n");
+                //     matrix_print(model_guess);
+                //     printf("\n");
+
+                //     sleep(5);
+                // }
             }
         }
 
         training_info->avg_test_error = avg_test_error * test_size_reciprocal;
-        training_info->test_accuracy = ((int)(100.0 * passed_test * test_size_reciprocal)) * 0.01;
+        training_info->test_accuracy = ((int)(100000.0 * passed_test * test_size_reciprocal)) * 0.00001;
 
         if ((((*epoch) + 1) % print_every == 0 && *epoch != 0) || *epoch == target_epochs - 1) {
-            printf("==== Epoch %d ==== \ntrain_error: %f, train_accuracy: %f\ntest_error: %f, test_accuracy: %f\n\n", (*epoch) + 1, 
+            printf("==== Epoch %d ==== \ntrain_error: %f, train_accuracy: %f\ntest_error: %f, test_accuracy: %f (passed=%d)\n\n", (*epoch) + 1, 
                     training_info->avg_train_error, training_info->train_accuracy, 
-                    training_info->avg_test_error, training_info->test_accuracy); 
+                    training_info->avg_test_error, training_info->test_accuracy,
+                    passed_test); 
         }
 
         // check if we can stop

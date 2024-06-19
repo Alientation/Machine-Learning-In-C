@@ -33,6 +33,10 @@ void DrawOutlinedRectangleRec(Rectangle rec, Color color, int outline_size, Colo
 }
 
 
+Vector2 Vec(float x, float y) {
+    return (Vector2) {.x = x, .y = y};
+}
+
 Vector2 RecPos(Rectangle rec) {
     return (Vector2) {.x = rec.x, .y = rec.y};
 }

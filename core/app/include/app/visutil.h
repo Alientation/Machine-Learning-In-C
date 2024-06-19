@@ -22,6 +22,7 @@ void DrawOutlinedCenteredText(const char* text, int pos_x, int pos_y, int font_s
 void DrawOutlinedRectangle(int x, int y, int width, int height, Color color, int outline_size, Color outline_color);
 void DrawOutlinedRectangleRec(Rectangle rec, Color color, int outline_size, Color outline_color);
 
+Vector2 Vec(float x, float y);
 Vector2 RecPos(Rectangle rec);
 Vector2 RecDim(Rectangle rec);
 Vector2 RenderTextureDim(RenderTexture2D rtexture);

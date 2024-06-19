@@ -47,6 +47,7 @@ extern const layer_function_t input_functions;
 extern const layer_function_t dense_functions;
 extern const layer_function_t activation_functions_sigmoid;
 extern const layer_function_t activation_functions_relu;
+extern const layer_function_t activation_functions_softmax;
 extern const layer_function_t output_functions_meansquared;
 extern const layer_function_t output_functions_crossentropy;
 
@@ -101,6 +102,7 @@ typedef struct Output_Layer {
     // m x 1
     mymatrix_t d_cost_wrt_input;
     mymatrix_t guess;
+    float (*loss)(layer_t *this, mymatrix_t expected_output);
 } output_layer_t;
 
 // unionized all layers under a common identity
@@ -187,7 +189,7 @@ void model_add_layer(neural_network_model_t *model, layer_t *layer);
 layer_t* layer_input(neural_network_model_t *model, mymatrix_t input);
 layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons);
 layer_t* layer_activation(neural_network_model_t *model, layer_function_t functions);
-layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions);
+layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions, float (*loss)(layer_t*, mymatrix_t));
 
 char* get_layer_name(layer_t *layer);
 char* get_activation_function_name(activation_layer_t *layer);

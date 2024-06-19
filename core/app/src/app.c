@@ -17,7 +17,6 @@ int main(void) {
     CLOCK_MARK
     neural_network_model_t nnmodel;
     pthread_t thread_id;
-    // todo, app should connect to visualizer's start button and only start the training process when it is clicked
 
     // training_info_t training_info = nn_XOR(&nnmodel);
     // training_info.model = &nnmodel;
@@ -72,20 +71,19 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     layer_t *dense_layer_1 = layer_dense(model_digit, dense_1);
     layer_t *activation_layer_1 = layer_activation(model_digit, activation_functions_relu);
     layer_t *dense_layer_2 = layer_dense(model_digit, dense_2);
-    layer_t *activation_layer_2 = layer_activation(model_digit, activation_functions_relu);
+    layer_t *activation_layer_2 = layer_activation(model_digit, activation_functions_sigmoid);
     layer_t *dense_layer_3 = layer_dense(model_digit, output);
-    layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_sigmoid);
-    // layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_relu);
-    // layer_t *output_layer = layer_output(model_digit, output_make_guess_softmax, output_functions_crossentropy);
+    layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_softmax);
+    layer_t *output_layer = layer_output(model_digit, output_make_guess_one_hot_encoded, output_functions_crossentropy, output_cost_categorical_cross_entropy);
 
-    layer_t *output_layer = layer_output(model_digit, output_make_guess_one_hot_encoded, output_functions_meansquared);
+    // layer_t *output_layer = layer_output(model_digit, output_make_guess_one_hot_encoded, output_functions_meansquared, output_cost_meansquared);
     
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);
-    model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);
+    // model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.weights, 0, 0.2);
-    model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.bias, 0, 0.2);
+    // model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.bias, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.weights, 0, 0.2);
-    model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.bias, 0, 0.2);
+    // model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.bias, 0, 0.2);
 
     training_info_t training_info;
     training_info.in_progress = false;
@@ -124,7 +122,7 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
     layer_t *activation_layer_1 = layer_activation(model_xor, activation_functions_sigmoid);
     layer_t *dense_layer_2 = layer_dense(model_xor, output);
     layer_t *activation_layer_2 = layer_activation(model_xor, activation_functions_sigmoid);
-    layer_t *output_layer = layer_output(model_xor, output_make_guess_round, output_functions_meansquared);
+    layer_t *output_layer = layer_output(model_xor, output_make_guess_round, output_functions_meansquared, output_cost_mean_squared);
 
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);    
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);
@@ -168,7 +166,7 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
 
     training_info.batch_size = 1;
     training_info.learning_rate = 0.1;
-    training_info.target_epochs = 2000000;
+    training_info.target_epochs = 200;
     training_info.target_accuracy = 1;
 
     matrix_free(input);
@@ -192,7 +190,7 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     layer_t *activation_layer_1 = layer_activation(model_and, activation_functions_sigmoid);
     layer_t *dense_layer_2 = layer_dense(model_and, output);
     layer_t *activation_layer_2 = layer_activation(model_and, activation_functions_sigmoid);
-    layer_t *output_layer = layer_output(model_and, output_make_guess_round, output_functions_meansquared);
+    layer_t *output_layer = layer_output(model_and, output_make_guess_round, output_functions_meansquared, output_cost_mean_squared);
 
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);    
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);

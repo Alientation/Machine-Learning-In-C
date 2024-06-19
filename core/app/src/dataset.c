@@ -328,6 +328,7 @@ void one_hot_encode_matrix(mymatrix_t *mymatrix, int label) {
     mymatrix->matrix[label][0] = 1;
 }
 
+// TODO load on separate thread
 void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts) {
     assert(dataset->type == DATASET_IMAGES);
 
@@ -344,7 +345,7 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
     training_info->test_y = NULL;
 
     training_info->batch_size = 1;
-    training_info->learning_rate = 0.005;
+    training_info->learning_rate = 0.01;
     training_info->target_epochs = 20;
     training_info->target_accuracy = 1.5;
     

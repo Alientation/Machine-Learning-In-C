@@ -72,6 +72,22 @@ mymatrix_t activation_feed_forward_relu(layer_t *this, mymatrix_t input) {
     return this->layer.activation.activated_values;
 }
 
+mymatrix_t activation_feed_forward_softmax(layer_t *this, mymatrix_t input) {
+    float sum = 0;
+    for (int r = 0; r < input.r; r++) {
+        for (int c = 0; c < input.c; c++) {
+            sum += exp(input.matrix[r][c]);
+        }
+    }
+
+    for (int r = 0; r < input.r; r++) {
+        for (int c = 0; c < input.c; c++) {
+            this->layer.activation.activated_values.matrix[r][c] = exp(input.matrix[r][c]) / sum;
+        }
+    }
+    return this->layer.activation.activated_values;
+}
+
 mymatrix_t activation_back_propagation_sigmoid(layer_t *this, mymatrix_t d_cost_wrt_output, float learning_rate) {
     mymatrix_t X = layer_get_neurons(this->prev);
 
@@ -88,6 +104,13 @@ mymatrix_t activation_back_propagation_relu(layer_t *this, mymatrix_t d_cost_wrt
     return this->layer.activation.activated_values;
 }
 
+// this uses the trick described here  https://stackoverflow.com/questions/58461808/understanding-backpropagation-with-softmax
+// which requires another layer before this to compute the partial derivatives
+mymatrix_t activation_back_propagation_softmax(layer_t *this, mymatrix_t d_cost_wrt_output, float learning_rate) {
+    matrix_memcpy(this->layer.activation.activated_values, d_cost_wrt_output);
+    return this->layer.activation.activated_values;
+}
+
 const layer_function_t activation_functions_sigmoid = {
     .feed_forward = activation_feed_forward_sigmoid,
     .back_propagation = activation_back_propagation_sigmoid,
@@ -96,6 +119,11 @@ const layer_function_t activation_functions_sigmoid = {
 const layer_function_t activation_functions_relu = {
     .feed_forward = activation_feed_forward_relu,
     .back_propagation = activation_back_propagation_relu,
+};
+
+const layer_function_t activation_functions_softmax = {
+    .feed_forward = activation_feed_forward_softmax,
+    .back_propagation = activation_back_propagation_softmax,
 };
 
 // todo TANH
@@ -156,8 +184,8 @@ mymatrix_t output_back_propagation_mean_squared(layer_t *this, mymatrix_t expect
 // Categorical Cross Entropy with Softmax
 // gradient = Y - y*
 mymatrix_t output_back_propagation_categorical_cross_entropy(layer_t *this, mymatrix_t expected_output, float learning_rate) {
-    mymatrix_t output = this->layer.output.guess;
-    matrix_sub(expected_output, output, this->layer.output.d_cost_wrt_input);
+    mymatrix_t output = this->layer.output.output_values;
+    matrix_sub(output, expected_output, this->layer.output.d_cost_wrt_input);
     return this->layer.output.d_cost_wrt_input;
 }
 
@@ -173,12 +201,13 @@ float output_cost_mean_squared(layer_t *this, mymatrix_t expected_output) {
     return mean_squared;
 }
 
+const float epsilon = 0.0001;
 float output_cost_categorical_cross_entropy(layer_t *this, mymatrix_t expected_output) {
     float cross_entropy = 0;
     mymatrix_t actual_output = this->layer.output.guess; // USES guess (assumption that softmax is used)
     for (int r = 0; r < actual_output.r; r++) {
         for (int c = 0; c < actual_output.c; c++) {
-            cross_entropy += expected_output.matrix[r][c] * log10(actual_output.matrix[r][c]);
+            cross_entropy += expected_output.matrix[r][c] * log10(actual_output.matrix[r][c] + epsilon);
         }
     }
     return -cross_entropy;
@@ -215,6 +244,8 @@ char* get_activation_function_name(activation_layer_t *layer) {
         return "Sigmoid";
     } else if (layer->functions.feed_forward == activation_feed_forward_relu) {
         return "RELU";
+    } else if (layer->functions.feed_forward == activation_feed_forward_softmax) {
+        return "Softmax";
     } else {
         assert(0);
     }
@@ -370,11 +401,11 @@ layer_t* layer_activation(neural_network_model_t *model, layer_function_t functi
     return layer;
 }
 
-layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions) {
+layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions, float (*loss)(layer_t*, mymatrix_t)) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
-    if (functions.back_propagation == output_functions_crossentropy.back_propagation) {
-        assert(make_guess == output_make_guess_softmax);
-    }
+    // if (functions.back_propagation == output_functions_crossentropy.back_propagation) { // TODO I DONT THINK THIS MATTERS
+    //     assert(make_guess == output_make_guess_softmax);
+    // }
     
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = OUTPUT;
@@ -385,6 +416,7 @@ layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(la
     output->functions = functions;
     output->d_cost_wrt_input = matrix_allocator(prev_output.r, 1);
     output->guess = matrix_allocator(prev_output.r, 1);
+    output->loss = loss;
 
     model_add_layer(model, layer);
     return layer;
@@ -440,7 +472,8 @@ float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t 
     float avg_error = 0;
     for (int example_i = 0; example_i < num_examples; example_i++) {
         model_predict(model, inputs[example_i], output);
-        avg_error += output_cost_mean_squared(model->output_layer, expected_outputs[example_i]);
+        // avg_error += output_cost_mean_squared(model->output_layer, expected_outputs[example_i]);
+        avg_error += model->output_layer->layer.output.loss(model->output_layer, expected_outputs[example_i]);
         model_back_propagate(model, expected_outputs[example_i], learning_rate);
     }
     avg_error /= (float) num_examples;
@@ -524,7 +557,7 @@ void model_train_info(training_info_t *training_info) {
         int passed_train = 0;
         for (*train_index = 0; *train_index < train_size; (*train_index)++) {
             model_predict(model, train_x[*train_index], actual_output);
-            avg_train_error += output_cost_mean_squared(model->output_layer, train_y[*train_index]);
+            avg_train_error += output_layer.loss(model->output_layer, train_y[*train_index]);
             model_back_propagate(model, train_y[*train_index], training_info->learning_rate);
 
             mymatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
@@ -540,7 +573,7 @@ void model_train_info(training_info_t *training_info) {
         int passed_test = 0;
         for (*test_index = 0; *test_index < test_size; (*test_index)++) {
             model_predict(model, test_x[*test_index], actual_output);
-            avg_test_error += output_cost_mean_squared(model->output_layer, test_y[*test_index]);
+            avg_test_error += output_layer.loss(model->output_layer, test_y[*test_index]);
             
             mymatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
             if (matrix_equal(test_y[*test_index], model_guess)) {
@@ -553,7 +586,7 @@ void model_train_info(training_info_t *training_info) {
                 //     matrix_print(model_guess);
                 //     printf("\n");
 
-                //     sleep(5);
+                //     sleep(3);
                 // }
             }
         }
@@ -589,7 +622,7 @@ void model_test_info(training_info_t *training_info) {
     int passed_test = 0;
     for (*test_index = 0; *test_index < test_size; (*test_index)++) {
         model_predict(model, test_x[*test_index], actual_output);
-        avg_test_error += output_cost_mean_squared(model->output_layer, test_y[*test_index]);
+        avg_test_error += output_layer.loss(model->output_layer, test_y[*test_index]);
         
         mymatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
         if (matrix_equal(test_y[*test_index], model_guess)) {

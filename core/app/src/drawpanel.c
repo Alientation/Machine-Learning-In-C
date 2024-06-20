@@ -575,7 +575,7 @@ void GuiDrawingTools(drawing_panel_args_t *draw_args, Rectangle draw_window_rec,
         .width = 40,
         .height = 20,
     };
-    if (GuiButton(draw_panel_undo_rec, "Undo") && !draw_args->is_save_popup_open) {
+    if ((GuiButton(draw_panel_undo_rec, "Undo") || (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Z))) && !draw_args->is_save_popup_open) {
         DrawingPanelUndo(draw_args);
     }
 
@@ -585,7 +585,7 @@ void GuiDrawingTools(drawing_panel_args_t *draw_args, Rectangle draw_window_rec,
         .width = 40,
         .height = 20,
     };
-    if (GuiButton(draw_panel_redo_rec, "Redo") && !draw_args->is_save_popup_open) {
+    if ((GuiButton(draw_panel_redo_rec, "Redo") || (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R))) && !draw_args->is_save_popup_open) {
         DrawingPanelRedo(draw_args);
     }
 

@@ -15,7 +15,7 @@ static const int MODEL_HEIGHT = 700;
 static const int MODEL_X = 20;
 static const int MODEL_Y = 20;
 
-#define SCALING_FACTOR 0.2
+#define SCALING_FACTOR 0.15
 
 // how many digits (including '-' sign for negative numbers)
 // that can be displayed for weights and nodes
@@ -39,7 +39,7 @@ static const int LAYER_DISPLAY_FONTSIZE = 12;
 // margin from bottom of layer's nodes to the layer's name
 static const int LAYER_NAME_OFFSET_Y = 20;
 // gap between consecutive layers
-static const int LAYER_GAP = 65;
+static const int LAYER_GAP = 60;
 
 // how many nodes can be stacked vertically before having multiple stacks of nodes 
 // side by side in a layer

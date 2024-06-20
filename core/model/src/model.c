@@ -26,23 +26,7 @@ const layer_function_t input_functions = {
     .feed_forward = input_feed_forward
 };
 
-static bool is_training = false;
-mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input) {
-    float keep = 1 - this->layer.dense.dropout;
-    if (keep < 1) {
-        if (is_training) { // limit chance of mispredicted branches by moving all conditionals possible outside loops
-            for (int r = 0; r < input.r; r++) {
-                if (random_uniform_range(1) > keep) {
-                    input.matrix[r][0] = 0;
-                }
-            }
-        } else {
-            for (int r = 0; r < input.r; r++) {
-                input.matrix[r][0] *= keep;
-            }
-        }
-    }
-
+mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input) { 
     matrix_multiply(this->layer.dense.weights, input, this->layer.dense.activation_values);
     matrix_add(this->layer.dense.activation_values, this->layer.dense.bias, this->layer.dense.activation_values);
     return this->layer.dense.activation_values;
@@ -76,6 +60,33 @@ mymatrix_t dense_back_propagation(layer_t *this, mymatrix_t d_error_wrt_output, 
 const layer_function_t dense_functions = {
     .feed_forward = dense_feed_forward,
     .back_propagation = dense_back_propagation,
+};
+
+mymatrix_t dropout_feedforward(layer_t *this, mymatrix_t input) {
+    float keep = 1 - this->layer.dropout.dropout;
+    if (keep < 1) {
+        if (this->layer.dropout.model->is_training) {
+            for (int r = 0; r < input.r; r++) {
+                this->layer.dropout.output.matrix[r][0] = input.matrix[r][0] * (random_uniform_range(1) <= keep);
+            }
+        } else {
+            for (int r = 0; r < input.r; r++) {
+                this->layer.dropout.output.matrix[r][0] = input.matrix[r][0] * keep;
+            }
+        }
+    } else {
+        matrix_memcpy(this->layer.dropout.output, input);
+    }
+}
+
+mymatrix_t dropout_backpropagation(layer_t *this, mymatrix_t d_error_wrt_output, float learning_rate) {
+    matrix_memcpy(this->layer.dropout.d_cost_wrt_input, d_error_wrt_output);
+    return this->layer.dropout.d_cost_wrt_input;
+}
+
+const layer_function_t dropout_functions = {
+    .feed_forward = dropout_feedforward,
+    .back_propagation = dropout_backpropagation,
 };
 
 mymatrix_t activation_feed_forward_sigmoid(layer_t *this, mymatrix_t input) {
@@ -246,6 +257,8 @@ char* get_layer_name(layer_t *layer) {
             return "Input";
         case DENSE:
             return "Dense";
+        case DROPOUT:
+            return "Dropout";
         case ACTIVATION:
             return "Activation";
         case OUTPUT:
@@ -304,6 +317,9 @@ void layer_free(layer_t *layer) {
             matrix_free(layer->layer.dense.d_cost_wrt_weight);
             matrix_free(layer->layer.dense.d_cost_wrt_bias);
             break;
+        case DROPOUT:
+            matrix_free(layer->layer.dropout.output);
+            matrix_free(layer->layer.dropout.d_cost_wrt_input);
         case ACTIVATION:
             matrix_free(layer->layer.activation.activated_values);
             matrix_free(layer->layer.activation.d_cost_wrt_input);
@@ -321,20 +337,17 @@ mymatrix_t layer_get_neurons(layer_t *layer) {
     switch (layer->type) {
         case INPUT:
             return layer->layer.input.input_values;
-            break;
+        case DROPOUT:
+            return layer->layer.dropout.output;
         case DENSE:
             return layer->layer.dense.activation_values;
-            break;
         case ACTIVATION:
             return layer->layer.activation.activated_values;
-            break;
         case OUTPUT:
-            // return layer->layer.output.output_values;
             return layer->layer.output.guess;
-            break;
+        default:
+            assert(0);
     }
-
-    assert(0);
 }
 
 void model_free(neural_network_model_t *model) {
@@ -372,12 +385,13 @@ layer_t* layer_input(neural_network_model_t *model, mymatrix_t input) {
     input_layer_t *input_layer = &layer->layer.input;
     input_layer->input_values = matrix_copy(input);
     input_layer->functions = input_functions;
+    input_layer->model = model;
 
     model_add_layer(model, layer);
     return layer;
 }
 
-layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons, float dropout) {
+layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     // for now, column vector
     assert(neurons.c == 1);
@@ -395,9 +409,24 @@ layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons, float dr
     dense->d_cost_wrt_input = matrix_allocator(prev_output.r, 1);
     dense->d_cost_wrt_weight = matrix_allocator(dense->weights.r, dense->weights.c);
     dense->d_cost_wrt_bias = matrix_allocator(dense->bias.r, dense->bias.c);
-    dense->dropout = dropout;
+    dense->model = model;
 
     dense->functions = dense_functions;
+
+    model_add_layer(model, layer);
+    return layer;
+}
+
+layer_t* layer_dropout(neural_network_model_t *model, float dropout) {
+    assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
+
+    layer_t *layer = malloc(sizeof(layer_t));
+    layer->type = DROPOUT;
+    dropout_layer_t *dropout_layer = &layer->layer.dropout;
+    mymatrix_t prev_output = layer_get_neurons(model->output_layer);
+    dropout_layer->output = matrix_allocator(prev_output.r, prev_output.c);
+    dropout_layer->functions = dropout_functions;
+    dropout_layer->d_cost_wrt_input = matrix_allocator(prev_output.r, prev_output.c);
 
     model_add_layer(model, layer);
     return layer;
@@ -412,7 +441,7 @@ layer_t* layer_activation(neural_network_model_t *model, layer_function_t functi
     mymatrix_t prev_output = layer_get_neurons(model->output_layer);
     activation->activated_values = matrix_allocator(prev_output.r, prev_output.c);
     activation->functions = functions;
-    activation->d_cost_wrt_input = matrix_allocator(prev_output.r, 1);
+    activation->d_cost_wrt_input = matrix_allocator(prev_output.r, prev_output.c);
 
     model_add_layer(model, layer);
     return layer;
@@ -488,6 +517,7 @@ void model_back_propagate(neural_network_model_t *model, mymatrix_t expected_out
 float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t *expected_outputs, unsigned int num_examples, float learning_rate) {
     mymatrix_t output = model->output_layer->layer.output.output_values;
     float avg_error = 0;
+    model->is_training = true;
     for (int example_i = 0; example_i < num_examples; example_i++) {
         model_predict(model, inputs[example_i], output);
         // avg_error += output_cost_mean_squared(model->output_layer, expected_outputs[example_i]);
@@ -496,6 +526,7 @@ float model_train(neural_network_model_t *model, mymatrix_t *inputs, mymatrix_t 
     }
     avg_error /= (float) num_examples;
     // printf("train avg error=%f", (float) avg_error);
+    model->is_training = false;
     return avg_error;
 }
 
@@ -573,7 +604,6 @@ void model_train_info(training_info_t *training_info) {
         // perform training
         float avg_train_error = 0;
         int passed_train = 0;
-        is_training = true;
         for (*train_index = 0; *train_index < train_size; (*train_index)++) {
             model_predict(model, train_x[*train_index], actual_output);
             avg_train_error += output_layer.loss(model->output_layer, train_y[*train_index]);
@@ -590,7 +620,6 @@ void model_train_info(training_info_t *training_info) {
         // perform test
         float avg_test_error = 0;
         int passed_test = 0;
-        is_training = false;
         for (*test_index = 0; *test_index < test_size; (*test_index)++) {
             model_predict(model, test_x[*test_index], actual_output);
             avg_test_error += output_layer.loss(model->output_layer, test_y[*test_index]);
@@ -598,16 +627,6 @@ void model_train_info(training_info_t *training_info) {
             mymatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
             if (matrix_equal(test_y[*test_index], model_guess)) {
                 passed_test++;
-            } else {
-                // if (training_info->train_accuracy >= 0.5) {
-                //     printf("EXPECTED:\n");
-                //     matrix_print(test_y[*test_index]);
-                //     printf("GOT:\n");
-                //     matrix_print(model_guess);
-                //     printf("\n");
-
-                //     sleep(3);
-                // }
             }
         }
 

@@ -11,10 +11,10 @@
 
 /**
  * Some Goals
+ *
+ * Add separate dropout layer, the current way dropout works is by modifying the input into a dense layer, but since the input matrix is
+ * likely the previous layer's output matrix, that will interfere with backpropagation which would explain the very low accuracy and the common fluxtuations it has
  * 
- * line or circle detector
- * network visualizer
- * add dropout
  * weight regularlization techniques (L2/L1)
  * weight clipping?
  * add momentum (remembers previous gradients)
@@ -22,7 +22,6 @@
  * weights should probably be normalized
  * save model to file
  * load model from file  *so we can pretrain models
- * digit detector
  * batch/mini batch, full gradient descent (apparently we are using stochastic gradient descent)
  * add more variety of layers (convolution, pooling, reshaping)
  * add variable learning rates for each layer support
@@ -45,6 +44,7 @@ typedef struct Layer_Function {
 
 extern const layer_function_t input_functions;
 extern const layer_function_t dense_functions;
+extern const layer_function_t dropout_functions;
 extern const layer_function_t activation_functions_sigmoid;
 extern const layer_function_t activation_functions_relu;
 extern const layer_function_t activation_functions_softmax;
@@ -55,6 +55,7 @@ extern const layer_function_t output_functions_crossentropy;
 typedef struct Input_Layer {
     layer_function_t functions;
     mymatrix_t input_values;
+    neural_network_model_t *model;
 } input_layer_t;
 
 // fully connected inner layer of the model
@@ -82,8 +83,17 @@ typedef struct Dense_Layer {
     // same dimensions as weight and bias matrices
     mymatrix_t d_cost_wrt_weight;
     mymatrix_t d_cost_wrt_bias;
-    float dropout;
+    neural_network_model_t *model;
 } dense_layer_t;
+
+typedef struct Dropout_Layer {
+    layer_function_t functions;
+    mymatrix_t output;
+
+    mymatrix_t d_cost_wrt_input;
+    float dropout;
+    neural_network_model_t *model;
+} dropout_layer_t;
 
 // passes in the activation values of the previous layer into the activation function
 typedef struct Activation_Layer {
@@ -92,6 +102,7 @@ typedef struct Activation_Layer {
     // dE/dX = W.T * dE/dY
     // m x 1
     mymatrix_t d_cost_wrt_input;
+    neural_network_model_t *model;
 } activation_layer_t;
 
 // final layer, compute the cost and derivatives to initiate backprop
@@ -104,6 +115,7 @@ typedef struct Output_Layer {
     mymatrix_t d_cost_wrt_input;
     mymatrix_t guess;
     float (*loss)(layer_t *this, mymatrix_t expected_output);
+    neural_network_model_t *model;
 } output_layer_t;
 
 // unionized all layers under a common identity
@@ -111,6 +123,7 @@ typedef struct Layer {
     enum {
         INPUT,
         DENSE,
+        DROPOUT,
         ACTIVATION,
         OUTPUT
     } type;
@@ -118,6 +131,7 @@ typedef struct Layer {
     union {
         input_layer_t input;
         dense_layer_t dense;
+        dropout_layer_t dropout;
         activation_layer_t activation;
         output_layer_t output;
     } layer;
@@ -137,7 +151,7 @@ typedef struct NeuralNetworkModel {
     layer_t *output_layer; // last layer
 
     // info data
-    
+    bool is_training;
 } neural_network_model_t;
 
 typedef struct TrainingInfo {
@@ -190,7 +204,8 @@ void model_add_layer(neural_network_model_t *model, layer_t *layer);
 // adds an layers to the model
 // todo in future, specify dimensions instead of supply matrix to be then copied
 layer_t* layer_input(neural_network_model_t *model, mymatrix_t input);
-layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons, float dropout);
+layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons);
+layer_t* layer_dropout(neural_network_model_t *model, float dropout);
 layer_t* layer_activation(neural_network_model_t *model, layer_function_t functions);
 layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions, float (*loss)(layer_t*, mymatrix_t));
 
@@ -214,5 +229,6 @@ void training_info_free(training_info_t *training_info);
 
 void model_train_info(training_info_t *training_info);
 void model_test_info(training_info_t *training_info);
+
 
 #endif // MODEL_H

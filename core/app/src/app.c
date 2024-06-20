@@ -97,11 +97,13 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     mymatrix_t output = matrix_allocator(10, 1);
 
     layer_t *input_layer = layer_input(model_digit, input);
-    layer_t *dense_layer_1 = layer_dense(model_digit, dense_1, 0);
+    layer_t *dense_layer_1 = layer_dense(model_digit, dense_1);
     layer_t *activation_layer_1 = layer_activation(model_digit, activation_functions_relu);
-    layer_t *dense_layer_2 = layer_dense(model_digit, dense_2, 0.3);
+    layer_t *dropout_layer_1 = layer_dropout(model_digit, 0.2);
+    layer_t *dense_layer_2 = layer_dense(model_digit, dense_2);
     layer_t *activation_layer_2 = layer_activation(model_digit, activation_functions_sigmoid);
-    layer_t *dense_layer_3 = layer_dense(model_digit, output, 0);
+    layer_t *dropout_layer_2 = layer_dropout(model_digit, 0.5);
+    layer_t *dense_layer_3 = layer_dense(model_digit, output);
     layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_softmax);
     layer_t *output_layer = layer_output(model_digit, output_make_guess_one_hot_encoded, output_functions_crossentropy, output_cost_categorical_cross_entropy);
 
@@ -133,9 +135,9 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
     mymatrix_t output = matrix_allocator(1, 1);
 
     layer_t *input_layer = layer_input(model_xor, input);
-    layer_t *dense_layer_1 = layer_dense(model_xor, dense_1, 0);
+    layer_t *dense_layer_1 = layer_dense(model_xor, dense_1);
     layer_t *activation_layer_1 = layer_activation(model_xor, activation_functions_sigmoid);
-    layer_t *dense_layer_2 = layer_dense(model_xor, output, 0);
+    layer_t *dense_layer_2 = layer_dense(model_xor, output);
     layer_t *activation_layer_2 = layer_activation(model_xor, activation_functions_sigmoid);
     layer_t *output_layer = layer_output(model_xor, output_make_guess_round, output_functions_meansquared, output_cost_mean_squared);
 
@@ -201,9 +203,9 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     mymatrix_t output = matrix_allocator(1, 1);
 
     layer_t *input_layer = layer_input(model_and, input);
-    layer_t *dense_layer_1 = layer_dense(model_and, dense_1, 0);
+    layer_t *dense_layer_1 = layer_dense(model_and, dense_1);
     layer_t *activation_layer_1 = layer_activation(model_and, activation_functions_sigmoid);
-    layer_t *dense_layer_2 = layer_dense(model_and, output, 0);
+    layer_t *dense_layer_2 = layer_dense(model_and, output);
     layer_t *activation_layer_2 = layer_activation(model_and, activation_functions_sigmoid);
     layer_t *output_layer = layer_output(model_and, output_make_guess_round, output_functions_meansquared, output_cost_mean_squared);
 

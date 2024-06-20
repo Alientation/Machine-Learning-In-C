@@ -167,7 +167,7 @@ void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
     };
     DrawCenteredText("New Dataset", file_viewer_r.x + file_viewer_r.width/2, name_ds_r.y - 20, 12, BLACK);
     if (GuiTextBox(name_ds_r, draw_args->add_dataset_file_name, FILE_NAME_BUFFER_SIZE, draw_args->is_editing_dataset_file_name)) {
-        draw_args->is_editing_dataset_file_name = !draw_args->is_editing_dataset_file_name;
+        _TOGGLE_BOOL(&draw_args->is_editing_dataset_file_name);
     }
 
     // add new dataset button
@@ -222,7 +222,7 @@ void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
             .height = 30,
         };
         if (GuiTextBox(imgs_ds_width_r, draw_args->images_dataset_width_input, NUMBER_INPUT_BUFFER_SIZE, draw_args->images_dataset_width_option_active)) {
-            draw_args->images_dataset_width_option_active = !draw_args->images_dataset_width_option_active;
+            _TOGGLE_BOOL(&draw_args->images_dataset_width_option_active);
         }
 
         Rectangle images_dataset_height_label_rec = {
@@ -240,7 +240,7 @@ void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
             .height = 30,
         };
         if (GuiTextBox(images_dataset_height_rec, draw_args->images_dataset_height_input, NUMBER_INPUT_BUFFER_SIZE, draw_args->images_dataset_height_option_active)) {
-            draw_args->images_dataset_height_option_active = !draw_args->images_dataset_height_option_active;
+            _TOGGLE_BOOL(&draw_args->images_dataset_height_option_active);
         }
     } else {
         assert(0);
@@ -353,7 +353,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
 
     DrawCenteredText("# Applied:", _UNPACK_REC_CENTER(transformation_label_r), 10, BLACK);
     if (GuiTextBox(transformation_picker_r, TEXT_INPUT_BUFFER, TEXT_INPUT_BUFFER_SIZE, draw_args->is_transformations_active)) {
-        draw_args->is_transformations_active = !draw_args->is_transformations_active;
+        _TOGGLE_BOOL(&draw_args->is_transformations_active);
     }
     draw_args->num_transformations = TextToInteger(TEXT_INPUT_BUFFER);
 

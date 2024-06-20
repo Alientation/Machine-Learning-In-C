@@ -15,9 +15,12 @@
 
 #define _REC_FROM_DIM(_x,_y,_width,_height) (Rectangle) {.x = _x, .y = _y, .width = _width, .height = _height}
 
+#define _TOGGLE_BOOL(bool_ptr) (*bool_ptr = !*bool_ptr)
+
 void DrawCenteredText(const char* text, int center_x, int center_y, int font_size, Color font_color);
 void DrawOutlinedText(const char *text, int pos_x, int pos_y, int font_size, Color color, int outline_size, Color outline_color);
 void DrawOutlinedCenteredText(const char* text, int pos_x, int pos_y, int font_size, Color color, int outline_size, Color outline_color);
+void DrawTextList(int count, int pos_x, int pos_y, int font_size, Color color, ...);
 
 void DrawOutlinedRectangle(int x, int y, int width, int height, Color color, int outline_size, Color outline_color);
 void DrawOutlinedRectangleRec(Rectangle rec, Color color, int outline_size, Color outline_color);
@@ -48,6 +51,5 @@ double linear_to_sRGB(double y);
 Color gray_scale(int r, int g, int b);
 
 const char* concat(int count, ...);
-
 
 #endif // VISUTIL_H

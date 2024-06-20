@@ -13,6 +13,26 @@ static const char* digit_outputs[10] = {
 
 static const char* xor_outputs[2] = {"0", "1"};
 
+static const training_info_t DEFAULT_TRAIN_INFO = {
+    .in_progress = false,
+    .train_size = 0,
+    .train_x = NULL,
+    .train_y = NULL,
+    .test_size = 0,
+    .test_x = NULL,
+    .test_y = NULL,
+    .train_accuracy = 0,
+    .avg_train_error = 0,
+    .train_correct = 0,
+    .test_accuracy = 0,
+    .avg_test_error = 0,
+    .test_correct = 0,
+    .batch_size = 1,
+    .learning_rate = .01,
+    .target_epochs = 1,
+    .target_accuracy = 1,
+};
+
 int main(void) {
     CLOCK_MARK
     neural_network_model_t nnmodel;
@@ -24,6 +44,10 @@ int main(void) {
     // visualizer_argument_t vis_args = {
     //     .model = &nnmodel,
     //     .training_info = &training_info,
+    //     .is_batch_size_active = false,
+    //     .is_learning_rate_active = false,
+    //     .is_target_epochs_active = false,
+    //     .is_target_accuracy_active = false,
     //     .model_name = "XOR",
     //     .output_labels = xor_outputs,
     //     .num_labels = 2,
@@ -38,6 +62,11 @@ int main(void) {
     visualizer_argument_t vis_args = {
         .model = &nnmodel,
         .training_info = &training_info,
+        .is_batch_size_active = false,
+        .is_learning_rate_active = false,
+        .is_target_epochs_active = false,
+        .is_target_accuracy_active = false,
+
         .model_name = "Digit Recognizer",
         .output_labels = digit_outputs,
         .num_labels = 10,
@@ -68,11 +97,11 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     mymatrix_t output = matrix_allocator(10, 1);
 
     layer_t *input_layer = layer_input(model_digit, input);
-    layer_t *dense_layer_1 = layer_dense(model_digit, dense_1);
+    layer_t *dense_layer_1 = layer_dense(model_digit, dense_1, 0.2);
     layer_t *activation_layer_1 = layer_activation(model_digit, activation_functions_relu);
-    layer_t *dense_layer_2 = layer_dense(model_digit, dense_2);
+    layer_t *dense_layer_2 = layer_dense(model_digit, dense_2, 0.5);
     layer_t *activation_layer_2 = layer_activation(model_digit, activation_functions_sigmoid);
-    layer_t *dense_layer_3 = layer_dense(model_digit, output);
+    layer_t *dense_layer_3 = layer_dense(model_digit, output, 0);
     layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_softmax);
     layer_t *output_layer = layer_output(model_digit, output_make_guess_one_hot_encoded, output_functions_crossentropy, output_cost_categorical_cross_entropy);
 
@@ -85,26 +114,12 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.weights, 0, 0.2);
     // model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.bias, 0, 0.2);
 
-    training_info_t training_info;
-    training_info.in_progress = false;
-    training_info.train_size = 0;
-    training_info.train_x = NULL;
-    training_info.train_y = NULL;
-    training_info.test_size = 0;
-    training_info.test_x = NULL;
-    training_info.test_y = NULL;
-
-    training_info.batch_size = 1;
-    training_info.learning_rate = 0.1;
-    training_info.target_epochs = 200;
-    training_info.target_accuracy = 1;
-
     matrix_free(input);
     matrix_free(dense_1);
     matrix_free(dense_2);
     matrix_free(output);
 
-    return training_info;
+    return DEFAULT_TRAIN_INFO;
 }
 
 
@@ -118,9 +133,9 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
     mymatrix_t output = matrix_allocator(1, 1);
 
     layer_t *input_layer = layer_input(model_xor, input);
-    layer_t *dense_layer_1 = layer_dense(model_xor, dense_1);
+    layer_t *dense_layer_1 = layer_dense(model_xor, dense_1, 0);
     layer_t *activation_layer_1 = layer_activation(model_xor, activation_functions_sigmoid);
-    layer_t *dense_layer_2 = layer_dense(model_xor, output);
+    layer_t *dense_layer_2 = layer_dense(model_xor, output, 0);
     layer_t *activation_layer_2 = layer_activation(model_xor, activation_functions_sigmoid);
     layer_t *output_layer = layer_output(model_xor, output_make_guess_round, output_functions_meansquared, output_cost_mean_squared);
 
@@ -186,9 +201,9 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     mymatrix_t output = matrix_allocator(1, 1);
 
     layer_t *input_layer = layer_input(model_and, input);
-    layer_t *dense_layer_1 = layer_dense(model_and, dense_1);
+    layer_t *dense_layer_1 = layer_dense(model_and, dense_1, 0);
     layer_t *activation_layer_1 = layer_activation(model_and, activation_functions_sigmoid);
-    layer_t *dense_layer_2 = layer_dense(model_and, output);
+    layer_t *dense_layer_2 = layer_dense(model_and, output, 0);
     layer_t *activation_layer_2 = layer_activation(model_and, activation_functions_sigmoid);
     layer_t *output_layer = layer_output(model_and, output_make_guess_round, output_functions_meansquared, output_cost_mean_squared);
 

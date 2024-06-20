@@ -523,6 +523,7 @@ void DrawNeuralNetwork(neural_network_model_t *model) {
 }
 
 void DrawWindow(neural_network_model_t *model) {
+    SetTextLineSpacing(20);
     BeginDrawing();
     {
         ClearBackground(RAYWHITE);
@@ -534,10 +535,44 @@ void DrawWindow(neural_network_model_t *model) {
             DrawNeuralNetwork(model);
         }
 
-        // draw model's training_info
-        // TODO
-        
+        training_info_t *t_info = vis_state.vis_args.training_info;
+        DrawText("# Train:\n# Test:\nTrain Acc:\nAvg Train Err:\nTest Acc:\nAvg Test Err:\n\nEpoch:\nTrain Index:\nTest Index:", 
+                MODEL_X + 20, MODEL_Y + 100, 16, DARKGRAY);
+        DrawText(TextFormat("%d\n%d\n%.2f\n%.3f\n%.2f\n%.3f\n\n%d\n%d\n%d",
+                t_info->train_size, t_info->test_size, t_info->train_accuracy, t_info->avg_train_error, t_info->test_accuracy, 
+                t_info->avg_test_error, t_info->epoch, t_info->train_index, t_info->test_index), MODEL_X + 160, MODEL_Y + 100, 16, BLACK);
 
+        if (!vis_state.is_training && !vis_state.is_testing) {
+            DrawText(TextFormat("Batch: %d\nLearning: %.2f\nEpochs: %d\nTrgt Acc: %.2f", 
+                    t_info->batch_size, t_info->learning_rate, t_info->target_epochs, t_info->target_accuracy),
+                    MODEL_X + 20, MODEL_Y + 350, 12, BLACK);
+
+            Rectangle batch_size_r = {
+                .x = MODEL_X + 160,
+                .y = MODEL_Y + 350,
+                .width = 60,
+                .height = 16
+            };
+            float value = t_info->batch_size;
+            if (GuiSlider(batch_size_r, "", "200", &value, 1, 200)) {
+                _TOGGLE_BOOL(&vis_state.vis_args.is_batch_size_active);
+            }
+            t_info->batch_size = value;
+
+            if (GuiSlider(RecShift(batch_size_r, 0, 20), "", "1", &t_info->learning_rate, 0.001, 0.1)) {
+                _TOGGLE_BOOL(&vis_state.vis_args.is_learning_rate_active);
+            }
+
+            value = t_info->target_epochs;
+            if (GuiSlider(RecShift(batch_size_r, 0, 40), "", "200", &value, 1, 200)) {
+                _TOGGLE_BOOL(&vis_state.vis_args.is_target_epochs_active);
+            }
+            t_info->target_epochs = value;
+
+            if (GuiSlider(RecShift(batch_size_r, 0, 60), "", "1.1", &t_info->target_accuracy, 0.5, 1.1)) {
+                _TOGGLE_BOOL(&vis_state.vis_args.is_target_accuracy_active);
+            }
+        }
 
 
         // some model control buttons

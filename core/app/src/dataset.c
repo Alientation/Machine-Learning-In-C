@@ -333,7 +333,6 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
         float train_test_split, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts) {
     assert(dataset->type == DATASET_IMAGES);
 
-    // TODO add option to select batch size, learning rate, target epochs, target accuracy
     struct DataSetData_Images data = dataset->data.image_dataset;
 
     training_info->in_progress = false;

@@ -91,6 +91,11 @@ typedef struct LabelGuesses {
 typedef struct VisualizerArgument {
     neural_network_model_t *model;
     training_info_t *training_info;
+    bool is_batch_size_active;
+    bool is_learning_rate_active;
+    bool is_target_epochs_active;
+    bool is_target_accuracy_active;
+
     char *model_name;
     bool allow_drawing_panel_as_model_input;
     

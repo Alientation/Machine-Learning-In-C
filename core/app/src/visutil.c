@@ -23,6 +23,17 @@ void DrawOutlinedCenteredText(const char* text, int pos_x, int pos_y, int font_s
     DrawCenteredText(text, pos_x, pos_y, font_size, color);
 }
 
+void DrawTextList(int count, int pos_x, int pos_y, int font_size, Color color, ...) {
+    va_list ptr;
+    va_start(ptr, color);
+    for (int i = 0; i < count; i++) {
+        DrawText(va_arg(ptr, char*), pos_x, pos_y, font_size, color);
+        pos_y += font_size * 1.25;
+    }
+    va_end(ptr);
+}
+
+
 void DrawOutlinedRectangle(int x, int y, int width, int height, Color color, int outline_size, Color outline_color) {
     DrawRectangle(x, y, width, height, color);
     DrawRectangleLines(x - outline_size/2.0, y - outline_size/2.0, width, height, outline_color);

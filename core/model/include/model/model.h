@@ -82,6 +82,7 @@ typedef struct Dense_Layer {
     // same dimensions as weight and bias matrices
     mymatrix_t d_cost_wrt_weight;
     mymatrix_t d_cost_wrt_bias;
+    float dropout;
 } dense_layer_t;
 
 // passes in the activation values of the previous layer into the activation function
@@ -158,7 +159,9 @@ typedef struct TrainingInfo {
     // stats
     bool in_progress;
     float train_accuracy;
+    float train_correct;
     float test_accuracy;
+    float test_correct;
     float avg_train_error;
     float avg_test_error;
     unsigned int epoch;
@@ -187,7 +190,7 @@ void model_add_layer(neural_network_model_t *model, layer_t *layer);
 // adds an layers to the model
 // todo in future, specify dimensions instead of supply matrix to be then copied
 layer_t* layer_input(neural_network_model_t *model, mymatrix_t input);
-layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons);
+layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons, float dropout);
 layer_t* layer_activation(neural_network_model_t *model, layer_function_t functions);
 layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions, float (*loss)(layer_t*, mymatrix_t));
 

@@ -27,6 +27,15 @@ const layer_function_t input_functions = {
 };
 
 mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input) {
+    float dropout = this->layer.dense.dropout;
+    if (dropout > 0) {
+        for (int r = 0; r < input.r; r++) {
+            if (random_uniform_range(1) <= dropout) {
+                input.matrix[r][0] = 0;
+            }
+        }
+    }
+
     matrix_multiply(this->layer.dense.weights, input, this->layer.dense.activation_values);
     matrix_add(this->layer.dense.activation_values, this->layer.dense.bias, this->layer.dense.activation_values);
     return this->layer.dense.activation_values;
@@ -361,7 +370,7 @@ layer_t* layer_input(neural_network_model_t *model, mymatrix_t input) {
     return layer;
 }
 
-layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons) {
+layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons, float dropout) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     // for now, column vector
     assert(neurons.c == 1);
@@ -379,6 +388,7 @@ layer_t* layer_dense(neural_network_model_t *model, mymatrix_t neurons) {
     dense->d_cost_wrt_input = matrix_allocator(prev_output.r, 1);
     dense->d_cost_wrt_weight = matrix_allocator(dense->weights.r, dense->weights.c);
     dense->d_cost_wrt_bias = matrix_allocator(dense->bias.r, dense->bias.c);
+    dense->dropout = dropout;
 
     dense->functions = dense_functions;
 
@@ -401,7 +411,8 @@ layer_t* layer_activation(neural_network_model_t *model, layer_function_t functi
     return layer;
 }
 
-layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions, float (*loss)(layer_t*, mymatrix_t)) {
+layer_t* layer_output(neural_network_model_t *model, mymatrix_t (*make_guess)(layer_t*, mymatrix_t), layer_function_t functions, 
+        float (*loss)(layer_t*, mymatrix_t)) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     // if (functions.back_propagation == output_functions_crossentropy.back_propagation) { // TODO I DONT THINK THIS MATTERS
     //     assert(make_guess == output_make_guess_softmax);

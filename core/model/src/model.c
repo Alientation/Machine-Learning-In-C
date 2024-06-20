@@ -26,12 +26,19 @@ const layer_function_t input_functions = {
     .feed_forward = input_feed_forward
 };
 
+static bool is_training = false;
 mymatrix_t dense_feed_forward(layer_t *this, mymatrix_t input) {
-    float dropout = this->layer.dense.dropout;
-    if (dropout > 0) {
-        for (int r = 0; r < input.r; r++) {
-            if (random_uniform_range(1) <= dropout) {
-                input.matrix[r][0] = 0;
+    float keep = 1 - this->layer.dense.dropout;
+    if (keep < 1) {
+        if (is_training) { // limit chance of mispredicted branches by moving all conditionals possible outside loops
+            for (int r = 0; r < input.r; r++) {
+                if (random_uniform_range(1) > keep) {
+                    input.matrix[r][0] = 0;
+                }
+            }
+        } else {
+            for (int r = 0; r < input.r; r++) {
+                input.matrix[r][0] *= keep;
             }
         }
     }
@@ -566,6 +573,7 @@ void model_train_info(training_info_t *training_info) {
         // perform training
         float avg_train_error = 0;
         int passed_train = 0;
+        is_training = true;
         for (*train_index = 0; *train_index < train_size; (*train_index)++) {
             model_predict(model, train_x[*train_index], actual_output);
             avg_train_error += output_layer.loss(model->output_layer, train_y[*train_index]);
@@ -582,6 +590,7 @@ void model_train_info(training_info_t *training_info) {
         // perform test
         float avg_test_error = 0;
         int passed_test = 0;
+        is_training = false;
         for (*test_index = 0; *test_index < test_size; (*test_index)++) {
             model_predict(model, test_x[*test_index], actual_output);
             avg_test_error += output_layer.loss(model->output_layer, test_y[*test_index]);

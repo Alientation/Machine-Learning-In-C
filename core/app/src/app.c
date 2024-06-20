@@ -97,9 +97,9 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     mymatrix_t output = matrix_allocator(10, 1);
 
     layer_t *input_layer = layer_input(model_digit, input);
-    layer_t *dense_layer_1 = layer_dense(model_digit, dense_1, 0.2);
+    layer_t *dense_layer_1 = layer_dense(model_digit, dense_1, 0);
     layer_t *activation_layer_1 = layer_activation(model_digit, activation_functions_relu);
-    layer_t *dense_layer_2 = layer_dense(model_digit, dense_2, 0.5);
+    layer_t *dense_layer_2 = layer_dense(model_digit, dense_2, 0.3);
     layer_t *activation_layer_2 = layer_activation(model_digit, activation_functions_sigmoid);
     layer_t *dense_layer_3 = layer_dense(model_digit, output, 0);
     layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_softmax);

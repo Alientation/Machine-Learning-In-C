@@ -543,7 +543,7 @@ void DrawWindow(neural_network_model_t *model) {
                 t_info->avg_test_error, t_info->epoch, t_info->train_index, t_info->test_index), MODEL_X + 160, MODEL_Y + 100, 16, BLACK);
 
         if (!vis_state.is_training && !vis_state.is_testing) {
-            DrawText(TextFormat("Batch: %d\nLearning: %.2f\nEpochs: %d\nTrgt Acc: %.2f", 
+            DrawText(TextFormat("Batch: %d\nLearning: %.3f\nEpochs: %d\nTrgt Acc: %.2f", 
                     t_info->batch_size, t_info->learning_rate, t_info->target_epochs, t_info->target_accuracy),
                     MODEL_X + 20, MODEL_Y + 350, 12, BLACK);
 

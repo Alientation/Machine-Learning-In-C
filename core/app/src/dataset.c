@@ -364,7 +364,8 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
         int label;
     };
 
-    struct Example shuffler[data.count * num_examples_per_image];
+    // struct Example shuffler[data.count * num_examples_per_image];
+    struct Example *shuffler = malloc(sizeof(struct Example) * data.count * num_examples_per_image);
     const int input_size = data.uniform_width * data.uniform_width;
     const int output_size = data.num_labels;
     
@@ -460,6 +461,7 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
     for (int i = 0; i < data.count * num_examples_per_image; i++) {
         UnloadImage(shuffler[i].image);
     }
+    free(shuffler);
 
     printf("Created training set with %d examples (%d training, %d testing)\n", data.count * num_examples_per_image, training_info->train_size, training_info->test_size);
 }

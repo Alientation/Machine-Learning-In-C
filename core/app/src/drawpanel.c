@@ -360,27 +360,39 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
     Rectangle rotation_label_r = RecShift(transformation_label_r, 0, 25);
     Rectangle rotation_picker_r = RecShift(transformation_picker_r, 0, 25);
     DrawCenteredText(TextFormat("Rot: %d", (int) draw_args->max_rotation_degree), _UNPACK_REC_CENTER(rotation_label_r), 10, BLACK);
-    GuiSlider(rotation_picker_r, "0", "180", &draw_args->max_rotation_degree, 0, 180);
+    GuiSlider(rotation_picker_r, "", "180", &draw_args->max_rotation_degree, 0, 180);
     
     Rectangle translation_x_label_r = RecShift(rotation_label_r, 0, 25);
     Rectangle translation_x_picker_r = RecShift(rotation_picker_r, 0, 25);
     DrawCenteredText(TextFormat("Shift X: %d", (int) draw_args->max_translations_pixels_x), _UNPACK_REC_CENTER(translation_x_label_r), 10, BLACK);
-    GuiSlider(translation_x_picker_r, "0", "20", &draw_args->max_translations_pixels_x, 0, 20);
+    GuiSlider(translation_x_picker_r, "", "20", &draw_args->max_translations_pixels_x, 0, 20);
     
     Rectangle translation_y_label_r = RecShift(translation_x_label_r, 0, 25);
     Rectangle translation_y_picker_r = RecShift(translation_x_picker_r, 0, 25);
     DrawCenteredText(TextFormat("Shift Y: %d", (int) draw_args->max_translations_pixels_y), _UNPACK_REC_CENTER(translation_y_label_r), 10, BLACK);
-    GuiSlider(translation_y_picker_r, "0", "20", &draw_args->max_translations_pixels_y, 0, 20);
+    GuiSlider(translation_y_picker_r, "", "20", &draw_args->max_translations_pixels_y, 0, 20);
 
     Rectangle artifact_label_r = RecShift(translation_y_label_r, 0, 25);
     Rectangle artifact_picker_r = RecShift(translation_y_picker_r, 0, 25);
     DrawCenteredText(TextFormat("Artifacts: %.3f", draw_args->max_artifacts), _UNPACK_REC_CENTER(artifact_label_r), 10, BLACK);
-    GuiSlider(artifact_picker_r, "0", "1", &draw_args->max_artifacts, 0, 1);
+    GuiSlider(artifact_picker_r, "", "1", &draw_args->max_artifacts, 0, 1);
+
+    // train/test split
+    Rectangle train_test_split_label_r = RecShift(artifact_label_r, 0, 25);
+    Rectangle train_test_split_picker_r = RecShift(artifact_picker_r, 0, 25);
+    DrawCenteredText(TextFormat("Train/Test: %.2f", draw_args->train_test_split), _UNPACK_REC_CENTER(train_test_split_label_r), 10, BLACK);
+    GuiSlider(train_test_split_picker_r, "", "1", &draw_args->train_test_split, 0, 1);
 
     // load dataset into training info for the model to run on
-    if (GuiButton((Rectangle) {.x = ds_info_r.x, .y = ds_info_r.y + ds_info_r.height + 150, .width = 80, .height = 30}, "Use")) {
+    Rectangle convert_ds_r = {
+        .x = ds_info_r.x, 
+        .y = train_test_split_label_r.y + train_test_split_label_r.height + 5,
+        .width = ds_info_r.width, 
+        .height = 30,
+    };
+    if (GuiButton(convert_ds_r, "Use")) {
         training_info_free(draw_args->vis_args->training_info);
-        ImageDataSetConvertToTraining(draw_args->vis_args->training_info, dataset, draw_args->num_transformations, 
+        ImageDataSetConvertToTraining(draw_args->vis_args->training_info, dataset, draw_args->train_test_split, draw_args->num_transformations, 
                 draw_args->max_rotation_degree, draw_args->max_translations_pixels_x, draw_args->max_translations_pixels_y, draw_args->max_artifacts);
         draw_args->is_dataset_viewer_open = false;
         draw_args->is_save_popup_open = false;

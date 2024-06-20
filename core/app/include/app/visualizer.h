@@ -148,6 +148,8 @@ typedef struct DrawingPanelArgs {
     bool is_translations_y_active;
     float max_artifacts;            // percentage of the image that will have a random artifact (ie, a random pixel shaded in with a random value)
     bool is_artifacts_active;
+    float train_test_split;
+    bool is_train_test_split_active;
 
     // create a new dataset
     char *add_dataset_file_name;

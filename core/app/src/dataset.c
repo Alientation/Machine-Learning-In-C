@@ -329,11 +329,11 @@ void one_hot_encode_matrix(mymatrix_t *mymatrix, int label) {
 }
 
 // TODO load on separate thread
-void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts) {
+void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, 
+        float train_test_split, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts) {
     assert(dataset->type == DATASET_IMAGES);
 
-    // TODO add option to select training/testing split, batch size, learning rate, target epochs, target accuracy
-    const float train_test_split = 0.8;
+    // TODO add option to select batch size, learning rate, target epochs, target accuracy
     struct DataSetData_Images data = dataset->data.image_dataset;
 
     training_info->in_progress = false;

@@ -48,7 +48,8 @@ typedef struct ImageDataSetVisualizer {
 image_dataset_visualizer_t LoadImageDataSetVisualizer(dataset_t *dataset);
 void UpdateImageDataSetVisualizer(image_dataset_visualizer_t *dataset_vis);
 void UnloadImageDataSetVisualizer(image_dataset_visualizer_t dataset_vis);
-void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts);
+void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, 
+        float train_test_split, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts);
 
 void MoveDisplayImageDataSetVisualizer(image_dataset_visualizer_t *dataset_vis, int move_count);
 void SetDisplayImageDataSetVisualizer(image_dataset_visualizer_t *dataset_vis, int pos);

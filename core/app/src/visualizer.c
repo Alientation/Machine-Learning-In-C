@@ -142,7 +142,9 @@ void initialize_visualizer(visualizer_argument_t *vis_args) {
         .is_translations_y_active = false,
         .max_artifacts = 0,
         .is_artifacts_active = false,
-        
+        .train_test_split = 0.8,
+        .is_train_test_split_active = false,
+
         .add_dataset_file_name = malloc((FILE_NAME_BUFFER_SIZE + 1) * sizeof(char)),
         .add_dataset_type = 0,
         

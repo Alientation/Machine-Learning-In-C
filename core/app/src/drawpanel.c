@@ -714,6 +714,34 @@ void GuiModelInfo(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
             model_input_rec.x + model_input_rec.width/2, model_input_rec.y + model_input_rec.height + 10, 12, BLACK);
     
     // TODO show all confidences of each label on the side
+    struct Label {
+        const char* label;
+        float confidence;
+    };
+
+    struct Label labels[draw_args->num_labels];
+    for (int i = 0; i < draw_args->num_labels; i++) {
+        labels[i] = (struct Label) {.label = draw_args->label_names[i], .confidence = output.matrix[i][0]};
+    }
+
+    // since number of labels is small, selection sort is fine
+    for (int i = 0; i < draw_args->num_labels; i++) {
+        int largest = i;
+        for (int j = i + 1; j < draw_args->num_labels; j++) {
+            if (labels[j].confidence > labels[largest].confidence) {
+                largest = j;
+            }
+        }
+        
+        struct Label temp = labels[i];
+        labels[i] = labels[largest];
+        labels[largest] = temp;
+    }
+
+    for (int i = 0; i < draw_args->num_labels; i++) {
+        DrawText(TextFormat("%s (%.3f)", labels[i].label, labels[i].confidence), 
+                model_input_rec.x - model_input_rec.width - 40, model_input_rec.y + i * 20, 16, BLACK);
+    }
 }
 
 // GOALS

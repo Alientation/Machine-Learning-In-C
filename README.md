@@ -2,11 +2,6 @@
 learned a lot about the math behind neural networks (gradient descent/backprop)
 really just an application of what i learned in multivariable and lin alg.
 
-![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/github_images/neuralnet_vis.PNG)
-![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/github_images/drawingpanel.PNG)
-![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/github_images/digit_predictor.PNG)
-![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/github_images/drawing_digit_predictor.PNG)
-
 ## Details
 Simple, really not too optimized multilayer perceptron model. A model is structured with a 
 series of layers explicitly defined by the user, where dense layers are separate from the activation functions
@@ -30,3 +25,9 @@ dataset file loader
 - Add more types of layers like convolution, maxpooling, etc
 - Support mini batching
 - ..possibly use third party linear algebra libraries, but trying not to.. don't want to use any for this project other than raylib
+
+## Some Images
+![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/github_images/neuralnet_vis.PNG)
+![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/github_images/drawingpanel.PNG)
+![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/github_images/digit_predictor.PNG)
+![alt text](https://github.com/Alientation/Machine-Learning-In-C/blob/master/github_images/drawing_digit_predictor.PNG)

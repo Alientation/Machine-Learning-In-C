@@ -330,6 +330,9 @@ void one_hot_encode_matrix(mymatrix_t *mymatrix, int label) {
 }
 
 // TODO load on separate thread
+// TODO first shuffle to split into training/testing dataset, then apply transformations and shuffle again
+//      this is to prevent the chance that the model will be trained on a transformation that is very similar to other transformations
+//      of the same image in the testing dataset
 void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, 
         float train_test_split, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts) {
     assert(dataset->type == DATASET_IMAGES);
@@ -351,7 +354,8 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
     
     const int num_examples_per_image = num_transformations + 1;
     
-    training_info->train_size = data.count * num_examples_per_image * train_test_split;
+    // split based on the number of unique images, not the extra copies with transformations
+    training_info->train_size = ceil(data.count * train_test_split) * num_examples_per_image;
     training_info->test_size = data.count * num_examples_per_image - training_info->train_size;
 
     training_info->train_x = malloc(training_info->train_size * sizeof(mymatrix_t));
@@ -370,15 +374,35 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
     const int output_size = data.num_labels;
     
     struct ImageListNode *cur = data.image_list_head;
-    RenderTexture2D cur_tex = LoadRenderTexture(data.uniform_width, data.uniform_height);
+    struct ImageListNode *nodes[data.count];
+    for (int i = 0; i < data.count; i++) {
+        nodes[i] = cur;
+        cur = cur->next;
+    }
 
+    srand(2304093940); // temporary, just use current time instead
+    // todo create generic array shuffler
+    // shuffle the images before applying transformations
+    for (int i = 0; i < data.count; i++) {
+        int s1 = i;
+        int s2 = i + rand() / (RAND_MAX / (data.count - i) + 1);
+        if (s2 >= data.count) {
+            s2 = data.count - 1;
+        }
+
+        struct ImageListNode *temp = nodes[s1];
+        nodes[s1] = nodes[s2];
+        nodes[s2] = temp; 
+    }
+
+    RenderTexture2D cur_tex = LoadRenderTexture(data.uniform_width, data.uniform_height);
     for (int i = 0; i < data.count; i++) {
         shuffler[i * num_examples_per_image] = (struct Example) {
-            .image = ImageCopy(cur->image),
-            .label = cur->label,
+            .image = ImageCopy(nodes[i]->image),
+            .label = nodes[i]->label,
         };
 
-        Image cur_image = ImageCopy(cur->image);
+        Image cur_image = ImageCopy(nodes[i]->image);
         ImageFlipVertical(&cur_image);
 
         Texture2D tex = LoadTextureFromImage(cur_image);
@@ -457,7 +481,7 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
 
             shuffler[i * num_examples_per_image + j] = (struct Example) {
                 .image = LoadImageFromTexture(cur_tex.texture),
-                .label = cur->label,
+                .label = nodes[i]->label,
             };
 
             UnloadImage(noise);
@@ -467,21 +491,28 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
         }
         UnloadImage(cur_image);
         UnloadTexture(tex);
-
-        cur = cur->next;
     }
     UnloadRenderTexture(cur_tex);
 
-    srand(2304093940);
-    for (int i = 0; i < data.count * num_examples_per_image; i++) {
+    // shuffle each train and test section
+    for (int i = 0; i < training_info->train_size; i++) {
         // int s1 = random_uniform_range(data.count * num_examples_per_image);
         int s1 = i;
-        int s2 = i + rand() / (RAND_MAX / (data.count * num_examples_per_image - i) + 1);
-        if (s1 >= data.count * num_examples_per_image) {
-            s1 = data.count * num_examples_per_image - 1;
+        int s2 = i + rand() / (RAND_MAX / (training_info->train_size - i) + 1);
+        if (s2 >= training_info->train_size) {
+            s2 = training_info->train_size - 1;
         }
-        if (s2 >= data.count * num_examples_per_image) {
-            s2 = data.count * num_examples_per_image - 1;
+
+        struct Example temp = shuffler[s1];
+        shuffler[s1] = shuffler[s2];
+        shuffler[s2] = temp; 
+    }
+
+    for (int i = 0; i < training_info->test_size; i++) {
+        int s1 = i + training_info->train_size;
+        int s2 = i + training_info->train_size + rand() / (RAND_MAX / (training_info->test_size - i) + 1);
+        if (s2 >= training_info->train_size + training_info->test_size) {
+            s2 = training_info->train_size + training_info->test_size - 1;
         }
 
         struct Example temp = shuffler[s1];

@@ -99,7 +99,7 @@ void DrawingPanelClear(drawing_panel_args_t *draw_args) {
     draw_args->updated = true;
 }
 
-void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
+static void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
     // files can be dropped into the current directory
     char *dir_path = strdup(concat(3, GetWorkingDirectory(), "\\", draw_args->dataset_directory));
     if (IsFileDropped()) {
@@ -157,7 +157,7 @@ void GuiFileViewer(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
     UnloadDirectoryFiles(data_files);
 }
 
-void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
+static void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
     // name of new dataset
     Rectangle name_ds_r = {
         .x = file_viewer_r.x,
@@ -248,7 +248,7 @@ void GuiAddDataset(drawing_panel_args_t *draw_args, Rectangle file_viewer_r) {
 }
 
 // must be an image dataset
-void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r, Rectangle file_viewer_r) {
+static void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r, Rectangle file_viewer_r) {
     // don't display dataset if no dataset is chosen
     if (draw_args->sel_dataset_index == -1 || draw_args->current_dataset.type != DATASET_IMAGES) {
         return;
@@ -481,7 +481,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
     }
 }
 
-void GuiSavePopup(drawing_panel_args_t *draw_args) {
+static void GuiSavePopup(drawing_panel_args_t *draw_args) {
     if (!draw_args->is_save_popup_open) {
         draw_args->is_dataset_viewer_open = false;
         return;
@@ -520,7 +520,7 @@ void GuiSavePopup(drawing_panel_args_t *draw_args) {
 
 
 // Draw brush tools to assist with drawing
-void GuiDrawingTools(drawing_panel_args_t *draw_args, Rectangle draw_window_rec, Rectangle draw_panel_rec) {
+static void GuiDrawingTools(drawing_panel_args_t *draw_args, Rectangle draw_window_rec, Rectangle draw_panel_rec) {
     // Brush color picker
     Rectangle color_picker_rec = {
         .x = draw_panel_rec.x + draw_panel_rec.width + 40,
@@ -609,7 +609,7 @@ void GuiDrawingTools(drawing_panel_args_t *draw_args, Rectangle draw_window_rec,
     }
 }
 
-void GuiDrawPanel(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
+static void GuiDrawPanel(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
     bool is_draw = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsGestureDetected(GESTURE_DRAG);
     bool is_erase = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
     bool just_off_panel = draw_args->is_dragged && !CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
@@ -662,7 +662,7 @@ void GuiDrawPanel(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
     draw_args->is_dragged = IsGestureDetected(GESTURE_DRAG) && CheckCollisionPointRec(GetMousePosition(), draw_panel_rec);
 }
 
-void GuiModelInfo(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
+static void GuiModelInfo(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
     // draw image onto the texture the model will see, scaled down
     RenderTexture2D input_texture = draw_args->input_texture;
     BeginTextureMode(input_texture);
@@ -672,20 +672,20 @@ void GuiModelInfo(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
     }
     EndTextureMode();
 
+    Image input_image = LoadImageFromTexture(input_texture.texture);
+    if (draw_args->gray_scale) {
+        ImageColorGrayscale(&input_image);
+        Color *pixels = LoadImageColors(input_image);
+        UpdateTexture(input_texture.texture, pixels);
+        UnloadImageColors(pixels);
+    }
+
     // check if we should update the model with information about the drawn image
     draw_args->cur_frames++;
     if (draw_args->updated && draw_args->update_frames <= draw_args->cur_frames) {
         draw_args->cur_frames = 0;
         draw_args->updated = false;
-        Image input_image = LoadImageFromTexture(input_texture.texture);
-
-        if (draw_args->gray_scale) {
-            ImageColorGrayscale(&input_image);
-            Color *pixels = LoadImageColors(input_image);
-            UpdateTexture(input_texture.texture, pixels);
-            UnloadImageColors(pixels);
-        }
-
+        
         // read in model input into buffer
         for (int r = 0; r < input_image.height; r++) {
             for (int c = 0; c < input_image.width; c++) {

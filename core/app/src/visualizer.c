@@ -38,7 +38,7 @@ static visualizer_state_t vis_state = {
 }; 
 
 //===========================================================================
-int compute_network_width() {
+static int compute_network_width() {
     layer_t *cur_layer = vis_state.vis_args.model->input_layer;
     int network_width = LAYER_GAP * (vis_state.vis_args.model->num_layers - 1);
     for (int i = 0; i < vis_state.vis_args.model->num_layers; i++) {
@@ -58,7 +58,7 @@ int compute_network_width() {
     return network_width;
 }
 
-void construct_node_positions() {
+static void construct_node_positions() {
     // TODO in future move all information about layer drawing to separate file
     vis_state.node_positions = malloc(vis_state.vis_args.model->num_layers * sizeof(Vector2*));
     
@@ -102,7 +102,7 @@ void construct_node_positions() {
     }
 }
 
-void initialize_visualizer(visualizer_argument_t *vis_args) {
+static void initialize_visualizer(visualizer_argument_t *vis_args) {
     vis_state.vis_args = *vis_args;
     vis_state.is_window_open = true;
     vis_state.draw_args = (drawing_panel_args_t) {
@@ -177,7 +177,7 @@ void initialize_visualizer(visualizer_argument_t *vis_args) {
     vis_state.draw_args.images_dataset_height_input[1] = '8';    
 }
 
-void end_visualizer() {
+static void end_visualizer() {
     // save the currently open dataset
     if (vis_state.draw_args.sel_dataset_index != -1) {
         WriteDataSet(vis_state.draw_args.current_dataset);
@@ -243,7 +243,7 @@ void* window_run(void *vargp) {
     end_visualizer();
 }
 
-void* train_run(void *vargp) {
+static void* train_run(void *vargp) {
     if (!vis_state.is_training && !vis_state.is_testing) {
         vis_state.is_training = true;
         CLOCK_MARK
@@ -253,7 +253,7 @@ void* train_run(void *vargp) {
     }
 }
 
-void* test_run(void *vargp) {
+static void* test_run(void *vargp) {
     if (!vis_state.is_testing && !vis_state.is_training) {
         vis_state.is_testing = true;
         CLOCK_MARK
@@ -265,7 +265,7 @@ void* test_run(void *vargp) {
 
 
 //===================================================================
-layer_t *get_layer(int layer_index) {
+static layer_t *get_layer(int layer_index) {
     assert(layer_index < vis_state.vis_args.model->num_layers);
 
     layer_t *cur = vis_state.vis_args.model->input_layer;
@@ -275,15 +275,15 @@ layer_t *get_layer(int layer_index) {
     return cur;
 }
 
-Vector2 get_node_position(int layer_index, int r) {
+static Vector2 get_node_position(int layer_index, int r) {
     return vis_state.node_positions[layer_index][r];    
 }
 
-Vector2 get_layer_topleft(int layer_index) {
+static Vector2 get_layer_topleft(int layer_index) {
     return vis_state.node_positions[layer_index][0];
 }
 
-Vector2 get_layer_bottomright(int layer_index) {
+static Vector2 get_layer_bottomright(int layer_index) {
     mymatrix_t nodes = layer_get_neurons(get_layer(layer_index));
     
     return vis_state.node_positions[layer_index][nodes.r * nodes.c - 1]; // TODO bottom right position is not accurate if last section of layer has less nodes
@@ -291,7 +291,7 @@ Vector2 get_layer_bottomright(int layer_index) {
 }
 
 // displays the highest priority tooltip
-void OpenTooltip(const char* msg, float priority, float *weight_value) {
+static void OpenTooltip(const char* msg, float priority, float *weight_value) {
     if (vis_state.show_tooltip && priority <= vis_state.tooltip_priority) {
         return;
     }
@@ -304,7 +304,7 @@ void OpenTooltip(const char* msg, float priority, float *weight_value) {
     vis_state.tooltip_weight_value = weight_value;
 }
 
-void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
+static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
     mymatrix_t this_neurons = layer_get_neurons(layer);
     mymatrix_t prev_neurons = layer_get_neurons(prev);
     
@@ -392,7 +392,7 @@ void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
     }
 }
 
-void DrawLayerInformation(int layer_index, layer_t *layer) {
+static void DrawLayerInformation(int layer_index, layer_t *layer) {
     mymatrix_t nodes = layer_get_neurons(layer);
 
     // draw layer name and information about it
@@ -417,7 +417,7 @@ void DrawLayerInformation(int layer_index, layer_t *layer) {
     }
 }
 
-void DrawLayer(int layer_index, layer_t *layer) {
+static void DrawLayer(int layer_index, layer_t *layer) {
     mymatrix_t nodes = layer_get_neurons(layer);
     
     // calculate values for color scaling
@@ -504,7 +504,7 @@ void DrawLayer(int layer_index, layer_t *layer) {
     DrawLayerInformation(layer_index, layer);
 }
 
-void DrawNeuralNetwork(neural_network_model_t *model) {
+static void DrawNeuralNetwork(neural_network_model_t *model) {
     // draw model background
     Color color = GRAY;
     color.a = 170;
@@ -522,7 +522,7 @@ void DrawNeuralNetwork(neural_network_model_t *model) {
     }
 }
 
-void DrawTrainingInfo() {
+static void DrawTrainingInfo() {
     training_info_t *t_info = vis_state.vis_args.training_info;
     DrawText("# Train:\n# Test:\nTrain Acc:\nAvg Train Err:\nTest Acc:\nAvg Test Err:\n\nEpoch:\nTrain Index:\nTest Index:", 
             MODEL_X + 20, MODEL_Y + 100, 16, DARKGRAY);
@@ -563,7 +563,7 @@ void DrawTrainingInfo() {
     }
 }
 
-mymatrix_t set_training_set_display(bool is_train, int loc) {
+static mymatrix_t set_training_set_display(bool is_train, int loc) {
     training_info_t *t_info = vis_state.vis_args.training_info;
     assert(loc >= 0 && loc < is_train ? t_info->train_size : t_info->test_size);
 
@@ -574,7 +574,7 @@ mymatrix_t set_training_set_display(bool is_train, int loc) {
     return model_calculate(model);
 }
 
-mymatrix_t move_training_set_display(bool is_train, int move) {
+static mymatrix_t move_training_set_display(bool is_train, int move) {
     training_info_t *t_info = vis_state.vis_args.training_info;
     int *cur = &vis_state.current_example;
     int max = is_train ? t_info->train_size : t_info->test_size;
@@ -590,7 +590,7 @@ mymatrix_t move_training_set_display(bool is_train, int move) {
     return set_training_set_display(is_train, *cur);
 }
 
-void DrawTrainingExamplesDisplay() {
+static void DrawTrainingExamplesDisplay() {
     if (vis_state.vis_args.training_info->train_size == 0 || vis_state.vis_args.training_info->test_size == 0) {
         return;
     }
@@ -680,7 +680,7 @@ void DrawTrainingExamplesDisplay() {
     }
 }
 
-void DrawWindow(neural_network_model_t *model) {
+static void DrawWindow(neural_network_model_t *model) {
     SetTextLineSpacing(20);
     BeginDrawing();
     {

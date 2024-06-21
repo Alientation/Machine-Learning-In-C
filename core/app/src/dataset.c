@@ -14,7 +14,7 @@
 
 #define IMAGE_DATASET_HEADER 0xFF0000DDLU
 
-long read_bytes(unsigned char *data, int start_byte, int bytes) {
+static long read_bytes(unsigned char *data, int start_byte, int bytes) {
     long value = 0;
     for (int i = start_byte + bytes - 1; i >= start_byte; i--) {
         value <<= 8;
@@ -23,7 +23,7 @@ long read_bytes(unsigned char *data, int start_byte, int bytes) {
     return value;
 }
 
-void write_bytes(unsigned char *data, int start_byte, unsigned long value, int bytes) {
+static void write_bytes(unsigned char *data, int start_byte, unsigned long value, int bytes) {
     for (int i = start_byte; i < start_byte + bytes; i++) {
         data[i] = value & (0xFF);
         value >>= 8;

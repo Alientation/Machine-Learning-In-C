@@ -5,6 +5,7 @@
 #include <util/profiler.h>
 #include <app/visutil.h>
 
+#include <math.h>
 #include <pthread.h>
 #include <assert.h>
 #include <stdio.h>
@@ -381,6 +382,7 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
         ImageFlipVertical(&cur_image);
 
         Texture2D tex = LoadTextureFromImage(cur_image);
+        SetTextureWrap(tex, TEXTURE_WRAP_CLAMP);
 
         for (int j = 1; j < num_examples_per_image; j++) {
             int rand_deg = GetRandomValue(-max_rot_deg, max_rot_deg);
@@ -391,13 +393,13 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
             int bufferx = 2 * abs(rand_transl_x);
             int buffery = 2 * abs(rand_transl_y);
 
-            int x = -rand_transl_x;
-            int y = -rand_transl_y;
+            // int x = -rand_transl_x;
+            // int y = -rand_transl_y;
             int width = data.uniform_width;
             int height = data.uniform_height;
 
             Rectangle img_src_r = {
-                .x = x, .y = y, .width = width, .height = height
+                .x = 0, .y = 0, .width = width, .height = height
             };
             Rectangle img_dst_r = {
                 .x = data.uniform_width/2, .y = data.uniform_height/2, .width = data.uniform_width, .height = data.uniform_height
@@ -410,12 +412,58 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
             }
             EndTextureMode();
 
-            // TODO ADD RANDOM NOISE TO IMAGE
+            Image image = LoadImageFromTexture(cur_tex.texture);
+            // find the max_translation possible
+            bool neg_x = rand_transl_x < 0;
+            int min_magnitude_x = image.width + 1;
+            for (int r = 0; r < image.height; r++) {
+                for (int c = 0; c < image.width; c++) {
+                    if (GetImageColor(image, neg_x ? image.width - 1 - c : c, r).r >= 0.25) { // ONLY WORKS FOR GRAYSCALE IMAGES
+                        min_magnitude_x = min_magnitude_x > c ? c : min_magnitude_x;
+                    }
+                }
+            }
+            bool neg_y = rand_transl_y < 0;
+            int min_magnitude_y = image.height + 1;
+            for (int c = 0; c < image.width; c++) {
+                for (int r = 0; r < image.height; r++) {
+                    if (GetImageColor(image, neg_y ? image.height - 1 - c : c, r).r >= 0.25) { // ONLY WORKS FOR GRAYSCALE IMAGES
+                        min_magnitude_y = min_magnitude_y > r ? r : min_magnitude_y;
+                    }
+                }
+            }
+
+            if (min_magnitude_x < fabs(rand_transl_x)) {
+                rand_transl_x = min_magnitude_x * (neg_x ? -1 : 1);
+            }
+            if (min_magnitude_y < fabs(rand_transl_y)) {
+                rand_transl_y = min_magnitude_y * (neg_y ? -1 : 1);
+            }
+
+            Image noise = GenImageWhiteNoise(image.width, image.height, rand_artifacts);
+            ImageColorInvert(&noise);
+            Texture2D noise_tex = LoadTextureFromImage(noise);
+            ImageFlipVertical(&image);
+            Texture2D image_tex = LoadTextureFromImage(image);
+
+            img_src_r = RecOffset(img_src_r, -rand_transl_x, -rand_transl_y);
+            BeginTextureMode(cur_tex);
+            {
+                ClearBackground(WHITE);
+                DrawTexturePro(image_tex, img_src_r, img_dst_r, (Vector2) {data.uniform_width/2, data.uniform_height/2}, 0, WHITE);
+                DrawTexture(noise_tex, 0, 0, ColorAlpha(WHITE, .3));
+            }
+            EndTextureMode();
 
             shuffler[i * num_examples_per_image + j] = (struct Example) {
                 .image = LoadImageFromTexture(cur_tex.texture),
                 .label = cur->label,
             };
+
+            UnloadImage(noise);
+            UnloadTexture(noise_tex);
+            UnloadImage(image);
+            UnloadTexture(image_tex);
         }
         UnloadImage(cur_image);
         UnloadTexture(tex);

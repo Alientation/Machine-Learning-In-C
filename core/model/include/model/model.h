@@ -230,5 +230,7 @@ void training_info_free(training_info_t *training_info);
 void model_train_info(training_info_t *training_info);
 void model_test_info(training_info_t *training_info);
 
+int unpack_one_hot_encoded(mymatrix_t one_hot_encoded);
+
 
 #endif // MODEL_H

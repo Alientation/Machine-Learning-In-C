@@ -568,7 +568,7 @@ mymatrix_t model_calculate(neural_network_model_t *model) {
 
     model->output_layer->layer.output.make_guess(model->output_layer, prev_output);
     matrix_memcpy(current->layer.output.output_values, prev_output);
-    return current->layer.output.output_values;
+    return current->layer.output.guess;
 }
 
 void training_info_free(training_info_t *training_info) {
@@ -673,4 +673,17 @@ void model_test_info(training_info_t *training_info) {
     training_info->test_accuracy = ((int)(100.0 * (float) passed_test / (float) test_size)) / 100.0;
 
     matrix_free(actual_output);
+}
+
+
+
+int unpack_one_hot_encoded(mymatrix_t one_hot_encoded) {
+    assert(one_hot_encoded.c == 1);
+    
+    for (int r = 0; r < one_hot_encoded.r; r++) {
+        if (one_hot_encoded.matrix[r][0] != 0) {
+            return r;
+        }
+    }
+    assert(0);
 }

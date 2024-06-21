@@ -522,6 +522,164 @@ void DrawNeuralNetwork(neural_network_model_t *model) {
     }
 }
 
+void DrawTrainingInfo() {
+    training_info_t *t_info = vis_state.vis_args.training_info;
+    DrawText("# Train:\n# Test:\nTrain Acc:\nAvg Train Err:\nTest Acc:\nAvg Test Err:\n\nEpoch:\nTrain Index:\nTest Index:", 
+            MODEL_X + 20, MODEL_Y + 100, 16, DARKGRAY);
+    DrawText(TextFormat("%d\n%d\n%.2f\n%.3f\n%.2f\n%.3f\n\n%d\n%d\n%d",
+            t_info->train_size, t_info->test_size, t_info->train_accuracy, t_info->avg_train_error, t_info->test_accuracy, 
+            t_info->avg_test_error, t_info->epoch, t_info->train_index, t_info->test_index), MODEL_X + 160, MODEL_Y + 100, 16, BLACK);
+    
+    DrawText(TextFormat("Batch: %d\nLearning: %.3f\nEpochs: %d\nTrgt Acc: %.2f", 
+            t_info->batch_size, t_info->learning_rate, t_info->target_epochs, t_info->target_accuracy),
+            MODEL_X + 20, MODEL_Y + 350, 12, BLACK);
+
+    if (!vis_state.is_training && !vis_state.is_testing) {
+        Rectangle batch_size_r = {
+            .x = MODEL_X + 160,
+            .y = MODEL_Y + 350,
+            .width = 60,
+            .height = 16
+        };
+        float value = t_info->batch_size;
+        if (GuiSlider(batch_size_r, "", "200", &value, 1, 200)) {
+            _TOGGLE_BOOL(&vis_state.vis_args.is_batch_size_active);
+        }
+        t_info->batch_size = value;
+
+        if (GuiSlider(RecShift(batch_size_r, 0, 20), "", "1", &t_info->learning_rate, 0.001, 0.1)) {
+            _TOGGLE_BOOL(&vis_state.vis_args.is_learning_rate_active);
+        }
+
+        value = t_info->target_epochs;
+        if (GuiSlider(RecShift(batch_size_r, 0, 40), "", "200", &value, 1, 200)) {
+            _TOGGLE_BOOL(&vis_state.vis_args.is_target_epochs_active);
+        }
+        t_info->target_epochs = value;
+
+        if (GuiSlider(RecShift(batch_size_r, 0, 60), "", "1.1", &t_info->target_accuracy, 0.5, 1.1)) {
+            _TOGGLE_BOOL(&vis_state.vis_args.is_target_accuracy_active);
+        }
+    }
+}
+
+mymatrix_t set_training_set_display(bool is_train, int loc) {
+    training_info_t *t_info = vis_state.vis_args.training_info;
+    assert(loc >= 0 && loc < is_train ? t_info->train_size : t_info->test_size);
+
+    neural_network_model_t *model = vis_state.vis_args.training_info->model;
+    int *cur = &vis_state.current_example;
+    *cur = loc;
+    matrix_memcpy(model->input_layer->layer.input.input_values, is_train ? t_info->train_x[*cur] : t_info->test_x[*cur]);
+    return model_calculate(model);
+}
+
+mymatrix_t move_training_set_display(bool is_train, int move) {
+    training_info_t *t_info = vis_state.vis_args.training_info;
+    int *cur = &vis_state.current_example;
+    int max = is_train ? t_info->train_size : t_info->test_size;
+
+    if ((*cur) + move < 0) {
+        *cur = 0;
+    } else if ((*cur) + move >= max) {
+        *cur = max - 1;
+    } else {
+        *cur = (*cur) + move;
+    }
+
+    return set_training_set_display(is_train, *cur);
+}
+
+void DrawTrainingExamplesDisplay() {
+    if (vis_state.vis_args.training_info->train_size == 0 || vis_state.vis_args.training_info->test_size == 0) {
+        return;
+    }
+
+    Rectangle display_train_examples_r = {
+        .x = MODEL_X + 30,
+        .y = MODEL_Y + 450,
+        .width = 80,
+        .height = 30,
+    };
+    Rectangle display_test_examples_r = RecShift(display_train_examples_r, 100, 0);
+
+    bool prev_state = vis_state.show_training;
+    GuiToggle(display_train_examples_r, "See Train", &vis_state.show_training);
+    if (!prev_state && vis_state.show_training) {
+        vis_state.show_testing = false;
+        set_training_set_display(true, 0);
+    }
+
+    prev_state = vis_state.show_testing;
+    GuiToggle(display_test_examples_r, "See Test", &vis_state.show_testing);
+    if (!prev_state && vis_state.show_testing) {
+        vis_state.show_training = false;
+        set_training_set_display(false, 0);
+    }
+
+    if (vis_state.show_training || vis_state.show_testing) {
+        Rectangle prev_incorrect_button_r = {
+            .x = display_train_examples_r.x + display_test_examples_r.width + 10 - 63,
+            .y = display_train_examples_r.y + display_train_examples_r.height + 15,
+            .width = 35,
+            .height = 15,
+        };
+
+        Rectangle prev_button_r = {
+            .x = prev_incorrect_button_r.x + prev_incorrect_button_r.width + 5,
+            .y = prev_incorrect_button_r.y,
+            .width = 20,
+            .height = 15,
+        };
+
+        Rectangle next_button_r = {
+            .x = prev_button_r.x + prev_button_r.width + 6,
+            .y = prev_button_r.y,
+            .width = 20,
+            .height = 15,
+        };
+
+        Rectangle next_incorrect_button_r = {
+            .x = next_button_r.x + next_button_r.width + 5,
+            .y = next_button_r.y,
+            .width = 35,
+            .height = 15,
+        };
+
+        training_info_t *t_info = vis_state.vis_args.training_info;
+        bool is_train = vis_state.show_training;
+        mymatrix_t *correct = is_train ? t_info->train_y : t_info->test_y;
+        int *cur = &vis_state.current_example;
+        int max = is_train ? t_info->train_size : t_info->test_size;
+        const char* display_name = is_train ? "Train" : "Test";
+
+        if (GuiButton(prev_incorrect_button_r, "<<<")) {
+            mymatrix_t output;
+            do {
+                output = move_training_set_display(is_train, -1);
+            } while (matrix_equal(output, correct[*cur]) && *cur > 0 && *cur < max - 1);
+        }
+        if (GuiButton(prev_button_r, "<")) {
+            move_training_set_display(is_train, -1);
+        }
+
+        if (GuiButton(next_button_r, ">")) {
+            move_training_set_display(is_train, 1);
+        }
+
+        if (GuiButton(next_incorrect_button_r, ">>>")) {
+            mymatrix_t output;
+            do {
+                output = move_training_set_display(is_train, 1);
+            } while (matrix_equal(output, correct[*cur]) && *cur > 0 && *cur < max - 1);
+        }
+
+        DrawText(TextFormat("Displaying Example: %d", *cur), prev_incorrect_button_r.x, prev_incorrect_button_r.y + 20, 16, BLACK);
+        DrawText(TextFormat("Expected Label: %s", vis_state.vis_args.output_labels[unpack_one_hot_encoded(correct[*cur])]), 
+                prev_incorrect_button_r.x, prev_incorrect_button_r.y + 40, 16, BLACK);
+    }
+}
+
 void DrawWindow(neural_network_model_t *model) {
     SetTextLineSpacing(20);
     BeginDrawing();
@@ -529,51 +687,24 @@ void DrawWindow(neural_network_model_t *model) {
         ClearBackground(RAYWHITE);
         DrawText(TextFormat("%d FPS", GetFPS()), 5, 5, 10, BLACK);
 
-        vis_state.show_tooltip = false;        
+        vis_state.show_tooltip = false;
+        if (vis_state.draw_args.updated_training_info) {
+            vis_state.draw_args.updated_training_info = false;
+            vis_state.current_example = 0;
+            vis_state.has_trained = false;
+            vis_state.show_training = false;
+        }
+
         // maybe have a better way to signify if a model is built or not
         if (model && model->input_layer != NULL) {
             DrawNeuralNetwork(model);
         }
 
-        training_info_t *t_info = vis_state.vis_args.training_info;
-        DrawText("# Train:\n# Test:\nTrain Acc:\nAvg Train Err:\nTest Acc:\nAvg Test Err:\n\nEpoch:\nTrain Index:\nTest Index:", 
-                MODEL_X + 20, MODEL_Y + 100, 16, DARKGRAY);
-        DrawText(TextFormat("%d\n%d\n%.2f\n%.3f\n%.2f\n%.3f\n\n%d\n%d\n%d",
-                t_info->train_size, t_info->test_size, t_info->train_accuracy, t_info->avg_train_error, t_info->test_accuracy, 
-                t_info->avg_test_error, t_info->epoch, t_info->train_index, t_info->test_index), MODEL_X + 160, MODEL_Y + 100, 16, BLACK);
+        DrawTrainingInfo();
 
-        if (!vis_state.is_training && !vis_state.is_testing) {
-            DrawText(TextFormat("Batch: %d\nLearning: %.3f\nEpochs: %d\nTrgt Acc: %.2f", 
-                    t_info->batch_size, t_info->learning_rate, t_info->target_epochs, t_info->target_accuracy),
-                    MODEL_X + 20, MODEL_Y + 350, 12, BLACK);
-
-            Rectangle batch_size_r = {
-                .x = MODEL_X + 160,
-                .y = MODEL_Y + 350,
-                .width = 60,
-                .height = 16
-            };
-            float value = t_info->batch_size;
-            if (GuiSlider(batch_size_r, "", "200", &value, 1, 200)) {
-                _TOGGLE_BOOL(&vis_state.vis_args.is_batch_size_active);
-            }
-            t_info->batch_size = value;
-
-            if (GuiSlider(RecShift(batch_size_r, 0, 20), "", "1", &t_info->learning_rate, 0.001, 0.1)) {
-                _TOGGLE_BOOL(&vis_state.vis_args.is_learning_rate_active);
-            }
-
-            value = t_info->target_epochs;
-            if (GuiSlider(RecShift(batch_size_r, 0, 40), "", "200", &value, 1, 200)) {
-                _TOGGLE_BOOL(&vis_state.vis_args.is_target_epochs_active);
-            }
-            t_info->target_epochs = value;
-
-            if (GuiSlider(RecShift(batch_size_r, 0, 60), "", "1.1", &t_info->target_accuracy, 0.5, 1.1)) {
-                _TOGGLE_BOOL(&vis_state.vis_args.is_target_accuracy_active);
-            }
+        if (!vis_state.is_training && !vis_state.is_testing && vis_state.has_trained) {
+            DrawTrainingExamplesDisplay();
         }
-
 
         // some model control buttons
         int control_y = MODEL_Y + 40;
@@ -581,6 +712,7 @@ void DrawWindow(neural_network_model_t *model) {
             pthread_t thread_id;
             pthread_create(&thread_id, NULL, train_run, vis_state.vis_args.training_info);
             pthread_detach(thread_id);
+            vis_state.has_trained = true;
         }
 
         if (GuiButton((Rectangle) {.x = MODEL_X + 170, .y = control_y, .height = 30, .width = 100}, "Start Test") && !vis_state.draw_args.is_open) {

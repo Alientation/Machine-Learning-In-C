@@ -166,6 +166,7 @@ typedef struct DrawingPanelArgs {
     bool images_dataset_height_option_active;
     char *images_dataset_height_input;
     bool is_editing_dataset_file_name;
+    bool updated_training_info;
 
     int num_labels;
     const char** label_names;
@@ -186,6 +187,13 @@ typedef struct VisualizerState {
     bool is_training;
     bool is_testing;
     bool playground_state;
+    bool display_training_dataset;
+
+    // stepping through training dataset
+    bool has_trained;
+    bool show_training;
+    bool show_testing;
+    int current_example;
 
     // draw info
     Vector2 **node_positions;

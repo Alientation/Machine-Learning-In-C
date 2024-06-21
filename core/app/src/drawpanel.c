@@ -397,6 +397,7 @@ void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_preview_r,
         draw_args->is_dataset_viewer_open = false;
         draw_args->is_save_popup_open = false;
         draw_args->is_open = false;
+        draw_args->updated_training_info = true;
     }
 
     // display currently selected image info
@@ -711,7 +712,6 @@ void GuiModelInfo(drawing_panel_args_t *draw_args, Rectangle draw_panel_rec) {
     DrawTexturePro(input_texture.texture, (Rectangle) {.x = 0, .y = 0, .width = input_texture.texture.width, .height = input_texture.texture.height}, 
             model_input_rec, (Vector2) {0, 0}, 0, WHITE);
 
-    // run the model
     neural_network_model_t *model = draw_args->vis_args->training_info->model;
     mymatrix_t output = model->output_layer->layer.output.output_values;
     int highest_guess = 0;

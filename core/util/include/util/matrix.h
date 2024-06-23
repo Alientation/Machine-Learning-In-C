@@ -3,7 +3,7 @@
 #define MATRIX_H
 
 #include <stdbool.h>
-
+#include <stdarg.h>
 
 // FIGURE OUT HOW TO OPTIMIZE
 // INSTEAD OF 2D ARRAY (IE ARRAY OF POINTERS TO ARRAYS)
@@ -17,6 +17,7 @@ typedef struct MyMatrix {
 
     bool transposed; // todo
 } mymatrix_t;
+
 
 void free_matrix_list(mymatrix_t *matrix_list, int size);
 
@@ -63,5 +64,59 @@ void matrix_for_each_operator(mymatrix_t m, float (*op)(float),
 void matrix_print(mymatrix_t m);
 
 void matrix_set_values_to_fit(mymatrix_t m, float* elements, unsigned int num_elements);
+
+// todo maybe create a generic n-dimensional matrix (using macros ??, is it even worth the effort tho)
+
+#ifndef MAX_DIMS
+#define MAX_DIMS 16
+#endif
+
+typedef struct NMatrix {
+    int n_elements;
+    int n_dims;
+    int dims[MAX_DIMS];
+    // unsigned int strides[MAX_DIMS];
+    float *matrix;
+} nmatrix_t;
+
+void free_nmatrix_list(int size, nmatrix_t *list);
+
+nmatrix_t nmatrix_allocator(int n_dims, ...);
+nmatrix_t nmatrix_constructor(int n_elements, float *matrix, int n_dims, ...);
+void nmatrix_reshape(nmatrix_t *m, int n_dims, ...);
+bool check_nmatrix_shape(nmatrix_t *m, int n_dims, ...);
+
+void nmatrix_free(nmatrix_t *m);
+nmatrix_t nmatrix_copy(nmatrix_t *src);
+void nmatrix_memcpy(nmatrix_t *dst, nmatrix_t *src);
+
+void nmatrix_multiply(nmatrix_t *m1, nmatrix_t *m2, 
+                      nmatrix_t *result);
+// todo int nmatrix_multiply_size(nmatrix_t *m1, nmatrix_t *m2);
+
+void nmatrix_multiply_scalar(nmatrix_t *m, float scalar,
+                             nmatrix_t *result);
+
+void nmatrix_elementwise_multiply(nmatrix_t *m1, nmatrix_t *m2,
+                                  nmatrix_t *result);
+
+void nmatrix_add(nmatrix_t *m1, nmatrix_t *m2,
+                 nmatrix_t *result);
+void nmatrix_sub(nmatrix_t *m1, nmatrix_t *m2,
+                 nmatrix_t *result);
+
+void nmatrix_transpose(nmatrix_t *m, 
+                       nmatrix_t *result);
+// void nmatrix_transpose_axis(nmatrix_t *m,
+                            // nmatrix_t *result, ...);
+
+bool nmatrix_equal(nmatrix_t *m1, nmatrix_t *m2);
+
+void nmatrix_for_each_operator(nmatrix_t *m, float (*op)(float), 
+                               nmatrix_t *result);
+
+void nmatrix_print(nmatrix_t *m);
+
+void nmatrix_set_values_to_fit(nmatrix_t *m, int num_elements, float* elements);
 
 #endif // MATRIX_H

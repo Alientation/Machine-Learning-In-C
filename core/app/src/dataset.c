@@ -331,6 +331,7 @@ void one_hot_encode_matrix(mymatrix_t *mymatrix, int label) {
 
 // TODO load on separate thread
 // TODO apply random scaling
+// TODO normalize the inputs into the model since shifting and rotations causes them to lower in magnitude
 void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *dataset, 
         float train_test_split, int num_transformations, int max_rot_deg, int max_transl_x, int max_transl_y, float max_artifacts) {
     assert(dataset->type == DATASET_IMAGES);

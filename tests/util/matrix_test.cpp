@@ -9,6 +9,20 @@ TEST(matrix, matrix_allocator) {
     matrix_free(m);
 }
 
+TEST(nmatrix, nmatrix_allocator) {
+    nmatrix_t m = nmatrix_allocator(2, 2, 3);
+
+    EXPECT_NE(m.matrix, nullptr);
+    EXPECT_EQ(m.n_dims, 2);
+    EXPECT_EQ(m.dims[0], 2);
+    EXPECT_EQ(m.dims[1], 3);
+    EXPECT_EQ(m.n_elements, 6);
+    for (int i = 0; i < m.n_elements; i++) {
+        EXPECT_EQ(m.matrix[i], 0.0);
+    }
+    nmatrix_free(&m);
+}
+
 TEST(matrix, matrix_constructor) {
     float a0[2] = {1,0};
     float a1[2] = {0,1};
@@ -22,6 +36,49 @@ TEST(matrix, matrix_constructor) {
     EXPECT_EQ(m.matrix[0][1], 0);
     EXPECT_EQ(m.matrix[1][0], 0);
     EXPECT_EQ(m.matrix[1][1], 1);
+}
+
+TEST(nmatrix, nmatrix_constructor) {
+    float a[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m = nmatrix_constructor(6, a, 2, 2, 3);
+    
+    EXPECT_EQ(m.n_dims, 2);
+    EXPECT_EQ(m.dims[0], 2);
+    EXPECT_EQ(m.dims[1], 3);
+    EXPECT_EQ(m.n_elements, 6);
+    
+    EXPECT_EQ(m.matrix[0], 0.);
+    EXPECT_EQ(m.matrix[1], 1.);
+    EXPECT_EQ(m.matrix[2], 2.);
+    EXPECT_EQ(m.matrix[3], 3.);
+    EXPECT_EQ(m.matrix[4], 4.);
+    EXPECT_EQ(m.matrix[5], 5.);
+}
+
+TEST(nmatrix, nmatrix_reshape) {
+    float a[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m = nmatrix_constructor(6, a, 2, 2, 3);
+
+    nmatrix_reshape(&m, 2, 3, 2);
+    
+    EXPECT_EQ(m.n_elements, 6);
+    EXPECT_EQ(m.n_dims, 2);
+    EXPECT_EQ(m.dims[0], 3);
+    EXPECT_EQ(m.dims[1], 2);
+
+    EXPECT_EQ(m.matrix[0], 0.);
+    EXPECT_EQ(m.matrix[1], 1.);
+    EXPECT_EQ(m.matrix[2], 2.);
+    EXPECT_EQ(m.matrix[3], 3.);
+    EXPECT_EQ(m.matrix[4], 4.);
+    EXPECT_EQ(m.matrix[5], 5.);
+}
+
+TEST(nmatrix, check_nmatrix_shape) {
+    float a[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m = nmatrix_constructor(6, a, 2, 2, 3);
+
+    EXPECT_TRUE(check_nmatrix_shape(&m, 2, 2, 3));
 }
 
 TEST(matrix, matrix_copy) {
@@ -42,6 +99,14 @@ TEST(matrix, matrix_copy) {
     matrix_free(copy);
 }
 
+TEST(nmatrix, nmatrix_copy) {
+    float a[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m = nmatrix_constructor(6, a, 2, 2, 3);
+    nmatrix_t copy = nmatrix_copy(&m);
+    
+    EXPECT_TRUE(nmatrix_equal(&m, &copy));
+}
+
 TEST(matrix, matrix_memcpy) {
     float a0[2] = {1,2};
     float a1[2] = {2,1};
@@ -59,6 +124,15 @@ TEST(matrix, matrix_memcpy) {
     EXPECT_EQ(copy.matrix[1][1], 1);
 
     matrix_free(copy);
+}
+
+TEST(nmatrix, nmatrix_memcpy) {
+    float a[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m = nmatrix_constructor(6, a, 2, 2, 3);
+    nmatrix_t copy = nmatrix_allocator(2, 2, 3);
+    nmatrix_memcpy(&copy, &m);
+
+    EXPECT_TRUE(nmatrix_equal(&copy, &m));
 }
 
 TEST(matrix, matrix_multiply_identity) {
@@ -108,6 +182,41 @@ TEST(matrix, matrix_multiply) {
     matrix_free(m3);
 }
 
+TEST(nmatrix, nmatrix_multiply) {
+    float a1[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m1 = nmatrix_constructor(6, a1, 2, 2, 3);
+
+    float a2[6] = {5, 4, 3, 2, 1, 0};
+    nmatrix_t m2 = nmatrix_constructor(6, a2, 2, 3, 2);
+
+    float expected[4] = {5, 2, 32, 20};
+    nmatrix_t exp = nmatrix_constructor(4, expected, 2, 2, 2);
+
+    nmatrix_t result = nmatrix_allocator(2, 2, 2);
+    nmatrix_multiply(&m1, &m2, &result);
+    
+    nmatrix_print(&exp);
+    nmatrix_print(&result);
+
+    EXPECT_TRUE(nmatrix_equal(&exp, &result));
+}
+
+TEST(nmatrix, nmatrix_multiply_stacked) {
+    float a1[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    nmatrix_t m1 = nmatrix_constructor(12, a1, 3, 2, 3, 2);
+
+    float a2[12] = {11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+    nmatrix_t m2 = nmatrix_constructor(12, a2, 3, 2, 2, 3);
+
+    float expected[18] = {8,7,6,46,41,36,84,75,66,44,31,18,58,41,24,72,51,30};
+    nmatrix_t exp = nmatrix_constructor(18, expected, 3, 2, 3, 3);
+
+    nmatrix_t result = nmatrix_allocator(3, 2, 3, 3);
+    nmatrix_multiply(&m1, &m2, &result);
+
+    EXPECT_TRUE(nmatrix_equal(&exp, &result));
+}
+
 TEST(matrix, matrix_multiply_scalar) {
     float a0[3] = {1,2,3};
     float a1[3] = {4,5,6};
@@ -129,7 +238,23 @@ TEST(matrix, matrix_multiply_scalar) {
     matrix_free(m2);
 }
 
-TEST(matrix, elementwise_multiply) {
+TEST(nmatrix, nmatrix_multiply_scalar) {
+    float a[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m = nmatrix_constructor(6, a, 2, 2, 3);
+
+    float expected[6];
+    for (int i = 0; i < 6; i++) {
+        expected[i] = a[i] * 2;
+    }
+    nmatrix_t exp = nmatrix_constructor(6, expected, 2, 2, 3);
+
+    nmatrix_t result = nmatrix_allocator(2, 2, 3);
+    nmatrix_multiply_scalar(&m, 2, &result);
+    
+    EXPECT_TRUE(nmatrix_equal(&exp, &result));
+}
+
+TEST(matrix, matrix_elementwise_multiply) {
     float a0[2] = {1,0};
     float a1[2] = {0,1};
     float *array1[2] = {a0, a1};
@@ -154,7 +279,26 @@ TEST(matrix, elementwise_multiply) {
     matrix_free(m3);
 }
 
-TEST(matrix, add) {
+TEST(nmatrix, nmatrix_elementwise_multiply) {
+    float a1[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m1 = nmatrix_constructor(6, a1, 2, 2, 3);
+
+    float a2[6] = {5, 4, 3, 2, 1, 0};
+    nmatrix_t m2 = nmatrix_constructor(6, a2, 2, 2, 3);
+
+    float expected[6];
+    for (int i = 0; i < 6; i++) {
+        expected[i] = a1[i] * a2[i];
+    }
+    nmatrix_t exp = nmatrix_constructor(6, expected, 2, 2, 3);
+
+    nmatrix_t result = nmatrix_allocator(2, 2, 3);
+    nmatrix_elementwise_multiply(&m1, &m2, &result);
+    
+    EXPECT_TRUE(nmatrix_equal(&exp, &result));
+}
+
+TEST(matrix, matrix_add) {
     float a0[2] = {1,0};
     float a1[2] = {0,1};
     float *array1[2] = {a0, a1};
@@ -179,7 +323,26 @@ TEST(matrix, add) {
     matrix_free(m3);
 }
 
-TEST(matrix, add_row) {
+TEST(nmatrix, nmatrix_add) {
+    float a1[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m1 = nmatrix_constructor(6, a1, 2, 2, 3);
+
+    float a2[6] = {5, 4, 3, 2, 1, 0};
+    nmatrix_t m2 = nmatrix_constructor(6, a2, 2, 2, 3);
+
+    float expected[6];
+    for (int i = 0; i < 6; i++) {
+        expected[i] = a1[i] + a2[i];
+    }
+    nmatrix_t exp = nmatrix_constructor(6, expected, 2, 2, 3);
+
+    nmatrix_t result = nmatrix_allocator(2, 2, 3);
+    nmatrix_add(&m1, &m2, &result);
+    
+    EXPECT_TRUE(nmatrix_equal(&exp, &result));
+}
+
+TEST(matrix, matrix_add_row) {
     float a0[2] = {1,0};
     float a1[2] = {0,1};
     float *array1[2] = {a0, a1};
@@ -202,7 +365,7 @@ TEST(matrix, add_row) {
     matrix_free(m3);
 }
 
-TEST(matrix, sub) {
+TEST(matrix, matrix_sub) {
     float a0[2] = {1,0};
     float a1[2] = {0,1};
     float *array1[2] = {a0, a1};
@@ -227,15 +390,34 @@ TEST(matrix, sub) {
     matrix_free(m3);
 }
 
-TEST(matrix, column_extend) {
+TEST(nmatrix, nmatrix_sub) {
+    float a1[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m1 = nmatrix_constructor(6, a1, 2, 2, 3);
+
+    float a2[6] = {5, 4, 3, 2, 1, 0};
+    nmatrix_t m2 = nmatrix_constructor(6, a2, 2, 2, 3);
+
+    float expected[6];
+    for (int i = 0; i < 6; i++) {
+        expected[i] = a1[i] - a2[i];
+    }
+    nmatrix_t exp = nmatrix_constructor(6, expected, 2, 2, 3);
+
+    nmatrix_t result = nmatrix_allocator(2, 2, 3);
+    nmatrix_sub(&m1, &m2, &result);
+    
+    EXPECT_TRUE(nmatrix_equal(&exp, &result));
+}
+
+TEST(matrix, matrix_column_extend) {
     // todo
 }
 
-TEST(matrix, row_extend) {
+TEST(matrix, matrix_row_extend) {
     // todo
 }
 
-TEST(matrix, transpose) {
+TEST(matrix, matrix_transpose) {
     float a0[3] = {1,2,3};
     float a1[3] = {4,5,6};
     float *array1[2] = {a0, a1};
@@ -257,7 +439,33 @@ TEST(matrix, transpose) {
     matrix_free(m2);
 }
 
-TEST(matrix, equal) {
+TEST(nmatrix, nmatrix_transpose) {
+    float a[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m = nmatrix_constructor(6, a, 2, 2, 3);
+
+    float expected[6] = {0, 3, 1, 4, 2, 5};
+    nmatrix_t exp = nmatrix_constructor(6, expected, 2, 3, 2);
+
+    nmatrix_t result = nmatrix_allocator(2, 3, 2);
+    nmatrix_transpose(&m, &result);
+    
+    EXPECT_TRUE(nmatrix_equal(&exp, &result));
+}
+
+TEST(nmatrix, nmatrix_transpose_3d) {
+    float a[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m = nmatrix_constructor(6, a, 3, 1, 2, 3);
+
+    float expected[6] = {0, 3, 1, 4, 2, 5};
+    nmatrix_t exp = nmatrix_constructor(6, expected, 3, 3, 2, 1);
+
+    nmatrix_t result = nmatrix_allocator(3, 3, 2, 1);
+    nmatrix_transpose(&m, &result);
+    
+    EXPECT_TRUE(nmatrix_equal(&exp, &result));
+}
+
+TEST(matrix, matrix_equal) {
     float a0[2] = {2,1};
     float a1[2] = {3,4};
     float *array1[2] = {a0, a1};
@@ -274,6 +482,50 @@ TEST(matrix, equal) {
     EXPECT_EQ(matrix_equal(m1, m2), false);
 }
 
-TEST(matrix, for_each_operator) {
+TEST(nmatrix, nmatrix_equal_true) {
+    float a1[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m1 = nmatrix_constructor(6, a1, 2, 2, 3);
+
+    float a2[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m2 = nmatrix_constructor(6, a2, 2, 2, 3);
+
+    EXPECT_TRUE(nmatrix_equal(&m1, &m2));
+}
+
+TEST(nmatrix, nmatrix_nequal_ndims) {
+    float a1[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m1 = nmatrix_constructor(6, a1, 2, 2, 3);
+
+    float a2[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m2 = nmatrix_constructor(6, a2, 3, 1, 2, 3);
+
+    EXPECT_FALSE(nmatrix_equal(&m1, &m2));
+}
+
+TEST(nmatrix, nmatrix_nequal_dims) {
+    float a1[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m1 = nmatrix_constructor(6, a1, 2, 2, 3);
+
+    float a2[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m2 = nmatrix_constructor(6, a2, 2, 3, 2);
+
+    EXPECT_FALSE(nmatrix_equal(&m1, &m2));
+}
+
+TEST(nmatrix, nmatrix_nequal_elements) {
+    float a1[6] = {0, 1, 2, 3, 4, 5};
+    nmatrix_t m1 = nmatrix_constructor(6, a1, 2, 2, 3);
+
+    float a2[6] = {5, 4, 3, 2, 1, 0};
+    nmatrix_t m2 = nmatrix_constructor(6, a2, 2, 2, 3);
+
+    EXPECT_FALSE(nmatrix_equal(&m1, &m2));
+}
+
+TEST(matrix, matrix_for_each_operator) {
+    // todo
+}
+
+TEST(nmatrix, nmatrix_for_each_operator) {
     // todo
 }

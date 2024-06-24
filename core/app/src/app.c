@@ -92,8 +92,8 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     model_digit->num_layers = 0;
 
     nmatrix_t input = nmatrix_allocator(2, 784, 1);
-    nmatrix_t dense_1 = nmatrix_allocator(2, 32, 1);
-    nmatrix_t dense_2 = nmatrix_allocator(2, 16, 1);
+    nmatrix_t dense_1 = nmatrix_allocator(2, 64, 1);
+    nmatrix_t dense_2 = nmatrix_allocator(2, 32, 1);
     nmatrix_t output = nmatrix_allocator(2, 10, 1);
 
     layer_t *input_layer = layer_input(model_digit, input);
@@ -106,15 +106,10 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     layer_t *dense_layer_3 = layer_dense(model_digit, output);
     layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_softmax);
     layer_t *output_layer = layer_output(model_digit, output_make_guess_one_hot_encoded, output_functions_crossentropy, output_cost_categorical_cross_entropy);
-
-    // layer_t *output_layer = layer_output(model_digit, output_make_guess_one_hot_encoded, output_functions_meansquared, output_cost_meansquared);
     
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);
-    // model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.weights, 0, 0.2);
-    // model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.bias, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.weights, 0, 0.2);
-    // model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.bias, 0, 0.2);
 
     nmatrix_free(&input);
     nmatrix_free(&dense_1);

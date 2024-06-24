@@ -28,11 +28,16 @@
  * matrix broadcasting??? support for multi-dimension matrices?????
  * 
  * 
- * Performance History
- * 6/23/2024 - prior to nmatrix refactor, 3200 28x28 examples per second for 12k test/train size (0.8 split)
- * 6/23/2024 - after nmatrix refactor, same test results in 2800 examples per second, likely because the size of the nmatrix struct is large and passing
+ * Performance History 28x28 examples for 12k test/train size (0.8 split)
+ * 6/23/2024 - prior to nmatrix refactor, 3200 examples per second per second
+ * 6/23/2024 - after nmatrix refactor, results in 2800 e/s, likely because the size of the nmatrix struct is large and passing
  *              them around without using references is slow
- * 6/23/2024 - temporarily limiting nmatrix dimensions to 2 results in 2850 examples per second.. so that was not the problem
+ * 6/23/2024 - temporarily limiting nmatrix dimensions to 2 results in 2850 e/s.. so that was not the problem
+ * 6/23/2024 - 3355 e/s, reverted the cache optimized loop ordering for matrix multiplication.. memset to clear matrix data since we are reusing the same buffers makes it signicantly slower
+ * 6/24/2024 - 3389 e/s, setting MAX_DIMS back to a low number (4)
+ * 6/24/2024 - 3404 e/s, Optimized 1D transposes to just resize.. not sure how much of an improvement this made
+ * 6/24/2024 - 3438 e/s, Optimized out function indirection for sigmoid and relu feedforward/backprop.. also not sure how significant this change was
+ * 6/24/2024 - 3441 e/s, Using fast exp() approximation .. reverting.. not worth the lower precision
  */
 
 

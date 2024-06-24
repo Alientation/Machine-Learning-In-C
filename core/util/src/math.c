@@ -49,5 +49,15 @@ float sigmoid_prime(float z) {
 }
 
 float relu_prime(float z) {
-    return z >= 0;
+    return z > 0;
+}
+
+
+
+
+// https://github.com/ekmett/approximate/
+float fast_exp(float z) {
+    union { float f; int x; } u;
+    u.x = (int) (12102203 * z + 1064866805);
+    return u.f;
 }

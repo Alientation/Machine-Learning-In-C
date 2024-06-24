@@ -15,5 +15,6 @@ float relu(float z);
 float sigmoid_prime(float z);
 float relu_prime(float z);
 
+float fast_exp(float z);
 
 #endif // MY_MATH_H

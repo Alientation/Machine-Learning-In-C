@@ -529,7 +529,13 @@ void nmatrix_transpose_2D(nmatrix_t *m,
 // https://numpy.org/doc/stable/reference/generated/numpy.transpose.html
 void nmatrix_transpose(nmatrix_t *m, 
                        nmatrix_t *result) {
-    if (m->n_dims == 2) {
+    if (m->n_dims == 1 || (m->n_dims == 2 && m->dims[1] == 1)) {
+        nmatrix_memcpy(result, m);
+        result->n_dims = 2;
+        result->dims[0] = 1;
+        result->dims[1] = m->dims[0];
+        return;
+    } if (m->n_dims == 2) {
         nmatrix_transpose_2D(m, result);
         return;
     }

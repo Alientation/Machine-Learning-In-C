@@ -68,7 +68,7 @@ void matrix_set_values_to_fit(mymatrix_t m, float* elements, unsigned int num_el
 // todo maybe create a generic n-dimensional matrix (using macros ??, is it even worth the effort tho)
 
 #ifndef MAX_DIMS
-#define MAX_DIMS 16
+#define MAX_DIMS 4
 #endif
 
 typedef struct NMatrix {

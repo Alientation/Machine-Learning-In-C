@@ -90,12 +90,20 @@ const layer_function_t dropout_functions = {
 };
 
 nmatrix_t activation_feed_forward_sigmoid(layer_t *this, nmatrix_t input) {
-    nmatrix_for_each_operator(&input, sigmoid, &this->layer.activation.activated_values);
+    // nmatrix_for_each_operator(&input, sigmoid, &this->layer.activation.activated_values);
+    for (int i = 0; i < input.n_elements; i++) {
+        this->layer.activation.activated_values.matrix[i] = 1. / (1 + exp(-input.matrix[i]));
+    }
+    
     return this->layer.activation.activated_values;
 }
 
 nmatrix_t activation_feed_forward_relu(layer_t *this, nmatrix_t input) {
-    nmatrix_for_each_operator(&input, relu, &this->layer.activation.activated_values);
+    // nmatrix_for_each_operator(&input, relu, &this->layer.activation.activated_values);
+    for (int i = 0; i < input.n_elements; i++) {
+        this->layer.activation.activated_values.matrix[i] = fmax(0, input.matrix[i]);
+    }
+    
     return this->layer.activation.activated_values;
 }
 
@@ -115,7 +123,12 @@ nmatrix_t activation_feed_forward_softmax(layer_t *this, nmatrix_t input) {
 nmatrix_t activation_back_propagation_sigmoid(layer_t *this, nmatrix_t d_cost_wrt_output, float learning_rate) {
     nmatrix_t X = layer_get_neurons(this->prev);
 
-    nmatrix_for_each_operator(&X, sigmoid_prime, &this->layer.activation.activated_values);
+    // nmatrix_for_each_operator(&X, sigmoid_prime, &this->layer.activation.activated_values);
+    for (int i = 0; i < X.n_elements; i++) {
+        float z = 1.0 / (1 + exp(-X.matrix[i]));
+        this->layer.activation.activated_values.matrix[i] = z * (1-z);
+    }
+
     nmatrix_elementwise_multiply(&d_cost_wrt_output, &this->layer.activation.activated_values, &this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
 }
@@ -123,7 +136,11 @@ nmatrix_t activation_back_propagation_sigmoid(layer_t *this, nmatrix_t d_cost_wr
 nmatrix_t activation_back_propagation_relu(layer_t *this, nmatrix_t d_cost_wrt_output, float learning_rate) {
     nmatrix_t X = layer_get_neurons(this->prev);
 
-    nmatrix_for_each_operator(&X, relu_prime, &this->layer.activation.activated_values);
+    // nmatrix_for_each_operator(&X, relu_prime, &this->layer.activation.activated_values);
+    for (int i = 0; i < X.n_elements; i++) {
+        this->layer.activation.activated_values.matrix[i] = X.matrix[i] > 0;
+    }
+
     nmatrix_elementwise_multiply(&d_cost_wrt_output, &this->layer.activation.activated_values, &this->layer.activation.activated_values);
     return this->layer.activation.activated_values;
 }

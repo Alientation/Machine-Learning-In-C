@@ -30,6 +30,9 @@
  * 
  * Performance History
  * 6/23/2024 - prior to nmatrix refactor, 3200 28x28 examples per second for 12k test/train size (0.8 split)
+ * 6/23/2024 - after nmatrix refactor, same test results in 2800 examples per second, likely because the size of the nmatrix struct is large and passing
+ *              them around without using references is slow
+ * 6/23/2024 - temporarily limiting nmatrix dimensions to 2 results in 2850 examples per second.. so that was not the problem
  */
 
 

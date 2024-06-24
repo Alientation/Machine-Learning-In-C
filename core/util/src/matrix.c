@@ -272,15 +272,25 @@ void matrix_multiply(mymatrix_t m1, mymatrix_t m2,
 void matrix_2d_multiply(int r1, int c1, float *m1, int r2, int c2, float *m2,
                         float *dst) {
     assert(c1 == r2);
-    memset(dst, 0, sizeof(float) * r1 * c2);
+    // memset(dst, 0, sizeof(float) * r1 * c2);
 
     for (int r = 0; r < r1; r++) {
-        for (int i = 0; i < c1; i++) {
-            for (int c = 0; c < c2; c++) {
-                dst[r * c2 + c] += m1[r * c1 + i] * m2[i * c2 + c];
+        for (int c = 0; c < c2; c++) {
+            float dot = 0;
+            for (int i = 0; i < c1; i++) {
+                dot += m1[r * c1 + i] * m2[i * c2 + c];
             }
+            dst[r * c2 + c] = dot;
         }
     }
+
+    // for (int r = 0; r < r1; r++) {
+    //     for (int i = 0; i < c1; i++) {
+    //         for (int c = 0; c < c2; c++) {
+    //             dst[r * c2 + c] += m1[r * c1 + i] * m2[i * c2 + c];
+    //         }
+    //     }
+    // }
 }
 
 // like numpy's matmul https://numpy.org/doc/stable/reference/generated/numpy.matmul.html
@@ -291,6 +301,11 @@ void nmatrix_multiply(nmatrix_t *m1, nmatrix_t *m2,
     assert(m2->n_dims >= 2);
     assert(m1->n_dims == m2->n_dims);
     assert(m1->dims[m1->n_dims-1] == m2->dims[m2->n_dims-2]);
+
+    if (m1->n_dims == 2 && m2->n_dims == 2) {
+        matrix_2d_multiply(m1->dims[0], m1->dims[1], m1->matrix, m2->dims[0], m2->dims[1], m2->matrix, result->matrix);
+        return;
+    }
 
     // all the dimensions other than the last 2 must be identical
     result->n_dims = m1->n_dims;

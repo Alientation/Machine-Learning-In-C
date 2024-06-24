@@ -42,8 +42,8 @@ static int compute_network_width() {
     layer_t *cur_layer = vis_state.vis_args.model->input_layer;
     int network_width = LAYER_GAP * (vis_state.vis_args.model->num_layers - 1);
     for (int i = 0; i < vis_state.vis_args.model->num_layers; i++) {
-        mymatrix_t neurons = layer_get_neurons(cur_layer);
-        int num_nodes = neurons.r * neurons.c;
+        nmatrix_t neurons = layer_get_neurons(cur_layer);
+        int num_nodes = neurons.n_elements;
         vis_state.node_positions[i] = malloc(num_nodes * sizeof(Vector2));
         
         int nodes_per_section = HIDDEN_LAYER_NODES_HEIGHT;
@@ -72,8 +72,8 @@ static void construct_node_positions() {
     int layer_x = network_x;
     cur_layer = vis_state.vis_args.model->input_layer;
     for (int i = 0 ; i < vis_state.vis_args.model->num_layers; i++) {
-        mymatrix_t neurons = layer_get_neurons(cur_layer);
-        int num_nodes = neurons.r * neurons.c;
+        nmatrix_t neurons = layer_get_neurons(cur_layer);
+        int num_nodes = neurons.n_elements;
         int nodes_per_section = cur_layer->type == INPUT ? INPUT_LAYER_NODES_HEIGHT : HIDDEN_LAYER_NODES_HEIGHT;
         if (nodes_per_section > num_nodes) {
             nodes_per_section = num_nodes;
@@ -284,9 +284,9 @@ static Vector2 get_layer_topleft(int layer_index) {
 }
 
 static Vector2 get_layer_bottomright(int layer_index) {
-    mymatrix_t nodes = layer_get_neurons(get_layer(layer_index));
+    nmatrix_t nodes = layer_get_neurons(get_layer(layer_index));
     
-    return vis_state.node_positions[layer_index][nodes.r * nodes.c - 1]; // TODO bottom right position is not accurate if last section of layer has less nodes
+    return vis_state.node_positions[layer_index][nodes.n_elements - 1]; // TODO bottom right position is not accurate if last section of layer has less nodes
     // instead store more info in node_positions (maybe make it an array of layer_info which contains node_positions)
 }
 
@@ -305,28 +305,28 @@ static void OpenTooltip(const char* msg, float priority, float *weight_value) {
 }
 
 static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
-    mymatrix_t this_neurons = layer_get_neurons(layer);
-    mymatrix_t prev_neurons = layer_get_neurons(prev);
+    nmatrix_t this_neurons = layer_get_neurons(layer);
+    nmatrix_t prev_neurons = layer_get_neurons(prev);
     
     if (layer->type == DENSE) { // fully connected
-        mymatrix_t weights = layer->layer.dense.weights;
+        nmatrix_t weights = layer->layer.dense.weights;
 
         int skip = 1;
-        if (weights.r * weights.c >= MAX_WEIGHTS_DRAWN_PER_LAYER) {
-            skip = 1 + (weights.r * weights.c + MAX_WEIGHTS_DRAWN_PER_LAYER - 1) / MAX_WEIGHTS_DRAWN_PER_LAYER;
+        if (weights.n_elements >= MAX_WEIGHTS_DRAWN_PER_LAYER) {
+            skip = 1 + (weights.n_elements + MAX_WEIGHTS_DRAWN_PER_LAYER - 1) / MAX_WEIGHTS_DRAWN_PER_LAYER;
         }
 
-        for (int r2 = 0; r2 < this_neurons.r; r2++) {
+        for (int r2 = 0; r2 < this_neurons.dims[0]; r2++) {
             // so we can color each weight based on its respective value to other weights
             // connecting to the same output neuron
             float max_weight = -1;
-            for (int r1 = 0; r1 < prev_neurons.r; r1++) {
-                float value = fabs(weights.matrix[r2][r1]);
+            for (int r1 = 0; r1 < prev_neurons.dims[0]; r1++) {
+                float value = fabs(weights.matrix[r2 * prev_neurons.dims[0] + r1]);
                 max_weight = max_weight < value ? value : max_weight;
             }
             
-            for (int r1 = 0; r1 < prev_neurons.r; r1++) {
-                if ((r2 * weights.r + r1) % skip != 0) {
+            for (int r1 = 0; r1 < prev_neurons.dims[0]; r1++) {
+                if ((r2 * weights.dims[0] + r1) % skip != 0) {
                     continue;
                 }
 
@@ -335,7 +335,7 @@ static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
 
                 this_pos.x -= NODE_RADIUS;
                 prev_pos.x += NODE_RADIUS;
-                float ratio = max_weight != 0 ? 1 - fabs(weights.matrix[r2][r1]) / max_weight : 0.5;
+                float ratio = max_weight != 0 ? 1 - fabs(weights.matrix[r2 * prev_neurons.dims[0] + r1]) / max_weight : 0.5;
                 
                 int cval = (int) (255 * ratio);
                 Color color = {
@@ -347,16 +347,16 @@ static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 if (CheckCollisionPointLine(GetMousePosition(), prev_pos, this_pos, MOUSE_HOVER_DISTANCE_TO_WEIGHT)) { 
                     // display information about the weight
                     char weight[WEIGHT_DISPLAY_PRECISION];
-                    snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", weights.matrix[r2][r1]);
-                    OpenTooltip(weight, 1 / (0.1 + sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2))), &weights.matrix[r2][r1]);
+                    snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", weights.matrix[r2 * prev_neurons.dims[0] + r1]);
+                    OpenTooltip(weight, 1 / (0.1 + sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2))), &weights.matrix[r2 * prev_neurons.dims[0] + r1]);
                 }
             }
         }
     } else { // Activation or Output, one to one connections
-        assert(this_neurons.r == prev_neurons.r);
-        for (int r = 0; r < prev_neurons.r; r++) {
-            Vector2 this_pos = get_node_position(layer_index, r);
-            Vector2 prev_pos = get_node_position(layer_index-1, r);
+        assert(this_neurons.n_elements == prev_neurons.n_elements);
+        for (int i = 0; i < prev_neurons.n_elements; i++) {
+            Vector2 this_pos = get_node_position(layer_index, i);
+            Vector2 prev_pos = get_node_position(layer_index-1, i);
 
             this_pos.x -= NODE_RADIUS;
             prev_pos.x += NODE_RADIUS;
@@ -379,12 +379,12 @@ static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 if (layer->type == ACTIVATION) {
                     // draw activated values
                     char activated_values[NODE_DISPLAY_PRECISION];
-                    snprintf(activated_values, NODE_DISPLAY_PRECISION, "%f", layer->layer.activation.activated_values.matrix[r][0]);
+                    snprintf(activated_values, NODE_DISPLAY_PRECISION, "%f", layer->layer.activation.activated_values.matrix[i]);
                     OpenTooltip(activated_values, 1 / (0.1 + sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2))), NULL);
                 } else if (layer->type == OUTPUT) {
                     // draw activated values
                     char output_values[NODE_DISPLAY_PRECISION];
-                    snprintf(output_values, NODE_DISPLAY_PRECISION, "%f", layer->layer.output.guess.matrix[r][0]);
+                    snprintf(output_values, NODE_DISPLAY_PRECISION, "%f", layer->layer.output.guess.matrix[i]);
                     OpenTooltip(output_values, 1 / (0.1 + sqrt(pow(prev_pos.x - this_pos.x, 2) + pow(prev_pos.y - this_pos.y, 2))), NULL);
                 }
             }
@@ -393,7 +393,7 @@ static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
 }
 
 static void DrawLayerInformation(int layer_index, layer_t *layer) {
-    mymatrix_t nodes = layer_get_neurons(layer);
+    nmatrix_t nodes = layer_get_neurons(layer);
 
     // draw layer name and information about it
     Vector2 layer_topleft = get_layer_topleft(layer_index);
@@ -418,13 +418,13 @@ static void DrawLayerInformation(int layer_index, layer_t *layer) {
 }
 
 static void DrawLayer(int layer_index, layer_t *layer) {
-    mymatrix_t nodes = layer_get_neurons(layer);
+    nmatrix_t nodes = layer_get_neurons(layer);
     
     // calculate values for color scaling
     float max_node_value = -1;
     float min_node_value = -1;
-    for (int r = 0; r < nodes.r; r++) {
-        float value = fabs(tanh(nodes.matrix[r][0]));
+    for (int r = 0; r < nodes.dims[0]; r++) {
+        float value = fabs(tanh(nodes.matrix[r]));
         if (max_node_value < 0 || min_node_value < 0) {
             max_node_value = value;
             min_node_value = value;
@@ -435,13 +435,13 @@ static void DrawLayer(int layer_index, layer_t *layer) {
     }
 
     // draw each neuron
-    for (int r = 0; r < nodes.r; r++) {
+    for (int r = 0; r < nodes.dims[0]; r++) {
         // draw node with color respective to its value
         float ratio = .5;
         if (max_node_value != min_node_value) {
-            ratio = (fabs(tanh(nodes.matrix[r][0])) - min_node_value) / (max_node_value - min_node_value);
+            ratio = (fabs(tanh(nodes.matrix[r])) - min_node_value) / (max_node_value - min_node_value);
         }
-        Color target = nodes.matrix[r][0] < 0 ? NODE_NEG_COLOR : NODE_POS_COLOR;
+        Color target = nodes.matrix[r] < 0 ? NODE_NEG_COLOR : NODE_POS_COLOR;
         Vector3 HSV = ColorToHSV(target);
         Color shade = ColorFromHSV(HSV.x, HSV.y * ratio, HSV.z);
         Vector2 pos = get_node_position(layer_index, r);
@@ -461,10 +461,10 @@ static void DrawLayer(int layer_index, layer_t *layer) {
             if (NODE_RADIUS < MIN_NODE_RADIUS_FOR_SLIDER_BAR) {
                 // shortcut to set node values
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-                    nodes.matrix[r][0] = IsKeyDown(KEY_LEFT_SHIFT) ? -1 : 1;
+                    nodes.matrix[r] = IsKeyDown(KEY_LEFT_SHIFT) ? -1 : 1;
                     model_needs_update = true;
                 } else if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-                    nodes.matrix[r][0] = 0;
+                    nodes.matrix[r] = 0;
                     model_needs_update = true;
                 }
             } else {
@@ -475,29 +475,29 @@ static void DrawLayer(int layer_index, layer_t *layer) {
 
                 DrawRectangle(rec_x, rec_y, rec_width, rec_height, TOOLTIP_BACKGROUND_COLOR);
                 DrawRectangleLines(rec_x, rec_y, rec_width, rec_height, BLACK);
-                float prevValue = nodes.matrix[r][0];
+                float prevValue = nodes.matrix[r];
                 GuiSlider((Rectangle) {.x = pos.x - 3 * NODE_RADIUS / 4, .y = pos.y + NODE_DISPLAY_FONTSIZE, .width = 3 * NODE_RADIUS / 2, .height = NODE_DISPLAY_FONTSIZE},
-                        "0", "1", &nodes.matrix[r][0], 0, 1);
+                        "0", "1", &nodes.matrix[r], 0, 1);
 
                 // run model on the changed inputs
-                model_needs_update = prevValue != nodes.matrix[r][0];
+                model_needs_update = prevValue != nodes.matrix[r];
             }
 
             if (model_needs_update) {
-                mymatrix_t output = model_calculate(vis_state.vis_args.training_info->model);
+                nmatrix_t output = model_calculate(vis_state.vis_args.training_info->model);
             }
         }
         
         // draw value of node
         if (NODE_DISPLAY_PRECISION > MIN_NODE_PRECISION_FOR_DISPLAY) {
             char node_value[NODE_DISPLAY_PRECISION];
-            snprintf(node_value, NODE_DISPLAY_PRECISION, "%f", (float) nodes.matrix[r][0]);
+            snprintf(node_value, NODE_DISPLAY_PRECISION, "%f", (float) nodes.matrix[r]);
             DrawCenteredText(node_value, pos.x, pos.y, NODE_DISPLAY_FONTSIZE, BLACK);
         } else if (CheckCollisionPointCircle(GetMousePosition(), pos, NODE_RADIUS)) { // display tooltip
             // display information about the weight
             char weight[WEIGHT_DISPLAY_PRECISION];
-            snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", nodes.matrix[r][0]);
-            OpenTooltip(weight, 1000000, &nodes.matrix[r][0]);
+            snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", nodes.matrix[r]);
+            OpenTooltip(weight, 1000000, &nodes.matrix[r]);
         }
     }
 
@@ -563,18 +563,18 @@ static void DrawTrainingInfo() {
     }
 }
 
-static mymatrix_t set_training_set_display(bool is_train, int loc) {
+static nmatrix_t set_training_set_display(bool is_train, int loc) {
     training_info_t *t_info = vis_state.vis_args.training_info;
     assert(loc >= 0 && loc < is_train ? t_info->train_size : t_info->test_size);
 
     neural_network_model_t *model = vis_state.vis_args.training_info->model;
     int *cur = &vis_state.current_example;
     *cur = loc;
-    matrix_memcpy(model->input_layer->layer.input.input_values, is_train ? t_info->train_x[*cur] : t_info->test_x[*cur]);
+    nmatrix_memcpy(&model->input_layer->layer.input.input_values, is_train ? &t_info->train_x[*cur] : &t_info->test_x[*cur]);
     return model_calculate(model);
 }
 
-static mymatrix_t move_training_set_display(bool is_train, int move) {
+static nmatrix_t move_training_set_display(bool is_train, int move) {
     training_info_t *t_info = vis_state.vis_args.training_info;
     int *cur = &vis_state.current_example;
     int max = is_train ? t_info->train_size : t_info->test_size;
@@ -648,16 +648,16 @@ static void DrawTrainingExamplesDisplay() {
 
         training_info_t *t_info = vis_state.vis_args.training_info;
         bool is_train = vis_state.show_training;
-        mymatrix_t *correct = is_train ? t_info->train_y : t_info->test_y;
+        nmatrix_t *correct = is_train ? t_info->train_y : t_info->test_y;
         int *cur = &vis_state.current_example;
         int max = is_train ? t_info->train_size : t_info->test_size;
         const char* display_name = is_train ? "Train" : "Test";
 
         if (GuiButton(prev_incorrect_button_r, "<<<")) {
-            mymatrix_t output;
+            nmatrix_t output;
             do {
                 output = move_training_set_display(is_train, -1);
-            } while (matrix_equal(output, correct[*cur]) && *cur > 0 && *cur < max - 1);
+            } while (nmatrix_equal(&output, &correct[*cur]) && *cur > 0 && *cur < max - 1);
         }
         if (GuiButton(prev_button_r, "<")) {
             move_training_set_display(is_train, -1);
@@ -668,10 +668,10 @@ static void DrawTrainingExamplesDisplay() {
         }
 
         if (GuiButton(next_incorrect_button_r, ">>>")) {
-            mymatrix_t output;
+            nmatrix_t output;
             do {
                 output = move_training_set_display(is_train, 1);
-            } while (matrix_equal(output, correct[*cur]) && *cur > 0 && *cur < max - 1);
+            } while (nmatrix_equal(&output, &correct[*cur]) && *cur > 0 && *cur < max - 1);
         }
 
         DrawText(TextFormat("Displaying Example: %d", *cur), prev_incorrect_button_r.x, prev_incorrect_button_r.y + 20, 16, BLACK);
@@ -744,7 +744,7 @@ static void DrawWindow(neural_network_model_t *model) {
 
             if (vis_state.tooltip_weight_value && vis_state.playground_state && !vis_state.is_testing && !vis_state.is_training) { // todo replace with model.isLocked instead
                 *vis_state.tooltip_weight_value += WEIGHT_VALUE_MOUSEWHEEL_SCALE * GetMouseWheelMove();
-                mymatrix_t output = model_calculate(vis_state.vis_args.training_info->model); // todo preferrably run on separate thread
+                nmatrix_t output = model_calculate(vis_state.vis_args.training_info->model); // todo preferrably run on separate thread
             }
 
             vis_state.show_tooltip = false;

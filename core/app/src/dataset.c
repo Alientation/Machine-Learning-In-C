@@ -315,18 +315,18 @@ void DataSetRemoveImages(dataset_t *dataset, int from_index, int to_index) {
     images->count -= to_index - from_index;
 }
 
-void convert_image_to_mymatrix(mymatrix_t* mymatrix, Image image) {
+void convert_image_to_mymatrix(nmatrix_t* m, Image image) {
     for (int i = 0; i < image.height; i++) {
         for (int j = 0; j < image.width; j++) {
             // mymatrix->matrix[i * image.width + j][0] = 1 - GetImageColor(image, j, i).r / 256.0;
-            assert(image.height * image.width == mymatrix->r);
-            mymatrix->matrix[j * image.height + i][0] = 1 - GetImageColor(image, j, i).r / 256.0;
+            assert(image.height * image.width == m->n_elements);
+            m->matrix[j * image.height + i] = 1 - GetImageColor(image, j, i).r / 256.0;
         }
     }
 }
 
-void one_hot_encode_matrix(mymatrix_t *mymatrix, int label) {
-    mymatrix->matrix[label][0] = 1;
+void one_hot_encode_matrix(nmatrix_t *m, int label) {
+    m->matrix[label] = 1;
 }
 
 // TODO load on separate thread
@@ -357,10 +357,10 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
     training_info->train_size = ceil(data.count * train_test_split) * num_examples_per_image;
     training_info->test_size = data.count * num_examples_per_image - training_info->train_size;
 
-    training_info->train_x = malloc(training_info->train_size * sizeof(mymatrix_t));
-    training_info->train_y = malloc(training_info->train_size * sizeof(mymatrix_t));
-    training_info->test_x = malloc(training_info->test_size * sizeof(mymatrix_t));
-    training_info->test_y = malloc(training_info->test_size * sizeof(mymatrix_t));
+    training_info->train_x = malloc(training_info->train_size * sizeof(nmatrix_t));
+    training_info->train_y = malloc(training_info->train_size * sizeof(nmatrix_t));
+    training_info->test_x = malloc(training_info->test_size * sizeof(nmatrix_t));
+    training_info->test_y = malloc(training_info->test_size * sizeof(nmatrix_t));
 
     struct Example {
         Image image;
@@ -523,16 +523,16 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
     }
 
     for (int i = 0; i < training_info->train_size; i++) {
-        training_info->train_x[i] = matrix_allocator(input_size, 1);
-        training_info->train_y[i] = matrix_allocator(output_size, 1);
+        training_info->train_x[i] = nmatrix_allocator(2, input_size, 1);
+        training_info->train_y[i] = nmatrix_allocator(2, output_size, 1);
 
         convert_image_to_mymatrix(&training_info->train_x[i], shuffler[i].image);
         one_hot_encode_matrix(&training_info->train_y[i], shuffler[i].label);
     }
 
     for (int i = 0; i < training_info->test_size; i++) {
-        training_info->test_x[i] = matrix_allocator(input_size, 1);
-        training_info->test_y[i] = matrix_allocator(output_size, 1);
+        training_info->test_x[i] = nmatrix_allocator(2, input_size, 1);
+        training_info->test_y[i] = nmatrix_allocator(2, output_size, 1);
 
         convert_image_to_mymatrix(&training_info->test_x[i], shuffler[i + training_info->train_size].image);
         one_hot_encode_matrix(&training_info->test_y[i], shuffler[i + training_info->train_size].label);

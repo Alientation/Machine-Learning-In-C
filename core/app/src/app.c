@@ -91,10 +91,10 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     model_digit->output_layer = NULL;
     model_digit->num_layers = 0;
 
-    mymatrix_t input = matrix_allocator(784, 1);
-    mymatrix_t dense_1 = matrix_allocator(32, 1);
-    mymatrix_t dense_2 = matrix_allocator(16, 1);
-    mymatrix_t output = matrix_allocator(10, 1);
+    nmatrix_t input = nmatrix_allocator(2, 784, 1);
+    nmatrix_t dense_1 = nmatrix_allocator(2, 32, 1);
+    nmatrix_t dense_2 = nmatrix_allocator(2, 16, 1);
+    nmatrix_t output = nmatrix_allocator(2, 10, 1);
 
     layer_t *input_layer = layer_input(model_digit, input);
     layer_t *dense_layer_1 = layer_dense(model_digit, dense_1);
@@ -116,10 +116,10 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.weights, 0, 0.2);
     // model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.bias, 0, 0.2);
 
-    matrix_free(input);
-    matrix_free(dense_1);
-    matrix_free(dense_2);
-    matrix_free(output);
+    nmatrix_free(&input);
+    nmatrix_free(&dense_1);
+    nmatrix_free(&dense_2);
+    nmatrix_free(&output);
 
     return DEFAULT_TRAIN_INFO;
 }
@@ -130,9 +130,9 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
     model_xor->output_layer = NULL;
     model_xor->num_layers = 0;
 
-    mymatrix_t input = matrix_allocator(2, 1);
-    mymatrix_t dense_1 = matrix_allocator(2, 1);
-    mymatrix_t output = matrix_allocator(1, 1);
+    nmatrix_t input = nmatrix_allocator(2, 2, 1);
+    nmatrix_t dense_1 = nmatrix_allocator(2, 2, 1);
+    nmatrix_t output = nmatrix_allocator(2, 1, 1);
 
     layer_t *input_layer = layer_input(model_xor, input);
     layer_t *dense_layer_1 = layer_dense(model_xor, dense_1);
@@ -163,13 +163,13 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
         {0}
     };
 
-    mymatrix_t *input_data = malloc(num_examples * sizeof(mymatrix_t));
-    mymatrix_t *output_data = malloc(num_examples * sizeof(mymatrix_t));
+    nmatrix_t *input_data = malloc(num_examples * sizeof(nmatrix_t));
+    nmatrix_t *output_data = malloc(num_examples * sizeof(nmatrix_t));
     for (int i = 0; i < num_examples; i++) {
-        input_data[i] = matrix_allocator(input_size, 1);
-        output_data[i] = matrix_allocator(output_size, 1);
-        matrix_set_values_to_fit(input_data[i], raw_input_data[i], input_size);
-        matrix_set_values_to_fit(output_data[i], raw_output_data[i], output_size);
+        input_data[i] = nmatrix_allocator(2, input_size, 1);
+        output_data[i] = nmatrix_allocator(2, output_size, 1);
+        nmatrix_set_values_to_fit(&input_data[i], input_size, raw_input_data[i]);
+        nmatrix_set_values_to_fit(&output_data[i], output_size, raw_output_data[i]);
     }
 
     training_info_t training_info;
@@ -186,9 +186,9 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
     training_info.target_epochs = 200;
     training_info.target_accuracy = 1;
 
-    matrix_free(input);
-    matrix_free(dense_1);
-    matrix_free(output);
+    nmatrix_free(&input);
+    nmatrix_free(&dense_1);
+    nmatrix_free(&output);
 
     return training_info;
 }
@@ -198,9 +198,9 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     model_and->output_layer = NULL;
     model_and->num_layers = 0;
 
-    mymatrix_t input = matrix_allocator(2, 1);
-    mymatrix_t dense_1 = matrix_allocator(2, 1);
-    mymatrix_t output = matrix_allocator(1, 1);
+    nmatrix_t input = nmatrix_allocator(2, 2, 1);
+    nmatrix_t dense_1 = nmatrix_allocator(2, 2, 1);
+    nmatrix_t output = nmatrix_allocator(2, 1, 1);
 
     layer_t *input_layer = layer_input(model_and, input);
     layer_t *dense_layer_1 = layer_dense(model_and, dense_1);
@@ -231,13 +231,13 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
         {1}
     };
 
-    mymatrix_t *input_data = malloc(num_examples * sizeof(mymatrix_t));
-    mymatrix_t *output_data = malloc(num_examples * sizeof(mymatrix_t));
+    nmatrix_t *input_data = malloc(num_examples * sizeof(nmatrix_t));
+    nmatrix_t *output_data = malloc(num_examples * sizeof(nmatrix_t));
     for (int i = 0; i < num_examples; i++) {
-        input_data[i] = matrix_allocator(input_size, 1);
-        output_data[i] = matrix_allocator(output_size, 1);
-        matrix_set_values_to_fit(input_data[i], raw_input_data[i], input_size);
-        matrix_set_values_to_fit(output_data[i], raw_output_data[i], output_size);
+        input_data[i] = nmatrix_allocator(2, input_size, 1);
+        output_data[i] = nmatrix_allocator(2, output_size, 1);
+        nmatrix_set_values_to_fit(&input_data[i], input_size, raw_input_data[i]);
+        nmatrix_set_values_to_fit(&output_data[i], output_size, raw_output_data[i]);
     }
 
     training_info_t training_info;
@@ -254,9 +254,9 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     training_info.target_epochs = 2000000;
     training_info.target_accuracy = 1;
 
-    matrix_free(input);
-    matrix_free(dense_1);
-    matrix_free(output);
+    nmatrix_free(&input);
+    nmatrix_free(&dense_1);
+    nmatrix_free(&output);
 
     return training_info;
 }

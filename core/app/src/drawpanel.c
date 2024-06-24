@@ -696,7 +696,7 @@ static void GuiModelInfo(drawing_panel_args_t *draw_args, Rectangle draw_panel_r
         
         neural_network_model_t *model = draw_args->vis_args->training_info->model;
         convert_image_to_mymatrix(&model->input_layer->layer.input.input_values, input_image);
-        mymatrix_t output = model_calculate(model);
+        model_calculate(model);
         UnloadImage(input_image);
     }
 
@@ -713,16 +713,16 @@ static void GuiModelInfo(drawing_panel_args_t *draw_args, Rectangle draw_panel_r
             model_input_rec, (Vector2) {0, 0}, 0, WHITE);
 
     neural_network_model_t *model = draw_args->vis_args->training_info->model;
-    mymatrix_t output = model->output_layer->layer.output.output_values;
+    nmatrix_t output = model->output_layer->layer.output.output_values;
     int highest_guess = 0;
     for (int i = 0; i < draw_args->vis_args->num_labels; i++) {
-        if (output.matrix[i][0] > output.matrix[highest_guess][0]) {
+        if (output.matrix[i] > output.matrix[highest_guess]) {
             highest_guess = i;
         }
     }
 
     // show the model's prediction and confidence
-    DrawCenteredText(TextFormat("%d (%f)", highest_guess, output.matrix[highest_guess][0]), 
+    DrawCenteredText(TextFormat("%d (%f)", highest_guess, output.matrix[highest_guess]), 
             model_input_rec.x + model_input_rec.width/2, model_input_rec.y + model_input_rec.height + 10, 12, BLACK);
     
     // TODO show all confidences of each label on the side
@@ -733,7 +733,7 @@ static void GuiModelInfo(drawing_panel_args_t *draw_args, Rectangle draw_panel_r
 
     struct Label labels[draw_args->num_labels];
     for (int i = 0; i < draw_args->num_labels; i++) {
-        labels[i] = (struct Label) {.label = draw_args->label_names[i], .confidence = output.matrix[i][0]};
+        labels[i] = (struct Label) {.label = draw_args->label_names[i], .confidence = output.matrix[i]};
     }
 
     // since number of labels is small, selection sort is fine

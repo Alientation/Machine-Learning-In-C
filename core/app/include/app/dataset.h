@@ -63,8 +63,8 @@ void DataSetAddImage(dataset_t *dataset, Image image, long label);
 void DataSetRemoveImage(dataset_t *dataset, int index);
 void DataSetRemoveImages(dataset_t *dataset, int from_index, int to_index);
 
-void convert_image_to_mymatrix(mymatrix_t* mymatrix, Image image);
-void one_hot_encode_matrix(mymatrix_t *mymatrix, int label);
+void convert_image_to_mymatrix(nmatrix_t* m, Image image);
+void one_hot_encode_matrix(nmatrix_t *m, int label);
 
 void UnloadDataSet(dataset_t dataset);
 

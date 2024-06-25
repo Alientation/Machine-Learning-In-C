@@ -95,17 +95,17 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     model_digit->num_layers = 0;
 
     nmatrix_t input = nmatrix_allocator(2, 784, 1);
-    nmatrix_t dense_1 = nmatrix_allocator(2, 64, 1);
-    nmatrix_t dense_2 = nmatrix_allocator(2, 32, 1);
+    nmatrix_t dense_1 = nmatrix_allocator(2, 32, 1);
+    nmatrix_t dense_2 = nmatrix_allocator(2, 16, 1);
     nmatrix_t output = nmatrix_allocator(2, 10, 1);
 
     layer_t *input_layer = layer_input(model_digit, input);
     layer_t *dense_layer_1 = layer_dense(model_digit, dense_1);
     layer_t *activation_layer_1 = layer_activation(model_digit, activation_functions_relu);
-    layer_t *dropout_layer_1 = layer_dropout(model_digit, 0.2);
+    // layer_t *dropout_layer_1 = layer_dropout(model_digit, 0.2);
     layer_t *dense_layer_2 = layer_dense(model_digit, dense_2);
     layer_t *activation_layer_2 = layer_activation(model_digit, activation_functions_sigmoid);
-    layer_t *dropout_layer_2 = layer_dropout(model_digit, 0.5);
+    // layer_t *dropout_layer_2 = layer_dropout(model_digit, 0.5);
     layer_t *dense_layer_3 = layer_dense(model_digit, output);
     layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_softmax);
     layer_t *output_layer = layer_output(model_digit, output_make_guess_one_hot_encoded, output_functions_crossentropy, output_cost_categorical_cross_entropy);

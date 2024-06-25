@@ -35,7 +35,10 @@ static const training_info_t DEFAULT_TRAIN_INFO = {
 
 int main(void) {
     CLOCK_MARK
-    neural_network_model_t nnmodel;
+    neural_network_model_t nnmodel = {
+        .is_training = false,
+        .batch_size = 1,
+    };
     pthread_t thread_id;
 
     // training_info_t training_info = nn_XOR(&nnmodel);

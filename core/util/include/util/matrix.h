@@ -84,6 +84,9 @@ void free_nmatrix_list(int size, nmatrix_t *list);
 nmatrix_t nmatrix_allocator(int n_dims, ...);
 nmatrix_t nmatrix_constructor(int n_elements, float *matrix, int n_dims, ...);
 void nmatrix_reshape(nmatrix_t *m, int n_dims, ...);
+void nmatrix_shape_contract(nmatrix_t *m, int dim_i);
+void nmatrix_shape_extend(nmatrix_t *m, int dim_i, int dim);
+void nmatrix_shape_change(nmatrix_t *m, int dim_i, int new_dim);
 bool check_nmatrix_shape(nmatrix_t *m, int n_dims, ...);
 
 void nmatrix_free(nmatrix_t *m);

@@ -47,7 +47,7 @@ nmatrix_t nmatrix_allocator(int n_dims, ...) {
 
     nmatrix_t m;
     m.n_dims = n_dims;
-    
+
     m.n_elements = 1;
     va_list ptr;
     va_start(ptr, n_dims);
@@ -160,6 +160,47 @@ void nmatrix_reshape(nmatrix_t *m, int n_dims, ...) {
     assert(check_n_elements == m->n_elements);
 }
 
+void nmatrix_shape_contract(nmatrix_t *m, int dim_i) {
+    assert(dim_i < m->n_dims && dim_i >= 0);
+
+    m->n_elements /= m->dims[dim_i];
+    m->n_dims--;
+    m->dims[m->n_dims] = 0;
+    for (int i = dim_i; i < m->n_dims - 1; i++) {
+        m->dims[i] = m->dims[i+1];
+    }
+
+    free(m->matrix);
+    m->matrix = malloc(sizeof(float) * m->n_elements);
+}
+
+void nmatrix_shape_extend(nmatrix_t *m, int dim_i, int dim) {
+    assert(dim_i <= m->n_dims && dim_i >= 0);
+    assert(dim > 0);
+    
+    m->n_dims++;
+    for (int i = m->n_dims - 1; i > dim_i; i++) {
+        m->dims[i] = m->dims[i-1];
+    }
+    m->dims[dim_i] = dim;
+    m->n_elements *= dim_i;
+
+    free(m->matrix);
+    m->matrix = malloc(sizeof(float) * m->n_elements);
+}
+
+void nmatrix_shape_change(nmatrix_t *m, int dim_i, int new_dim) {
+    assert(dim_i < m->n_dims && dim_i >= 0);
+    assert(new_dim > 0);
+
+    m->n_elements /= m->dims[dim_i];
+    m->dims[dim_i] = new_dim;
+    m->n_elements *= new_dim;
+    
+    free(m->matrix);
+    m->matrix = malloc(sizeof(float) * m->n_elements);
+    memset(m->matrix, 0, sizeof(float) * m->n_elements);
+}
 
 bool check_nmatrix_shape(nmatrix_t *m, int n_dims, ...) {
     if (m->n_dims != n_dims) {
@@ -654,7 +695,7 @@ void nmatrix_print_nd(nmatrix_t *m, bool is_first, int tot_dims, int cur_dim) {
                 if (c != 0) {
                     printf(", ");
                 }
-                printf("%-4.3f", (float) round(m->matrix[r * m->dims[1] + c] * 1000)/1000);
+                printf("%-6.3f", (float) round(m->matrix[r * m->dims[1] + c] * 1000)/1000);
             }
             printf("]");
         }
@@ -676,31 +717,31 @@ void nmatrix_print_nd(nmatrix_t *m, bool is_first, int tot_dims, int cur_dim) {
 }
 
 void nmatrix_print(nmatrix_t *m) {
-    printf("%u-Dimensional Matrix: (", m->n_dims);
+    // printf("%u-Dimensional Matrix: (", m->n_dims);
     for (int i = 0; i < m->n_dims; i++) {
         if (i != 0) {
-            printf(",");
+            // printf(",");
         }
-        printf("%u", m->dims[i]);
+        // printf("%u", m->dims[i]);
     }
-    printf(")\n");
+    // printf(")\n");
 
     if (m->n_dims == 1) {
         for (int i = 0; i < m->n_elements; i++) {
-            printf("%-6.5f  ", (float) round(m->matrix[i] * 1000)/1000);
+            printf("%-7.3f  ", (float) round(m->matrix[i] * 1000)/1000);
         }
     } else if (m->n_dims == 2) {
         for (int r = 0; r < m->dims[0]; r++) {
-            printf("%-3d: ", r);
+            // printf("%-3d: ", r);
             for (int c = 0; c < m->dims[1]; c++) {
-                printf("%-6.5f  ", (float) round(m->matrix[r * m->dims[1] + c] * 1000)/1000);
+                // printf("%-7.4f  ", (float) round(m->matrix[r * m->dims[1] + c] * 1000)/1000);
             }
-            printf("\n");
+            // printf("\n");
         }
     } else {
         nmatrix_print_nd(m, true, m->n_dims, 0);
     }
-    printf("\n\n");
+    // printf("\n\n");
 }
 
 void matrix_set_values_to_fit(mymatrix_t m, float* elements, unsigned int num_elements) {

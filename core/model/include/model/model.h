@@ -26,7 +26,10 @@
  * add more variety of layers (convolution, pooling, reshaping)
  * add variable learning rates for each layer support
  * matrix broadcasting??? support for multi-dimension matrices?????
- * 
+ *
+ * FOR BATCHING... COMPLETELY REDO HOW IT WORKS SINCE IT CAUSES A LOT OF ISSUES WITH THE VISUALIZER. INSTEAD
+ * HAVE EACH LAYER CONTAIN SEPARATE MATRICES, ONE FOR BATCHES, THE OTHER FOR VISUALIZATION
+ *  
  * 
  * Performance History 28x28 examples for 12k test/train size (0.8 split)
  * 6/23/2024 - prior to nmatrix refactor, 3200 examples per second per second
@@ -78,7 +81,7 @@ typedef struct Dense_Layer {
     // n x 1, this layer's neurons which contain the "output" values
     nmatrix_t activation_values;
 
-    // W.X + b= Y
+    // W.X + b = Y
     // n x m
     // connecting the previous layer to this layer
     // the edges are the weights
@@ -151,6 +154,7 @@ typedef struct Layer {
     // doubly linked
     layer_t *next;
     layer_t *prev;
+    neural_network_model_t *model;
 } layer_t;
 
 // nn model
@@ -164,6 +168,7 @@ typedef struct NeuralNetworkModel {
 
     // info data
     bool is_training;
+    int batch_size;
 } neural_network_model_t;
 
 typedef struct TrainingInfo {
@@ -236,6 +241,7 @@ float model_train(neural_network_model_t *model, nmatrix_t *inputs, nmatrix_t *e
 void model_test(neural_network_model_t *model, nmatrix_t *inputs, nmatrix_t *expected_outputs, unsigned int num_tests);
 nmatrix_t model_calculate(neural_network_model_t *model);
 
+void model_update_batchsize(neural_network_model_t *model, int batch_size);
 
 void training_info_free(training_info_t *training_info);
 
@@ -243,6 +249,5 @@ void model_train_info(training_info_t *training_info);
 void model_test_info(training_info_t *training_info);
 
 int unpack_one_hot_encoded(nmatrix_t one_hot_encoded);
-
 
 #endif // MODEL_H

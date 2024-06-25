@@ -50,9 +50,9 @@ nmatrix_t dense_back_propagation(layer_t *this, nmatrix_t d_error_wrt_output, fl
     // apply adjustments
     nmatrix_multiply_scalar(&this->layer.dense.d_cost_wrt_weight, learning_rate, &this->layer.dense.d_cost_wrt_weight);
     nmatrix_multiply_scalar(&this->layer.dense.d_cost_wrt_bias, learning_rate, &this->layer.dense.d_cost_wrt_bias);
-    
-    nmatrix_sub(&this->layer.dense.weights, &this->layer.dense.d_cost_wrt_weight, &this->layer.dense.weights);
-    nmatrix_sub(&this->layer.dense.bias, &this->layer.dense.d_cost_wrt_bias, &this->layer.dense.bias);
+
+    nmatrix_add(&this->layer.dense.d_cost_wrt_weight_sum, &this->layer.dense.d_cost_wrt_weight, &this->layer.dense.d_cost_wrt_weight_sum);
+    nmatrix_add(&this->layer.dense.d_cost_wrt_bias_sum, &this->layer.dense.d_cost_wrt_bias, &this->layer.dense.d_cost_wrt_bias_sum);
 
     return this->layer.dense.d_cost_wrt_input;
 }
@@ -317,6 +317,8 @@ void layer_free(layer_t *layer) {
             nmatrix_free(&layer->layer.dense.d_cost_wrt_input);
             nmatrix_free(&layer->layer.dense.d_cost_wrt_weight);
             nmatrix_free(&layer->layer.dense.d_cost_wrt_bias);
+            nmatrix_free(&layer->layer.dense.d_cost_wrt_weight_sum);
+            nmatrix_free(&layer->layer.dense.d_cost_wrt_bias_sum);
             break;
         case DROPOUT:
             nmatrix_free(&layer->layer.dropout.output);
@@ -407,6 +409,8 @@ layer_t* layer_dense(neural_network_model_t *model, nmatrix_t neurons) {
     dense->d_cost_wrt_input = nmatrix_allocator(2, prev_output.dims[0], 1);
     dense->d_cost_wrt_weight = nmatrix_allocator(2, dense->weights.dims[0], dense->weights.dims[1]);
     dense->d_cost_wrt_bias = nmatrix_allocator(2, dense->bias.dims[0], dense->bias.dims[1]);
+    dense->d_cost_wrt_weight_sum = nmatrix_copy(&dense->d_cost_wrt_weight);
+    dense->d_cost_wrt_bias_sum = nmatrix_copy(&dense->d_cost_wrt_bias);
     dense->model = model;
 
     dense->functions = dense_functions;
@@ -510,6 +514,21 @@ void model_back_propagate(neural_network_model_t *model, nmatrix_t expected_outp
     }
 }
 
+void model_gradient_descent(neural_network_model_t *model) {
+    layer_t *current = model->input_layer;
+    for (int layer_i = 0; layer_i < model->num_layers; layer_i++) {
+        if (current->type == DENSE) {
+            nmatrix_sub(&current->layer.dense.weights, &current->layer.dense.d_cost_wrt_weight_sum, &current->layer.dense.weights);
+            nmatrix_sub(&current->layer.dense.bias, &current->layer.dense.d_cost_wrt_bias_sum, &current->layer.dense.bias);
+
+            nmatrix_memset(&current->layer.dense.d_cost_wrt_weight_sum, 0);
+            nmatrix_memset(&current->layer.dense.d_cost_wrt_bias_sum, 0);
+        }
+
+        current = current->next;
+    }
+}
+
 float model_train(neural_network_model_t *model, nmatrix_t *inputs, nmatrix_t *expected_outputs, unsigned int num_examples, float learning_rate) {
     nmatrix_t output = model->output_layer->layer.output.output_values;
     float avg_error = 0;
@@ -519,6 +538,7 @@ float model_train(neural_network_model_t *model, nmatrix_t *inputs, nmatrix_t *e
         // avg_error += output_cost_mean_squared(model->output_layer, expected_outputs[example_i]);
         avg_error += model->output_layer->layer.output.loss(model->output_layer, expected_outputs[example_i]);
         model_back_propagate(model, expected_outputs[example_i], learning_rate);
+        model_gradient_descent(model);
     }
     avg_error /= (float) num_examples;
     // printf("train avg error=%f", (float) avg_error);
@@ -575,10 +595,9 @@ void training_info_free(training_info_t *training_info) {
 }
 
 void model_train_info(training_info_t *training_info) {
-    // todo support batch size in future
-    assert(training_info->batch_size == 1);
     neural_network_model_t *model = training_info->model;
     
+    int batch_size = training_info->batch_size;
     unsigned int *epoch = &training_info->epoch;
     unsigned int target_epochs = training_info->target_epochs;
     unsigned int *train_index = &training_info->train_index;
@@ -604,6 +623,10 @@ void model_train_info(training_info_t *training_info) {
             model_predict(model, train_x[*train_index], actual_output);
             avg_train_error += output_layer.loss(model->output_layer, train_y[*train_index]);
             model_back_propagate(model, train_y[*train_index], training_info->learning_rate);
+
+            if ((1 + *train_index) % batch_size == 0 || *train_index == train_size-1) {
+                model_gradient_descent(model);
+            }
 
             nmatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
             if (nmatrix_equal(&train_y[*train_index], &model_guess)) {

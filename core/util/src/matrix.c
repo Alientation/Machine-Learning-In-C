@@ -59,14 +59,12 @@ nmatrix_t nmatrix_allocator(int n_dims, ...) {
     }
     va_end(ptr);
 
-    // int stride = 1;
-    // for (int i = n_dims-1; i >= 0; i--) {
-    //     m.strides[i] = stride;
-    //     stride *= m.dims[i];
-    // }
-
     m.matrix = malloc(sizeof(float) * m.n_elements);
-    memset(m.matrix, 0, sizeof(float) * m.n_elements);
+    
+    for (int i = 0; i < m.n_elements; i++) {
+        m.matrix[i] = 0;
+    }
+
     return m;
 }
 
@@ -274,6 +272,13 @@ void matrix_memcpy(mymatrix_t dst, mymatrix_t src) {
 void nmatrix_memcpy(nmatrix_t *dst, nmatrix_t *src) {
     assert(dst->n_elements == src->n_elements); // don't need to check dims
     memcpy(dst->matrix, src->matrix, sizeof(float) * src->n_elements);
+}
+
+void nmatrix_memset(nmatrix_t *m, float val) {
+    // for (int i = 0; i < m->n_elements; i++) {
+    //     m->matrix[i] = val;
+    // }
+    memset(m->matrix, 0, sizeof(float) * m->n_elements);
 }
 
 // use https://en.wikipedia.org/wiki/Strassen_algorithm for large matrices

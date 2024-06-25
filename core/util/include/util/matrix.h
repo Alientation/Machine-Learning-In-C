@@ -92,6 +92,7 @@ bool check_nmatrix_shape(nmatrix_t *m, int n_dims, ...);
 void nmatrix_free(nmatrix_t *m);
 nmatrix_t nmatrix_copy(nmatrix_t *src);
 void nmatrix_memcpy(nmatrix_t *dst, nmatrix_t *src);
+void nmatrix_memset(nmatrix_t *m, float val);
 
 void nmatrix_multiply(nmatrix_t *m1, nmatrix_t *m2, 
                       nmatrix_t *result);

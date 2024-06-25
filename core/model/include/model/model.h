@@ -98,6 +98,9 @@ typedef struct Dense_Layer {
     // same dimensions as weight and bias matrices
     nmatrix_t d_cost_wrt_weight;
     nmatrix_t d_cost_wrt_bias;
+
+    nmatrix_t d_cost_wrt_weight_sum;
+    nmatrix_t d_cost_wrt_bias_sum;
     neural_network_model_t *model;
 } dense_layer_t;
 
@@ -237,11 +240,10 @@ nmatrix_t model_predict(neural_network_model_t *model, nmatrix_t input,
 
 void model_initialize_matrix_normal_distribution(nmatrix_t model, float mean, float standard_deviation);
 void model_back_propagate(neural_network_model_t *model, nmatrix_t expected_output, float learning_rate);
+void model_gradient_descent(neural_network_model_t *model);
 float model_train(neural_network_model_t *model, nmatrix_t *inputs, nmatrix_t *expected_outputs, unsigned int num_examples, float learning_rate);
 void model_test(neural_network_model_t *model, nmatrix_t *inputs, nmatrix_t *expected_outputs, unsigned int num_tests);
 nmatrix_t model_calculate(neural_network_model_t *model);
-
-void model_update_batchsize(neural_network_model_t *model, int batch_size);
 
 void training_info_free(training_info_t *training_info);
 

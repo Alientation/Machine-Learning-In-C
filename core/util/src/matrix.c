@@ -321,22 +321,16 @@ void matrix_2d_multiply(int r1, int c1, float *m1, int r2, int c2, float *m2,
     // memset(dst, 0, sizeof(float) * r1 * c2);
 
     for (int r = 0; r < r1; r++) {
+        int o1 = r * c1;
+        int o2 = r * c2;
         for (int c = 0; c < c2; c++) {
             float dot = 0;
             for (int i = 0; i < c1; i++) {
-                dot += m1[r * c1 + i] * m2[i * c2 + c];
+                dot += m1[o1 + i] * m2[i * c2 + c];
             }
-            dst[r * c2 + c] = dot;
+            dst[o2 + c] = dot;
         }
     }
-
-    // for (int r = 0; r < r1; r++) {
-    //     for (int i = 0; i < c1; i++) {
-    //         for (int c = 0; c < c2; c++) {
-    //             dst[r * c2 + c] += m1[r * c1 + i] * m2[i * c2 + c];
-    //         }
-    //     }
-    // }
 }
 
 // like numpy's matmul https://numpy.org/doc/stable/reference/generated/numpy.matmul.html

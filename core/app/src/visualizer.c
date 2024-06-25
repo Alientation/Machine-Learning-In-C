@@ -542,7 +542,7 @@ static void DrawTrainingInfo() {
             .height = 16
         };
         float value = t_info->batch_size;
-        if (GuiSlider(batch_size_r, "", "200", &value, 1, 200)) {
+        if (GuiSlider(batch_size_r, "", "64", &value, 1, 64)) {
             _TOGGLE_BOOL(&vis_state.vis_args.is_batch_size_active);
         }
         t_info->batch_size = value;
@@ -552,7 +552,7 @@ static void DrawTrainingInfo() {
         }
 
         value = t_info->target_epochs;
-        if (GuiSlider(RecShift(batch_size_r, 0, 40), "", "200", &value, 1, 200)) {
+        if (GuiSlider(RecShift(batch_size_r, 0, 40), "", "50", &value, 1, 50)) {
             _TOGGLE_BOOL(&vis_state.vis_args.is_target_epochs_active);
         }
         t_info->target_epochs = value;

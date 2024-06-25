@@ -360,7 +360,7 @@ static void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_pre
     Rectangle rotation_label_r = RecShift(transformation_label_r, 0, 25);
     Rectangle rotation_picker_r = RecShift(transformation_picker_r, 0, 25);
     DrawCenteredText(TextFormat("Rot: %d", (int) draw_args->max_rotation_degree), _UNPACK_REC_CENTER(rotation_label_r), 10, BLACK);
-    GuiSlider(rotation_picker_r, "", "180", &draw_args->max_rotation_degree, 0, 180);
+    GuiSlider(rotation_picker_r, "", "90", &draw_args->max_rotation_degree, 0, 90);
     
     Rectangle translation_x_label_r = RecShift(rotation_label_r, 0, 25);
     Rectangle translation_x_picker_r = RecShift(rotation_picker_r, 0, 25);
@@ -381,7 +381,7 @@ static void GuiDisplayDataset(drawing_panel_args_t *draw_args, Rectangle img_pre
     Rectangle train_test_split_label_r = RecShift(artifact_label_r, 0, 25);
     Rectangle train_test_split_picker_r = RecShift(artifact_picker_r, 0, 25);
     DrawCenteredText(TextFormat("Train/Test: %.2f", draw_args->train_test_split), _UNPACK_REC_CENTER(train_test_split_label_r), 10, BLACK);
-    GuiSlider(train_test_split_picker_r, "", "1", &draw_args->train_test_split, 0, 1);
+    GuiSlider(train_test_split_picker_r, "", "1", &draw_args->train_test_split, 0.2, .9);
 
     // load dataset into training info for the model to run on
     Rectangle convert_ds_r = {

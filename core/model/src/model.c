@@ -321,6 +321,7 @@ void layer_free(layer_t *layer) {
         case DROPOUT:
             nmatrix_free(&layer->layer.dropout.output);
             nmatrix_free(&layer->layer.dropout.d_cost_wrt_input);
+            break;
         case ACTIVATION:
             nmatrix_free(&layer->layer.activation.activated_values);
             nmatrix_free(&layer->layer.activation.d_cost_wrt_input);

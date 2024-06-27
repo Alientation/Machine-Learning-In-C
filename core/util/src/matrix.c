@@ -5,16 +5,22 @@
 #include <memory.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <omp.h>
 
-#include <util/debug_memory.h>
+nshape_t nshape_constructor(int n_dims, ...) {
+    nshape_t shape = {.n_dims = n_dims};
+    va_list ptr;
+    va_start(ptr, n_dims);
+    for (int i = 0; i < n_dims; i++) {
+        shape.dims[i] = va_arg(ptr, int);
+        assert(shape.dims[i] > 0);
+    }
+    va_end(ptr);
 
-void free_matrix_list(mymatrix_t *matrix_list, int size) {
-    for (int i = 0; i < size; i++) {
-        matrix_free(matrix_list[i]);
+    for (int i = n_dims; i < MAX_DIMS; i++) {
+        shape.dims[i] = 0;
     }
 
-    free(matrix_list);
+    return shape;
 }
 
 void free_nmatrix_list(int size, nmatrix_t *list) {
@@ -24,43 +30,20 @@ void free_nmatrix_list(int size, nmatrix_t *list) {
     free(list);
 }
 
+nmatrix_t nmatrix_allocator(nshape_t shape) {
+    assert(shape.n_dims > 0);
+    assert(shape.n_dims <= MAX_DIMS);
 
-mymatrix_t matrix_allocator(int r, int c) {
-    mymatrix_t m;
-    m.r = r;
-    m.c = c;
-    m.matrix = (float**) malloc(r * sizeof(float*));
-    for (int i = 0; i < r; i++) {
-        m.matrix[i] = (float*) malloc(c * sizeof(float));
-        for (int j = 0; j < c; j++) {
-            m.matrix[i][j] = 0;
-        }
-    }
-    m.transposed = false;
-
-    return m;
-}
-
-nmatrix_t nmatrix_allocator(int n_dims, ...) {
-    assert(n_dims > 0);
-    assert(n_dims <= MAX_DIMS);
-
-    nmatrix_t m;
-    m.n_dims = n_dims;
-
+    nmatrix_t m = {.n_dims = shape.n_dims};
     m.n_elements = 1;
-    va_list ptr;
-    va_start(ptr, n_dims);
-    for (int i = 0; i < n_dims; i++) {
-        m.dims[i] = va_arg(ptr, int);
-        m.n_elements *= m.dims[i];
+    for (int i = 0; i < shape.n_dims; i++) {
+        m.n_elements *= shape.dims[i];
+        m.dims[i] = shape.dims[i];
 
-        assert(m.dims[i] > 0);
+        assert(shape.dims[i] > 0);
     }
-    va_end(ptr);
 
     m.matrix = malloc(sizeof(float) * m.n_elements);
-    
     for (int i = 0; i < m.n_elements; i++) {
         m.matrix[i] = 0;
     }
@@ -68,43 +51,23 @@ nmatrix_t nmatrix_allocator(int n_dims, ...) {
     return m;
 }
 
-
-mymatrix_t matrix_constructor(int r, int c, float** matrix) {
-    mymatrix_t m;
-    m.r = r;
-    m.c = c;
-    m.matrix = matrix;
-    m.transposed = false;
-    return m;
-}
-
 // should technically make a copy of matrix to be safe
-nmatrix_t nmatrix_constructor(int n_elements, float *matrix, int n_dims, ...) {
+nmatrix_t nmatrix_constructor(int n_elements, float *matrix, nshape_t shape) {
     assert(n_elements > 0);
-    assert(n_dims > 0);
-    assert(n_dims <= MAX_DIMS);
+    assert(shape.n_dims > 0);
+    assert(shape.n_dims <= MAX_DIMS);
 
-    nmatrix_t m;
+    nmatrix_t m = {.n_dims = shape.n_dims};
     m.n_elements = n_elements;
-    m.n_dims = n_dims;
     m.matrix = matrix;
     
     int check_n_elements = 1;
-    va_list ptr;
-    va_start(ptr, n_dims);
-    for (int i = 0; i < n_dims; i++) {
-        m.dims[i] = va_arg(ptr, int);
-        check_n_elements *= m.dims[i];
+    for (int i = 0; i < shape.n_dims; i++) {
+        check_n_elements *= shape.dims[i];
+        m.dims[i] = shape.dims[i];
 
-        assert(m.dims[i] > 0);
+        assert(shape.dims[i] > 0);
     }
-    va_end(ptr);
-
-    // int stride = 1;
-    // for (int i = n_dims-1; i >= 0; i--) {
-    //     m.strides[i] = stride;
-    //     stride *= m.dims[i];
-    // }
 
     assert(check_n_elements == n_elements);
     return m;
@@ -133,27 +96,18 @@ nmatrix_t nmatrix_constructor_array(int n_elements, float *matrix, int n_dims, i
 }
 
 // https://numpy.org/doc/stable/reference/generated/numpy.reshape.html
-void nmatrix_reshape(nmatrix_t *m, int n_dims, ...) {
-    va_list ptr;
-    va_start(ptr, n_dims);
-    for (int i = m->n_dims - 1; i >= n_dims; i--) {
-        m->dims[i] = 0;
+void nmatrix_reshape(nmatrix_t *m, nshape_t shape) {
+    m->n_dims = shape.n_dims;
+    for (int i = 0; i < shape.n_dims; i++) {
+        m->dims[i] = shape.dims[i];
     }
-    m->n_dims = n_dims;
+
     int check_n_elements = 1;
-    for (int i = 0; i < n_dims; i++) {
-        m->dims[i] = va_arg(ptr, int);
+    for (int i = 0; i < shape.n_dims; i++) {
         check_n_elements *= m->dims[i];
 
         assert(m->dims[i] > 0);
     }
-    va_end(ptr);
-
-    // int stride = 1;
-    // for (int i = n_dims-1; i >= 0; i--) {
-    //     m->strides[i] = stride;
-    //     stride *= m->dims[i];
-    // }
 
     assert(check_n_elements == m->n_elements);
 }
@@ -200,31 +154,17 @@ void nmatrix_shape_change(nmatrix_t *m, int dim_i, int new_dim) {
     memset(m->matrix, 0, sizeof(float) * m->n_elements);
 }
 
-bool check_nmatrix_shape(nmatrix_t *m, int n_dims, ...) {
-    if (m->n_dims != n_dims) {
+bool check_nmatrix_shape(nmatrix_t *m, nshape_t shape) {
+    if (m->n_dims != shape.n_dims) {
         return false;
     }
 
-    va_list ptr;
-    va_start(ptr, n_dims);
-    for (int i = 0; i < n_dims; i++) {
-        if (m->dims[i] != va_arg(ptr, int)) {
+    for (int i = 0; i < shape.n_dims; i++) {
+        if (m->dims[i] != shape.dims[i]) {
             return false;
         }
     }
     return true;
-}
-
-
-void matrix_free(mymatrix_t matrix) {
-    if (matrix.matrix == NULL) {
-        return;
-    }
-
-    for (int r = 0; r < matrix.r; r++) {
-        free(matrix.matrix[r]);
-    }
-    free(matrix.matrix);
 }
 
 void nmatrix_free(nmatrix_t *m) {
@@ -235,37 +175,16 @@ void nmatrix_free(nmatrix_t *m) {
     free(m->matrix);
 }
 
-mymatrix_t matrix_copy(mymatrix_t src) {
-    mymatrix_t copy;
-    copy.r = src.r;
-    copy.c = src.c;
-    copy.matrix = (float**) malloc(copy.r * sizeof(float*));
-    for (int i = 0; i < copy.r; i++) {
-        copy.matrix[i] = (float*) malloc(copy.c * sizeof(float));
-    }
-    matrix_memcpy(copy, src);
-    return copy;
-}
-
 nmatrix_t nmatrix_copy(nmatrix_t *src) {
     nmatrix_t copy;
     copy.n_elements = src->n_elements;
     copy.n_dims = src->n_dims;
-    memcpy(copy.dims, src->dims, sizeof(int) * src->n_dims);
-    // memcpy(copy.strides, src->strides, sizeof(int) * src->n_dims);
+    for (int i = 0; i < copy.n_dims; i++) {
+        copy.dims[i] = src->dims[i];
+    }
     copy.matrix = malloc(sizeof(float) * src->n_elements);
     memcpy(copy.matrix, src->matrix, sizeof(float) * src->n_elements);
     return copy;
-}
-
-void matrix_memcpy(mymatrix_t dst, mymatrix_t src) {
-    assert(dst.r == src.r && dst.c == src.c);
-
-    for (int r = 0; r < dst.r; r++) {
-        for (int c = 0; c < dst.c; c++) {
-            dst.matrix[r][c] = src.matrix[r][c];
-        }
-    }
 }
 
 // simply just copies the matrix data, will not reshape the matrix
@@ -275,50 +194,27 @@ void nmatrix_memcpy(nmatrix_t *dst, nmatrix_t *src) {
 }
 
 void nmatrix_memset(nmatrix_t *m, float val) {
-    // for (int i = 0; i < m->n_elements; i++) {
-    //     m->matrix[i] = val;
-    // }
-    memset(m->matrix, 0, sizeof(float) * m->n_elements);
-}
-
-// use https://en.wikipedia.org/wiki/Strassen_algorithm for large matrices
-// todo
-void matrix_multiply(mymatrix_t m1, mymatrix_t m2,
-                     mymatrix_t result) {
-    assert(m1.c == m2.r);
-    assert(m1.r == result.r && m2.c == result.c);
-
-    for (int r = 0; r < result.r; r++) {
-        for (int c = 0; c < result.c; c++) {
-            float dot = 0;
-            for (int i = 0; i < m1.c; i++) {
-                dot += m1.matrix[r][i] * m2.matrix[i][c];
-            }
-            result.matrix[r][c] = dot;
-        }
+    for (int i = 0; i < m->n_elements; i++) {
+        m->matrix[i] = val;
     }
-    
-    // for (int r = 0; r < result.r; r++) {
-    //     for (int c = 0; c < result.c; c++) {
-    //         result.matrix[r][c] = 0;
-    //     }
-    //     // use memset TODO
-    // }
-
-    // for (int r = 0; r < result.r; r++) {
-    //     for (int i = 0; i < m1.c; i++) {
-    //         for (int c = 0; c < result.c; c++) {
-    //             result.matrix[r][c] += m1.matrix[r][i] * m2.matrix[i][c];
-    //         }
-    //     }
-    // }
 }
 
+
+void nmatrix_convolve(nmatrix_t *m1, nmatrix_t *m2,
+                      nmatrix_t *result) {
+    assert(m1->n_dims == m2->n_dims);
+    assert(m2->n_dims == result->n_dims);
+}
+
+void nmatrix_maxpool(nmatrix_t *m1, nshape_t shape,
+                     nmatrix_t *result) {
+    assert(m1->n_dims == shape.n_dims);
+    assert(m1->n_dims == result->n_dims);
+}
 
 void matrix_2d_multiply(int r1, int c1, float *m1, int r2, int c2, float *m2,
                         float *dst) {
     assert(c1 == r2);
-    // memset(dst, 0, sizeof(float) * r1 * c2);
 
     for (int r = 0; r < r1; r++) {
         int o1 = r * c1;
@@ -392,17 +288,6 @@ void nmatrix_multiply(nmatrix_t *m1, nmatrix_t *m2,
     }
 }
 
-
-void matrix_multiply_scalar(mymatrix_t m1, float scalar,
-                            mymatrix_t result) {
-    assert(m1.r == result.r && m1.c == result.c);
-    for (int r = 0; r < result.r; r++) {
-        for (int c = 0; c < result.c; c++) {
-            result.matrix[r][c] = m1.matrix[r][c] * scalar;
-        }
-    }
-}
-
 void nmatrix_multiply_scalar(nmatrix_t *m, float scalar,
                              nmatrix_t *result) {
     assert(m->n_dims == result->n_dims);
@@ -413,18 +298,6 @@ void nmatrix_multiply_scalar(nmatrix_t *m, float scalar,
 
     for (int i = 0; i < m->n_elements; i++) {
         result->matrix[i] = m->matrix[i] * scalar;
-    }
-}
-
-void matrix_elementwise_multiply(mymatrix_t m1, mymatrix_t m2,
-                                 mymatrix_t result) {
-    assert(m1.r == m2.r && m1.c == m2.c);
-    assert(m1.r == result.r && m2.c == result.c);
-
-    for (int r = 0; r < m1.r; r++) {
-        for (int c = 0; c < m2.c; c++) {
-            result.matrix[r][c] = m1.matrix[r][c] * m2.matrix[r][c];
-        }
     }
 }
 
@@ -444,18 +317,6 @@ void nmatrix_elementwise_multiply(nmatrix_t *m1, nmatrix_t *m2,
     }
 }
 
-void matrix_add(mymatrix_t m1, mymatrix_t m2,
-                mymatrix_t result) {
-    assert(m1.r == m2.r && m1.c == m2.c);
-    assert(m1.r == result.r && m2.c == result.c);
-
-    for (int r = 0; r < result.r; r++) {
-        for (int c = 0; c < result.c; c++) {
-            result.matrix[r][c] = m1.matrix[r][c] + m2.matrix[r][c];
-        }
-    }
-}
-
 void nmatrix_add(nmatrix_t *m1, nmatrix_t *m2,
                  nmatrix_t *result) {
     assert(m1->n_dims == m2->n_dims);
@@ -472,29 +333,6 @@ void nmatrix_add(nmatrix_t *m1, nmatrix_t *m2,
     }
 }
 
-
-void matrix_add_row(mymatrix_t m1, unsigned int r1, mymatrix_t m2, unsigned int r2,
-                    mymatrix_t result, unsigned int r_result) {
-    assert(m1.c == m2.c && m1.c == result.c);
-    assert(r1 < m1.r && r2 < m2.r);
-
-    for (int c = 0; c < result.c; c++) {
-        result.matrix[r_result][c] = m1.matrix[r1][c] + m2.matrix[r2][c];
-    }
-}
-
-void matrix_sub(mymatrix_t m1, mymatrix_t m2,
-                mymatrix_t result) {
-    assert(m1.r == m2.r && m1.c == m2.c);
-    assert(m1.r == result.r && m2.c == result.c);
-
-    for (int r = 0; r < result.r; r++) {
-        for (int c = 0; c < result.c; c++) {
-            result.matrix[r][c] = m1.matrix[r][c] - m2.matrix[r][c];
-        }
-    }
-}
-
 void nmatrix_sub(nmatrix_t *m1, nmatrix_t *m2,
                  nmatrix_t *result) {
     assert(m1->n_dims == m2->n_dims);
@@ -508,45 +346,6 @@ void nmatrix_sub(nmatrix_t *m1, nmatrix_t *m2,
 
     for (int i = 0; i < m1->n_elements; i++) {
         result->matrix[i] = m1->matrix[i] - m2->matrix[i];
-    }
-}
-
-void matrix_column_extend(mymatrix_t m, unsigned int factor,
-                          mymatrix_t result) {
-    assert(factor > 0);
-    assert(m.r * factor == result.r && m.c == result.c);
-
-    for (int copy = 0; copy < factor; copy++) {
-        for (int r = 0; r < m.r; r++) {
-            for (int c = 0; c < m.c; c++) {
-                result.matrix[copy * m.r + r][c] = m.matrix[r][c];
-            }
-        }
-    }
-}
-
-void matrix_row_extend(mymatrix_t m, unsigned int factor,
-                       mymatrix_t result) {
-    assert(factor > 0);
-    assert(m.r == result.r && m.c * factor == result.c);
-
-    for (int copy = 0; copy < factor; copy++) {
-        for (int r = 0; r < m.r; r++) {
-            for (int c = 0; c < m.c; c++) {
-                result.matrix[r][copy * m.c] = m.matrix[r][c];
-            }
-        }
-    }
-}
-
-void matrix_transpose(mymatrix_t m,
-                      mymatrix_t result) {
-    assert(m.r == result.c && m.c == result.r);
-
-    for (int r = 0; r < result.r; r++) {
-        for (int c = 0; c < result.c; c++) {
-            result.matrix[r][c] = m.matrix[c][r];
-        }
     }
 }
 
@@ -612,21 +411,6 @@ void nmatrix_transpose(nmatrix_t *m,
     }
 }
 
-bool matrix_equal(mymatrix_t m1, mymatrix_t m2) {
-    if (m1.r != m2.r || m1.c != m2.c) {
-        return false;
-    }
-
-    for (int r = 0; r < m1.r; r++) {
-        for (int c = 0; c < m1.c; c++) {
-            if (m1.matrix[r][c] != m2.matrix[r][c]) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 bool nmatrix_equal(nmatrix_t *m1, nmatrix_t *m2) {
     if (m1->n_dims != m2->n_dims || m1->n_elements != m2->n_elements) {
         return false;
@@ -640,16 +424,6 @@ bool nmatrix_equal(nmatrix_t *m1, nmatrix_t *m2) {
     return memcmp(m1->matrix, m2->matrix, sizeof(float) * m1->n_elements) == 0;
 }
 
-void matrix_for_each_operator(mymatrix_t m, float (*op)(float),
-                              mymatrix_t result) {
-    assert(m.r == result.r && m.c == result.c);
-    for (int r = 0; r < m.r; r++) {
-        for (int c = 0; c < m.c; c++) {
-            result.matrix[r][c] = op(m.matrix[r][c]);
-        }
-    }
-}
-
 void nmatrix_for_each_operator(nmatrix_t *m, float (*op)(float), 
                                nmatrix_t *result) {
     assert(m->n_dims == result->n_dims);
@@ -660,17 +434,6 @@ void nmatrix_for_each_operator(nmatrix_t *m, float (*op)(float),
 
     for (int i = 0; i < m->n_elements; i++) {
         result->matrix[i] = op(m->matrix[i]);
-    }
-}
-
-void matrix_print(mymatrix_t m) {
-    printf("%d x %d Matrix\n", m.r, m.c);
-    for (int r = 0; r < m.r; r++) {
-        printf("%-3d: ", r);
-        for (int c = 0; c < m.c; c++) {
-            printf("%-6f  ", (float)round(m.matrix[r][c] * 1000)/1000);
-        }
-        printf("\n");
     }
 }
 
@@ -716,14 +479,14 @@ void nmatrix_print_nd(nmatrix_t *m, bool is_first, int tot_dims, int cur_dim) {
 }
 
 void nmatrix_print(nmatrix_t *m) {
-    // printf("%u-Dimensional Matrix: (", m->n_dims);
+    printf("%u-Dimensional Matrix: (", m->n_dims);
     for (int i = 0; i < m->n_dims; i++) {
         if (i != 0) {
-            // printf(",");
+            printf(",");
         }
-        // printf("%u", m->dims[i]);
+        printf("%u", m->dims[i]);
     }
-    // printf(")\n");
+    printf(")\n");
 
     if (m->n_dims == 1) {
         for (int i = 0; i < m->n_elements; i++) {
@@ -731,27 +494,16 @@ void nmatrix_print(nmatrix_t *m) {
         }
     } else if (m->n_dims == 2) {
         for (int r = 0; r < m->dims[0]; r++) {
-            // printf("%-3d: ", r);
+            printf("%-3d: ", r);
             for (int c = 0; c < m->dims[1]; c++) {
-                // printf("%-7.4f  ", (float) round(m->matrix[r * m->dims[1] + c] * 1000)/1000);
+                printf("%-7.4f  ", (float) round(m->matrix[r * m->dims[1] + c] * 1000)/1000);
             }
-            // printf("\n");
+            printf("\n");
         }
     } else {
         nmatrix_print_nd(m, true, m->n_dims, 0);
     }
-    // printf("\n\n");
-}
-
-void matrix_set_values_to_fit(mymatrix_t m, float* elements, unsigned int num_elements) {
-    assert(m.r * m.c == num_elements);
-    int element_i = 0;
-    for (int r = 0; r < m.r; r++) {
-        for (int c = 0; c < m.c; c++) {
-            m.matrix[r][c] = elements[element_i];
-            element_i++;
-        }
-    }
+    printf("\n\n");
 }
 
 void nmatrix_set_values_to_fit(nmatrix_t *m, int num_elements, float* elements) {

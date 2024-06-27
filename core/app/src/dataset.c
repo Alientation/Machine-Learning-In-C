@@ -13,6 +13,7 @@
 #include <stdlib.h>
 
 #define IMAGE_DATASET_HEADER 0xFF0000DDLU
+#define SHAPE(...) nshape_constructor(__VA_ARGS__)
 
 static long read_bytes(unsigned char *data, int start_byte, int bytes) {
     long value = 0;
@@ -523,16 +524,16 @@ void ImageDataSetConvertToTraining(training_info_t *training_info, dataset_t *da
     }
 
     for (int i = 0; i < training_info->train_size; i++) {
-        training_info->train_x[i] = nmatrix_allocator(2, input_size, 1);
-        training_info->train_y[i] = nmatrix_allocator(2, output_size, 1);
+        training_info->train_x[i] = nmatrix_allocator(SHAPE(2, input_size, 1));
+        training_info->train_y[i] = nmatrix_allocator(SHAPE(2, output_size, 1));
 
         convert_image_to_mymatrix(&training_info->train_x[i], shuffler[i].image);
         one_hot_encode_matrix(&training_info->train_y[i], shuffler[i].label);
     }
 
     for (int i = 0; i < training_info->test_size; i++) {
-        training_info->test_x[i] = nmatrix_allocator(2, input_size, 1);
-        training_info->test_y[i] = nmatrix_allocator(2, output_size, 1);
+        training_info->test_x[i] = nmatrix_allocator(SHAPE(2, input_size, 1));
+        training_info->test_y[i] = nmatrix_allocator(SHAPE(2, output_size, 1));
 
         convert_image_to_mymatrix(&training_info->test_x[i], shuffler[i + training_info->train_size].image);
         one_hot_encode_matrix(&training_info->test_y[i], shuffler[i + training_info->train_size].label);

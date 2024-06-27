@@ -16,6 +16,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Add compile options for debug
+add_compile_options(-Wall -Wextra)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-gdwarf-2)
 endif()

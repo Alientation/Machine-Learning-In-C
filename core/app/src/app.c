@@ -7,6 +7,8 @@
 #include <util/profiler.h>
 #include <util/debug_memory.h>
 
+#define SHAPE(...) nshape_constructor(__VA_ARGS__)
+
 static const char* digit_outputs[10] = {
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
 };
@@ -94,10 +96,10 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     model_digit->output_layer = NULL;
     model_digit->num_layers = 0;
 
-    nmatrix_t input = nmatrix_allocator(2, 784, 1);
-    nmatrix_t dense_1 = nmatrix_allocator(2, 32, 1);
-    nmatrix_t dense_2 = nmatrix_allocator(2, 16, 1);
-    nmatrix_t output = nmatrix_allocator(2, 10, 1);
+    nmatrix_t input = nmatrix_allocator(SHAPE(2, 784, 1));
+    nmatrix_t dense_1 = nmatrix_allocator(SHAPE(2, 32, 1));
+    nmatrix_t dense_2 = nmatrix_allocator(SHAPE(2, 16, 1));
+    nmatrix_t output = nmatrix_allocator(SHAPE(2, 10, 1));
 
     layer_t *input_layer = layer_input(model_digit, input);
     layer_t *dense_layer_1 = layer_dense(model_digit, dense_1);
@@ -128,9 +130,9 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
     model_xor->output_layer = NULL;
     model_xor->num_layers = 0;
 
-    nmatrix_t input = nmatrix_allocator(2, 2, 1);
-    nmatrix_t dense_1 = nmatrix_allocator(2, 2, 1);
-    nmatrix_t output = nmatrix_allocator(2, 1, 1);
+    nmatrix_t input = nmatrix_allocator(SHAPE(2, 2, 1));
+    nmatrix_t dense_1 = nmatrix_allocator(SHAPE(2, 2, 1));
+    nmatrix_t output = nmatrix_allocator(SHAPE(2, 1, 1));
 
     layer_t *input_layer = layer_input(model_xor, input);
     layer_t *dense_layer_1 = layer_dense(model_xor, dense_1);
@@ -164,8 +166,8 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
     nmatrix_t *input_data = malloc(num_examples * sizeof(nmatrix_t));
     nmatrix_t *output_data = malloc(num_examples * sizeof(nmatrix_t));
     for (int i = 0; i < num_examples; i++) {
-        input_data[i] = nmatrix_allocator(2, input_size, 1);
-        output_data[i] = nmatrix_allocator(2, output_size, 1);
+        input_data[i] = nmatrix_allocator(SHAPE(2, input_size, 1));
+        output_data[i] = nmatrix_allocator(SHAPE(2, output_size, 1));
         nmatrix_set_values_to_fit(&input_data[i], input_size, raw_input_data[i]);
         nmatrix_set_values_to_fit(&output_data[i], output_size, raw_output_data[i]);
     }
@@ -196,9 +198,9 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     model_and->output_layer = NULL;
     model_and->num_layers = 0;
 
-    nmatrix_t input = nmatrix_allocator(2, 2, 1);
-    nmatrix_t dense_1 = nmatrix_allocator(2, 2, 1);
-    nmatrix_t output = nmatrix_allocator(2, 1, 1);
+    nmatrix_t input = nmatrix_allocator(SHAPE(2, 2, 1));
+    nmatrix_t dense_1 = nmatrix_allocator(SHAPE(2, 2, 1));
+    nmatrix_t output = nmatrix_allocator(SHAPE(2, 1, 1));
 
     layer_t *input_layer = layer_input(model_and, input);
     layer_t *dense_layer_1 = layer_dense(model_and, dense_1);
@@ -232,8 +234,8 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     nmatrix_t *input_data = malloc(num_examples * sizeof(nmatrix_t));
     nmatrix_t *output_data = malloc(num_examples * sizeof(nmatrix_t));
     for (int i = 0; i < num_examples; i++) {
-        input_data[i] = nmatrix_allocator(2, input_size, 1);
-        output_data[i] = nmatrix_allocator(2, output_size, 1);
+        input_data[i] = nmatrix_allocator(SHAPE(2, input_size, 1));
+        output_data[i] = nmatrix_allocator(SHAPE(2, output_size, 1));
         nmatrix_set_values_to_fit(&input_data[i], input_size, raw_input_data[i]);
         nmatrix_set_values_to_fit(&output_data[i], output_size, raw_output_data[i]);
     }

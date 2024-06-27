@@ -5,6 +5,7 @@ add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE 
     # source files for the library
     src/model.c
+    src/layer.c
 )
 
 # Set build type to Debug by default
@@ -13,6 +14,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Add compile options for debug
+add_compile_options(-Wall -Wextra)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-gdwarf-2)
 endif()

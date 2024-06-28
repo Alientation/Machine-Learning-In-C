@@ -33,10 +33,10 @@ void nmatrix_shape_extend(nmatrix_t *m, int dim_i, int dim);
 void nmatrix_shape_change(nmatrix_t *m, int dim_i, int new_dim);
 bool check_nmatrix_shape(nmatrix_t *m, nshape_t shape);
 
-void nmatrix_free(nmatrix_t *m);
-nmatrix_t nmatrix_copy(nmatrix_t *src);
-void nmatrix_memcpy(nmatrix_t *dst, nmatrix_t *src);
-void nmatrix_memset(nmatrix_t *m, float val);
+void        nmatrix_free(nmatrix_t *m);
+nmatrix_t   nmatrix_copy(nmatrix_t *src);
+void        nmatrix_memcpy(nmatrix_t *dst, nmatrix_t *src);
+void        nmatrix_memset(nmatrix_t *m, float val);
 
 void nmatrix_convolve(nmatrix_t *m1, nmatrix_t *m2,
                       nmatrix_t *result);

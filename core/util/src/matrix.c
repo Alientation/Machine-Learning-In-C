@@ -3,9 +3,14 @@
 #include <assert.h>
 #include <math.h>
 #include <memory.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
+/**
+ * Constructs a struct nshape with the specified dimensions
+ * 
+ * 
+ */
 nshape_t nshape_constructor(int n_dims, ...) {
     nshape_t shape = {.n_dims = n_dims};
     va_list ptr;
@@ -199,7 +204,7 @@ void nmatrix_memset(nmatrix_t *m, float val) {
     }
 }
 
-
+// TODO
 void nmatrix_convolve(nmatrix_t *m1, nmatrix_t *m2,
                       nmatrix_t *result) {
     assert(m1->n_dims == m2->n_dims);
@@ -437,7 +442,7 @@ void nmatrix_for_each_operator(nmatrix_t *m, float (*op)(float),
     }
 }
 
-void nmatrix_print_nd(nmatrix_t *m, bool is_first, int tot_dims, int cur_dim) {
+static void nmatrix_print_nd(nmatrix_t *m, bool is_first, int tot_dims, int cur_dim) {
     if (m->n_dims == 2) {
         if (!is_first) {
             printf(",\n\n");

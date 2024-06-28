@@ -38,7 +38,7 @@ static visualizer_state_t vis_state = {
 }; 
 
 //===========================================================================
-static int compute_network_width() {
+static int compute_network_width(void) {
     layer_t *cur_layer = vis_state.vis_args.model->input_layer;
     int network_width = LAYER_GAP * (vis_state.vis_args.model->num_layers - 1);
     for (int i = 0; i < vis_state.vis_args.model->num_layers; i++) {
@@ -58,7 +58,7 @@ static int compute_network_width() {
     return network_width;
 }
 
-static void construct_node_positions() {
+static void construct_node_positions(void) {
     // TODO in future move all information about layer drawing to separate file
     vis_state.node_positions = malloc(vis_state.vis_args.model->num_layers * sizeof(Vector2*));
     
@@ -177,7 +177,7 @@ static void initialize_visualizer(visualizer_argument_t *vis_args) {
     vis_state.draw_args.images_dataset_height_input[1] = '8';    
 }
 
-static void end_visualizer() {
+static void end_visualizer(void) {
     // save the currently open dataset
     if (vis_state.draw_args.sel_dataset_index != -1) {
         WriteDataSet(vis_state.draw_args.current_dataset);
@@ -522,7 +522,7 @@ static void DrawNeuralNetwork(neural_network_model_t *model) {
     }
 }
 
-static void DrawTrainingInfo() {
+static void DrawTrainingInfo(void) {
     training_info_t *t_info = vis_state.vis_args.training_info;
     DrawText("# Train:\n# Test:\nTrain Acc:\nAvg Train Err:\nTest Acc:\nAvg Test Err:\n\nEpoch:\nTrain Index:\nTest Index:", 
             MODEL_X + 20, MODEL_Y + 100, 16, DARKGRAY);
@@ -590,7 +590,7 @@ static nmatrix_t move_training_set_display(bool is_train, int move) {
     return set_training_set_display(is_train, *cur);
 }
 
-static void DrawTrainingExamplesDisplay() {
+static void DrawTrainingExamplesDisplay(void) {
     if (vis_state.vis_args.training_info->train_size == 0 || vis_state.vis_args.training_info->test_size == 0) {
         return;
     }

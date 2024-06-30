@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <pthread.h>
 
+#define TIME
 #include <util/profiler.h>
 #include <util/debug_memory.h>
 
@@ -59,7 +60,7 @@ int main(void) {
     //     .default_dataset_directory = "",
     //     .allow_drawing_panel_as_model_input = false,
     // };
-    
+
     training_info_t training_info = nn_digit_recognizer(&nnmodel);
     training_info.model = &nnmodel;
     model_calculate(&nnmodel);
@@ -82,7 +83,7 @@ int main(void) {
     pthread_create(&thread_id, NULL, window_run, &vis_args);
 
     // clean up
-    pthread_join(thread_id, NULL);   
+    pthread_join(thread_id, NULL);
     model_free(&nnmodel);
 
     training_info_free(&training_info);
@@ -111,7 +112,7 @@ training_info_t nn_digit_recognizer(neural_network_model_t *model_digit) {
     layer_t *dense_layer_3 = layer_dense(model_digit, output);
     layer_t *activation_layer_3 = layer_activation(model_digit, activation_functions_softmax);
     layer_t *output_layer = layer_output(model_digit, output_make_guess_one_hot_encoded, output_functions_crossentropy, output_cost_categorical_cross_entropy);
-    
+
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.weights, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_3->layer.dense.weights, 0, 0.2);
@@ -141,9 +142,9 @@ training_info_t nn_XOR(neural_network_model_t *model_xor) {
     layer_t *activation_layer_2 = layer_activation(model_xor, activation_functions_sigmoid);
     layer_t *output_layer = layer_output(model_xor, output_make_guess_round, output_functions_meansquared, output_cost_mean_squared);
 
-    model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);    
+    model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);
-    model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.weights, 0, 0.2);    
+    model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.weights, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.bias, 0, 0.2);
 
     const int num_examples = 4;
@@ -209,9 +210,9 @@ training_info_t nn_AND(neural_network_model_t *model_and) {
     layer_t *activation_layer_2 = layer_activation(model_and, activation_functions_sigmoid);
     layer_t *output_layer = layer_output(model_and, output_make_guess_round, output_functions_meansquared, output_cost_mean_squared);
 
-    model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);    
+    model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.weights, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_1->layer.dense.bias, 0, 0.2);
-    model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.weights, 0, 0.2);    
+    model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.weights, 0, 0.2);
     model_initialize_matrix_normal_distribution(dense_layer_2->layer.dense.bias, 0, 0.2);
 
     const int num_examples = 4;

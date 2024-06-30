@@ -12,7 +12,7 @@ float random_normal_distribution_BoxMullerTransform(float standard_deviation) {
     float U1 = random_uniform_range(1);
     float U2 = random_uniform_range(1);
     float Z0 = sqrt(-2 * log10(U1) / log10(exp(1))) * cos(2 * acos(-1) * U2);
-    
+
     // scale to correct standard deviation
     // Var(Y) = Var(aX) = a^2Var(X)
     // Var(X) = 1
@@ -27,7 +27,7 @@ float random_normal_distribution_BoxMullerTransform(float standard_deviation) {
 
     printf("NORMAL DISTRIBUTED RANDOM: %f\n\n", (float) Z0);
     #endif
-    
+
     return Z0;
 }
 

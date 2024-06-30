@@ -14,7 +14,7 @@
  *
  * Add separate dropout layer, the current way dropout works is by modifying the input into a dense layer, but since the input matrix is
  * likely the previous layer's output matrix, that will interfere with backpropagation which would explain the very low accuracy and the common fluxtuations it has
- * 
+ *
  * weight regularlization techniques (L2/L1)
  * weight clipping?
  * add momentum (remembers previous gradients)
@@ -29,8 +29,8 @@
  *
  * FOR BATCHING... COMPLETELY REDO HOW IT WORKS SINCE IT CAUSES A LOT OF ISSUES WITH THE VISUALIZER. INSTEAD
  * HAVE EACH LAYER CONTAIN SEPARATE MATRICES, ONE FOR BATCHES, THE OTHER FOR VISUALIZATION
- *  
- * 
+ *
+ *
  * Performance History 28x28 examples for 12k test/train size (0.8 split)
  * 6/23/2024 - prior to nmatrix refactor, 3200 examples per second per second
  * 6/23/2024 - after nmatrix refactor, results in 2800 e/s, likely because the size of the nmatrix struct is large and passing
@@ -87,7 +87,7 @@ typedef struct Dense_Layer {
     // the edges are the weights
     nmatrix_t weights;
     nmatrix_t transposed_weights; // to not have to reallocate memory
-    nmatrix_t transposed_inputs; 
+    nmatrix_t transposed_inputs;
 
     // n x 1
     nmatrix_t bias;
@@ -184,12 +184,12 @@ typedef struct TrainingInfo {
 
     // when training stops, either condition is met => stops training
     unsigned int target_epochs;
-    float target_accuracy; 
+    float target_accuracy;
 
     unsigned int test_size;
     nmatrix_t *test_x;
     nmatrix_t *test_y;
-    
+
     // stats
     bool in_progress;
     float train_accuracy;
@@ -235,7 +235,7 @@ char* get_output_function_name(output_layer_t *layer);
 char* get_output_guess_function_name(output_layer_t *layer);
 nmatrix_t layer_get_neurons(layer_t *layer);
 
-nmatrix_t model_predict(neural_network_model_t *model, nmatrix_t input, 
+nmatrix_t model_predict(neural_network_model_t *model, nmatrix_t input,
                nmatrix_t output);
 
 void model_initialize_matrix_normal_distribution(nmatrix_t model, float mean, float standard_deviation);

@@ -22,7 +22,7 @@ const layer_function_t input_functions = {
     .feed_forward = input_feed_forward
 };
 
-nmatrix_t dense_feed_forward(layer_t *this, nmatrix_t input) { 
+nmatrix_t dense_feed_forward(layer_t *this, nmatrix_t input) {
     nmatrix_multiply(&this->layer.dense.weights, &input, &this->layer.dense.activation_values);
     nmatrix_add(&this->layer.dense.activation_values, &this->layer.dense.bias, &this->layer.dense.activation_values);
     return this->layer.dense.activation_values;
@@ -90,7 +90,7 @@ nmatrix_t activation_feed_forward_sigmoid(layer_t *this, nmatrix_t input) {
     for (int i = 0; i < input.n_elements; i++) {
         this->layer.activation.activated_values.matrix[i] = 1. / (1 + exp(-input.matrix[i]));
     }
-    
+
     return this->layer.activation.activated_values;
 }
 
@@ -99,7 +99,7 @@ nmatrix_t activation_feed_forward_relu(layer_t *this, nmatrix_t input) {
     for (int i = 0; i < input.n_elements; i++) {
         this->layer.activation.activated_values.matrix[i] = fmax(0, input.matrix[i]);
     }
-    
+
     return this->layer.activation.activated_values;
 }
 

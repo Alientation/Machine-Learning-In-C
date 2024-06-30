@@ -7,11 +7,14 @@
 #include <stdlib.h>
 
 /**
- * Constructs a struct nshape with the specified dimensions
- * 
- * 
+ * \brief               Constructs a nshape object
+ *
+ * \param[in]           n_dims: Dimensionality of the shape
+ * \param[in]           ...: Size of each dimension, from dimension 1..n_dims
+ * \return              \ref nshape_t object
  */
-nshape_t nshape_constructor(int n_dims, ...) {
+nshape_t
+nshape_constructor(int n_dims, ...) {
     nshape_t shape = {.n_dims = n_dims};
     va_list ptr;
     va_start(ptr, n_dims);
@@ -28,14 +31,29 @@ nshape_t nshape_constructor(int n_dims, ...) {
     return shape;
 }
 
-void free_nmatrix_list(int size, nmatrix_t *list) {
+/**
+ * \brief               Free malloced matrices
+ * \note                Only use on matrices allocated by \ref nmatrix_allocator
+ *
+ * \param[in]           size: number of matrices to free
+ * \param[in]           list: pointer to the matrix list
+ */
+void
+free_nmatrix_list(int size, nmatrix_t *list) {
     for (int i = 0; i < size; i++) {
         nmatrix_free(&list[i]);
     }
     free(list);
 }
 
-nmatrix_t nmatrix_allocator(nshape_t shape) {
+/**
+ * \brief               Heap allocates a matrix
+ *
+ * \param[in]           shape: shape of the matrix to allocate, dimensionality and size of it
+ * \return              \ref nmatrix_t object
+ */
+nmatrix_t
+nmatrix_allocator(nshape_t shape) {
     assert(shape.n_dims > 0);
     assert(shape.n_dims <= MAX_DIMS);
 
@@ -56,8 +74,16 @@ nmatrix_t nmatrix_allocator(nshape_t shape) {
     return m;
 }
 
-// should technically make a copy of matrix to be safe
-nmatrix_t nmatrix_constructor(int n_elements, float *matrix, nshape_t shape) {
+/**
+ * \brief               Creates a matrix with supplied data
+ *
+ * \param[in]           n_elements: number of floats stored in the matrix
+ * @param[in]           matrix: pointer to float array
+ * @param[in]           shape: shape of the matrix to create
+ * @return              \ref nmatrix_t object
+ */
+nmatrix_t
+nmatrix_constructor(int n_elements, float *matrix, nshape_t shape) {
     assert(n_elements > 0);
     assert(shape.n_dims > 0);
     assert(shape.n_dims <= MAX_DIMS);
@@ -65,7 +91,7 @@ nmatrix_t nmatrix_constructor(int n_elements, float *matrix, nshape_t shape) {
     nmatrix_t m = {.n_dims = shape.n_dims};
     m.n_elements = n_elements;
     m.matrix = matrix;
-    
+
     int check_n_elements = 1;
     for (int i = 0; i < shape.n_dims; i++) {
         check_n_elements *= shape.dims[i];
@@ -94,7 +120,7 @@ nmatrix_t nmatrix_constructor_array(int n_elements, float *matrix, int n_dims, i
         check_n_elements *= dims[i];
 
         assert(m.dims[i] > 0);
-    } 
+    }
 
     assert(check_n_elements == n_elements);
     return m;
@@ -134,7 +160,7 @@ void nmatrix_shape_contract(nmatrix_t *m, int dim_i) {
 void nmatrix_shape_extend(nmatrix_t *m, int dim_i, int dim) {
     assert(dim_i <= m->n_dims && dim_i >= 0);
     assert(dim > 0);
-    
+
     m->n_dims++;
     for (int i = m->n_dims - 1; i > dim_i; i++) {
         m->dims[i] = m->dims[i-1];
@@ -153,7 +179,7 @@ void nmatrix_shape_change(nmatrix_t *m, int dim_i, int new_dim) {
     m->n_elements /= m->dims[dim_i];
     m->dims[dim_i] = new_dim;
     m->n_elements *= new_dim;
-    
+
     free(m->matrix);
     m->matrix = malloc(sizeof(float) * m->n_elements);
     memset(m->matrix, 0, sizeof(float) * m->n_elements);
@@ -371,7 +397,7 @@ void nmatrix_transpose_2D(nmatrix_t *m,
 }
 
 // https://numpy.org/doc/stable/reference/generated/numpy.transpose.html
-void nmatrix_transpose(nmatrix_t *m, 
+void nmatrix_transpose(nmatrix_t *m,
                        nmatrix_t *result) {
     if (m->n_dims == 1 || (m->n_dims == 2 && m->dims[1] == 1)) {
         nmatrix_memcpy(result, m);
@@ -396,7 +422,7 @@ void nmatrix_transpose(nmatrix_t *m,
         strides[m->n_dims-1-i] = stride;
         stride *= m->dims[i];
     }
-    
+
     int *dims = result->dims;
     int pos[MAX_DIMS] = {0};
     int offset = 0;
@@ -405,7 +431,7 @@ void nmatrix_transpose(nmatrix_t *m,
         for (int dim = m->n_dims-1; dim >= 0; dim--) {
             offset += strides[dim];
             pos[dim]++;
-            
+
             if (pos[dim] == dims[dim]) {
                 pos[dim] = 0;
                 offset -= strides[dim] * dims[dim];
@@ -429,7 +455,7 @@ bool nmatrix_equal(nmatrix_t *m1, nmatrix_t *m2) {
     return memcmp(m1->matrix, m2->matrix, sizeof(float) * m1->n_elements) == 0;
 }
 
-void nmatrix_for_each_operator(nmatrix_t *m, float (*op)(float), 
+void nmatrix_for_each_operator(nmatrix_t *m, float (*op)(float),
                                nmatrix_t *result) {
     assert(m->n_dims == result->n_dims);
     assert(m->n_elements == result->n_elements);
@@ -457,7 +483,7 @@ static void nmatrix_print_nd(nmatrix_t *m, bool is_first, int tot_dims, int cur_
                 }
             }
             printf("[");
-            
+
             for (int c = 0; c < m->dims[1]; c++) {
                 if (c != 0) {
                     printf(", ");
@@ -474,7 +500,7 @@ static void nmatrix_print_nd(nmatrix_t *m, bool is_first, int tot_dims, int cur_
         printf(",\n");
     }
     printf("[");
-    
+
     for (int outer_dim = 0; outer_dim < m->dims[0]; outer_dim++) {
         int stride = m->n_elements / m->dims[0];
         nmatrix_t matrix = nmatrix_constructor_array(stride, m->matrix + outer_dim * stride, m->n_dims-1, &m->dims[1]);

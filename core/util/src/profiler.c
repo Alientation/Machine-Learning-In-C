@@ -2,7 +2,7 @@
  * \file                profiler.c
  * \brief               Profile execution time
  * \todo                See if a macro can be used to mark the function entry time
- *                      Log information to file
+ *                          Log information to file
  */
 
 #include <util/profiler.h>
@@ -30,7 +30,7 @@ typedef struct ProfilerInfo {
 static profiler_info_t
 mark_time(void) {
     time_t time_since = 0; /* initialize to 0 in case this is the first call */
-    time_t now = clock(); 
+    time_t now = clock();
     if (count_marks != 0) { /* called before so find elapsed time */
         time_since = now - prev_time;
     }
@@ -43,7 +43,7 @@ mark_time(void) {
 /**
  * \brief               Mark time
  */
-void 
+void
 mark_func_time(const char* file, const char* func, int line) {
     profiler_info_t info = mark_time();
     printf("%s:%d [%s] in %llu ms (at %.4f s)\n", file, line, func, info.delta, info.cur / 1000.0); /* log time */
@@ -51,7 +51,7 @@ mark_func_time(const char* file, const char* func, int line) {
 }
 
 /**
- * \brief               Mark time with a name
+ * \brief               Mark time with label
  */
 void mark_func_entry_time(const char* file, const char* func, int line, const char* entry) {
     profiler_info_t info = mark_time();
@@ -60,7 +60,7 @@ void mark_func_entry_time(const char* file, const char* func, int line, const ch
 }
 
 /**
- * \brief               Mark function exit time
+ * \brief               Mark on function exit
  */
 void mark_func_exit(const char* file, const char* func, int line) {
     profiler_info_t info = mark_time();

@@ -11,6 +11,7 @@
 #include <string.h>
 
 #define PROFILER_DISABLE_FUNCTION_RETURN
+#define TIME
 #include <util/profiler.h>
 #include <util/debug_memory.h>
 
@@ -27,7 +28,7 @@ static visualizer_state_t vis_state = {
     .is_training = false,
     .is_testing = false,
     .playground_state = false,
-    
+
     .node_positions = NULL,
 
     .show_tooltip = false,
@@ -35,7 +36,7 @@ static visualizer_state_t vis_state = {
     .tooltip_weight_value = NULL,
 
     .is_window_open = false,
-}; 
+};
 
 //===========================================================================
 static int compute_network_width(void) {
@@ -45,7 +46,7 @@ static int compute_network_width(void) {
         nmatrix_t neurons = layer_get_neurons(cur_layer);
         int num_nodes = neurons.n_elements;
         vis_state.node_positions[i] = malloc(num_nodes * sizeof(Vector2));
-        
+
         int nodes_per_section = HIDDEN_LAYER_NODES_HEIGHT;
         if (cur_layer->type == INPUT) {
             nodes_per_section = INPUT_LAYER_NODES_HEIGHT;
@@ -61,14 +62,14 @@ static int compute_network_width(void) {
 static void construct_node_positions(void) {
     // TODO in future move all information about layer drawing to separate file
     vis_state.node_positions = malloc(vis_state.vis_args.model->num_layers * sizeof(Vector2*));
-    
+
     // compute the width of the whole neural network to center it in the screen
     layer_t *cur_layer = vis_state.vis_args.model->input_layer;
     int network_width = compute_network_width();
 
     // center
     int network_x = MODEL_X + MODEL_WIDTH/2 - network_width/2;
-    
+
     int layer_x = network_x;
     cur_layer = vis_state.vis_args.model->input_layer;
     for (int i = 0 ; i < vis_state.vis_args.model->num_layers; i++) {
@@ -81,7 +82,7 @@ static void construct_node_positions(void) {
 
         // round up how many sections are needed with nodes_per_section nodes vertically
         int num_sections = (num_nodes + nodes_per_section - 1) / nodes_per_section;
-        
+
         // center
         int layer_height = (NODE_RADIUS * 2) * nodes_per_section + (NODE_GAP) * (nodes_per_section - 1);
         int layer_y = MODEL_Y + MODEL_HEIGHT/2 - layer_height/2;
@@ -111,25 +112,25 @@ static void initialize_visualizer(visualizer_argument_t *vis_args) {
         .is_open = false,
         .brush_size = 10,
         .brush_color = ColorToHSV(BLACK),
-        
+
         .prev_draw_pos = (Vector2) {.x = -1, .y = -1},
         .is_dragged = false,
         .is_drawing = false,
         .draw_texture = LoadRenderTexture(400, 400),
-        
+
         .segments_list_head = NULL,
         .segments_list_cur = NULL,
         .segments_list_size = 0,
 
         .is_save_popup_open = false,
         .is_dataset_viewer_open = false,
-        
+
         .dataset_directory = vis_args->default_dataset_directory,
         .sel_dataset_index = -1,
         .sel_label_index = -1,
         .current_dataset = {0},
         .img_dataset_vis = {0},
-        .dataset_list_scroll_index = 0, 
+        .dataset_list_scroll_index = 0,
         .sel_dataset_image_index = -1,
 
         .num_transformations = 0,
@@ -147,7 +148,7 @@ static void initialize_visualizer(visualizer_argument_t *vis_args) {
 
         .add_dataset_file_name = malloc((FILE_NAME_BUFFER_SIZE + 1) * sizeof(char)),
         .add_dataset_type = 0,
-        
+
         .images_dataset_width_option_active = false,
         .images_dataset_width_input = malloc((NUMBER_INPUT_BUFFER_SIZE + 1) * sizeof(char)),
         .images_dataset_height_option_active = false,
@@ -174,7 +175,7 @@ static void initialize_visualizer(visualizer_argument_t *vis_args) {
     vis_state.draw_args.images_dataset_width_input[1] = '8';
     memset(vis_state.draw_args.images_dataset_height_input, 0, NUMBER_INPUT_BUFFER_SIZE * sizeof(char));
     vis_state.draw_args.images_dataset_height_input[0] = '2';
-    vis_state.draw_args.images_dataset_height_input[1] = '8';    
+    vis_state.draw_args.images_dataset_height_input[1] = '8';
 }
 
 static void end_visualizer(void) {
@@ -196,14 +197,14 @@ static void end_visualizer(void) {
     free(vis_state.draw_args.add_dataset_file_name);
     free(vis_state.draw_args.images_dataset_width_input);
     free(vis_state.draw_args.images_dataset_height_input);
-    
+
     for (int i = 0; i < vis_state.vis_args.model->num_layers; i++) {
         free(vis_state.node_positions[i]);
     }
     free(vis_state.node_positions);
 }
 
-void* window_run(void *vargp) {    
+void* window_run(void *vargp) {
     assert(!vis_state.is_window_open);
     SetTraceLogLevel(LOG_ERROR);
 
@@ -212,7 +213,7 @@ void* window_run(void *vargp) {
     SetTargetFPS(60);
 
     initialize_visualizer(vis_args);
-    
+
     // smoother rescaling textures for the drawing panel images to input into the model
     SetTextureFilter(vis_state.draw_args.draw_texture.texture, TEXTURE_FILTER_TRILINEAR);
 
@@ -235,7 +236,7 @@ void* window_run(void *vargp) {
     EndTextureMode();
 
     construct_node_positions();
-    
+
     // RUNNER
     window_keep_open(vis_args->model, 0);
 
@@ -276,7 +277,7 @@ static layer_t *get_layer(int layer_index) {
 }
 
 static Vector2 get_node_position(int layer_index, int r) {
-    return vis_state.node_positions[layer_index][r];    
+    return vis_state.node_positions[layer_index][r];
 }
 
 static Vector2 get_layer_topleft(int layer_index) {
@@ -285,7 +286,7 @@ static Vector2 get_layer_topleft(int layer_index) {
 
 static Vector2 get_layer_bottomright(int layer_index) {
     nmatrix_t nodes = layer_get_neurons(get_layer(layer_index));
-    
+
     return vis_state.node_positions[layer_index][nodes.n_elements - 1]; // TODO bottom right position is not accurate if last section of layer has less nodes
     // instead store more info in node_positions (maybe make it an array of layer_info which contains node_positions)
 }
@@ -307,7 +308,7 @@ static void OpenTooltip(const char* msg, float priority, float *weight_value) {
 static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
     nmatrix_t this_neurons = layer_get_neurons(layer);
     nmatrix_t prev_neurons = layer_get_neurons(prev);
-    
+
     if (layer->type == DENSE) { // fully connected
         nmatrix_t weights = layer->layer.dense.weights;
 
@@ -324,7 +325,7 @@ static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 float value = fabs(weights.matrix[r2 * prev_neurons.dims[0] + r1]);
                 max_weight = max_weight < value ? value : max_weight;
             }
-            
+
             for (int r1 = 0; r1 < prev_neurons.dims[0]; r1++) {
                 if ((r2 * weights.dims[0] + r1) % skip != 0) {
                     continue;
@@ -336,7 +337,7 @@ static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 this_pos.x -= NODE_RADIUS;
                 prev_pos.x += NODE_RADIUS;
                 float ratio = max_weight != 0 ? 1 - fabs(weights.matrix[r2 * prev_neurons.dims[0] + r1]) / max_weight : 0.5;
-                
+
                 int cval = (int) (255 * ratio);
                 Color color = {
                     .a = 255,
@@ -344,7 +345,7 @@ static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
                 };
                 DrawLineEx(this_pos, prev_pos, 3, BLACK);
                 DrawLineV(this_pos, prev_pos, color);
-                if (CheckCollisionPointLine(GetMousePosition(), prev_pos, this_pos, MOUSE_HOVER_DISTANCE_TO_WEIGHT)) { 
+                if (CheckCollisionPointLine(GetMousePosition(), prev_pos, this_pos, MOUSE_HOVER_DISTANCE_TO_WEIGHT)) {
                     // display information about the weight
                     char weight[WEIGHT_DISPLAY_PRECISION];
                     snprintf(weight, WEIGHT_DISPLAY_PRECISION, "%f", weights.matrix[r2 * prev_neurons.dims[0] + r1]);
@@ -360,18 +361,18 @@ static void DrawLayerEdges(int layer_index, layer_t *layer, layer_t *prev) {
 
             this_pos.x -= NODE_RADIUS;
             prev_pos.x += NODE_RADIUS;
-            
+
             for (int dot = 1; dot <= WEIGHT_DOTTED_LINES; dot+=2) {
                 Vector2 draw_end = {
                     .x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * (dot / (float) WEIGHT_DOTTED_LINES)),
                     .y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * (dot / (float) WEIGHT_DOTTED_LINES)),
                 };
-                
+
                 Vector2 draw_start = {
                     .x = prev_pos.x + (int)((this_pos.x - prev_pos.x) * ((dot-1) / (float) WEIGHT_DOTTED_LINES)),
                     .y = prev_pos.y + (int)((this_pos.y - prev_pos.y) * ((dot-1) / (float) WEIGHT_DOTTED_LINES)),
                 };
-                
+
                 DrawLineV(draw_start, draw_end, BLACK);
             }
 
@@ -419,7 +420,7 @@ static void DrawLayerInformation(int layer_index, layer_t *layer) {
 
 static void DrawLayer(int layer_index, layer_t *layer) {
     nmatrix_t nodes = layer_get_neurons(layer);
-    
+
     // calculate values for color scaling
     float max_node_value = -1;
     float min_node_value = -1;
@@ -445,14 +446,14 @@ static void DrawLayer(int layer_index, layer_t *layer) {
         Vector3 HSV = ColorToHSV(target);
         Color shade = ColorFromHSV(HSV.x, HSV.y * ratio, HSV.z);
         Vector2 pos = get_node_position(layer_index, r);
-        
+
         DrawTexture(vis_state.node_texture.texture, pos.x - NODE_RADIUS, pos.y - NODE_RADIUS, shade);
         DrawTexture(vis_state.node_outline_texture.texture, pos.x - NODE_RADIUS, pos.y - NODE_RADIUS, WHITE);
 
         if (layer->type == OUTPUT) {
             DrawCenteredText(vis_state.vis_args.output_labels[r], pos.x + NODE_RADIUS + NODE_GAP + 5, pos.y, 10, BLACK);
         }
-        
+
         // edit input node values
         if (vis_state.playground_state && layer->type == INPUT && CheckCollisionPointCircle(GetMousePosition(), pos, MOUSE_HOVER_DISTANCE_TO_NODE)
                 && !vis_state.draw_args.is_open) {
@@ -487,7 +488,7 @@ static void DrawLayer(int layer_index, layer_t *layer) {
                 nmatrix_t output = model_calculate(vis_state.vis_args.training_info->model);
             }
         }
-        
+
         // draw value of node
         if (NODE_DISPLAY_PRECISION > MIN_NODE_PRECISION_FOR_DISPLAY) {
             char node_value[NODE_DISPLAY_PRECISION];
@@ -524,13 +525,13 @@ static void DrawNeuralNetwork(neural_network_model_t *model) {
 
 static void DrawTrainingInfo(void) {
     training_info_t *t_info = vis_state.vis_args.training_info;
-    DrawText("# Train:\n# Test:\nTrain Acc:\nAvg Train Err:\nTest Acc:\nAvg Test Err:\n\nEpoch:\nTrain Index:\nTest Index:", 
+    DrawText("# Train:\n# Test:\nTrain Acc:\nAvg Train Err:\nTest Acc:\nAvg Test Err:\n\nEpoch:\nTrain Index:\nTest Index:",
             MODEL_X + 20, MODEL_Y + 100, 16, DARKGRAY);
     DrawText(TextFormat("%d\n%d\n%.2f\n%.3f\n%.2f\n%.3f\n\n%d\n%d\n%d",
-            t_info->train_size, t_info->test_size, t_info->train_accuracy, t_info->avg_train_error, t_info->test_accuracy, 
+            t_info->train_size, t_info->test_size, t_info->train_accuracy, t_info->avg_train_error, t_info->test_accuracy,
             t_info->avg_test_error, t_info->epoch, t_info->train_index, t_info->test_index), MODEL_X + 160, MODEL_Y + 100, 16, BLACK);
-    
-    DrawText(TextFormat("Batch: %d\nLearning: %.3f\nEpochs: %d\nTrgt Acc: %.2f", 
+
+    DrawText(TextFormat("Batch: %d\nLearning: %.3f\nEpochs: %d\nTrgt Acc: %.2f",
             t_info->batch_size, t_info->learning_rate, t_info->target_epochs, t_info->target_accuracy),
             MODEL_X + 20, MODEL_Y + 350, 12, BLACK);
 
@@ -675,7 +676,7 @@ static void DrawTrainingExamplesDisplay(void) {
         }
 
         DrawText(TextFormat("Displaying Example: %d", *cur), prev_incorrect_button_r.x, prev_incorrect_button_r.y + 20, 16, BLACK);
-        DrawText(TextFormat("Expected Label: %s", vis_state.vis_args.output_labels[unpack_one_hot_encoded(correct[*cur])]), 
+        DrawText(TextFormat("Expected Label: %s", vis_state.vis_args.output_labels[unpack_one_hot_encoded(correct[*cur])]),
                 prev_incorrect_button_r.x, prev_incorrect_button_r.y + 40, 16, BLACK);
     }
 }
@@ -767,4 +768,3 @@ void window_keep_open(neural_network_model_t *model, unsigned int num_seconds) {
     }
     vis_state.is_window_open = false;
 }
-

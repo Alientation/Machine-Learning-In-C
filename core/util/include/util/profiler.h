@@ -1,6 +1,9 @@
 /**
  * \file                profiler.h
  * \brief               profiler include file
+ * \note                '#TIME' will enable stopwatch behavior through the macros '#CLOCK_MARK' and '#CLOCK_MARK_ENTRY'
+ *                          Setting '#PROFILER_DISABLE_FUNCTION_RETURN' will prevent replacing all function 'return' statements with a
+ *                          mark time call
  */
 
 #pragma once

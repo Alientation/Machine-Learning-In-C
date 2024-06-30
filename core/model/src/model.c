@@ -92,7 +92,7 @@ layer_t* layer_dropout(neural_network_model_t *model, float dropout) {
 
 layer_t* layer_activation(neural_network_model_t *model, layer_function_t functions) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
-    
+
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = ACTIVATION;
     activation_layer_t *activation = &layer->layer.activation;
@@ -105,13 +105,13 @@ layer_t* layer_activation(neural_network_model_t *model, layer_function_t functi
     return layer;
 }
 
-layer_t* layer_output(neural_network_model_t *model, nmatrix_t (*make_guess)(layer_t*, nmatrix_t), layer_function_t functions, 
+layer_t* layer_output(neural_network_model_t *model, nmatrix_t (*make_guess)(layer_t*, nmatrix_t), layer_function_t functions,
         float (*loss)(layer_t*, nmatrix_t)) {
     assert(model->num_layers > 0 && model->input_layer != NULL && model->input_layer->type == INPUT);
     // if (functions.back_propagation == output_functions_crossentropy.back_propagation) { // TODO I DONT THINK THIS MATTERS
     //     assert(make_guess == output_make_guess_softmax);
     // }
-    
+
     layer_t *layer = malloc(sizeof(layer_t));
     layer->type = OUTPUT;
     output_layer_t *output = &layer->layer.output;
@@ -133,14 +133,14 @@ void model_initialize_matrix_normal_distribution(nmatrix_t matrix, float mean, f
     }
 }
 
-nmatrix_t model_predict(neural_network_model_t *model, nmatrix_t input, 
+nmatrix_t model_predict(neural_network_model_t *model, nmatrix_t input,
                         nmatrix_t output) {
     layer_t *current = model->input_layer;
     nmatrix_t prev_output = input;
     int num_iterations = model->num_layers-1;
     for (int layer_i = 0; layer_i < num_iterations; layer_i++) {
         assert(current->type != OUTPUT);
-        
+
         // since the different layer structs are arranged in a way that the function pointers are in the same "locations"
         // this should work for all layers without having to use a switch
         prev_output = current->layer.input.functions.feed_forward(current, prev_output);
@@ -230,7 +230,7 @@ nmatrix_t model_calculate(neural_network_model_t *model) {
     nmatrix_t prev_output = model->input_layer->layer.input.input_values;
     for (int layer_i = 0; layer_i < model->num_layers-1; layer_i++) {
         assert(current->type != OUTPUT);
-        
+
         // since the different layer structs are arranged in a way that the function pointers are in the same "locations"
         // this should work for all layers without having to use a switch
         prev_output = current->layer.input.functions.feed_forward(current, prev_output);
@@ -251,7 +251,7 @@ void training_info_free(training_info_t *training_info) {
 
 void model_train_info(training_info_t *training_info) {
     neural_network_model_t *model = training_info->model;
-    
+
     int batch_size = training_info->batch_size;
     unsigned int *epoch = &training_info->epoch;
     unsigned int target_epochs = training_info->target_epochs;
@@ -297,7 +297,7 @@ void model_train_info(training_info_t *training_info) {
         for (*test_index = 0; *test_index < test_size; (*test_index)++) {
             model_predict(model, test_x[*test_index], actual_output);
             avg_test_error += output_layer.loss(model->output_layer, test_y[*test_index]);
-            
+
             nmatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
             if (nmatrix_equal(&test_y[*test_index], &model_guess)) {
                 passed_test++;
@@ -308,10 +308,10 @@ void model_train_info(training_info_t *training_info) {
         training_info->test_accuracy = ((int)(100000.0 * passed_test * test_size_reciprocal)) * 0.00001;
 
         if ((((*epoch) + 1) % print_every == 0 && *epoch != 0) || *epoch == target_epochs - 1) {
-            printf("==== Epoch %d ==== \ntrain_error: %f, train_accuracy: %f\ntest_error: %f, test_accuracy: %f (passed=%d)\n\n", (*epoch) + 1, 
-                    training_info->avg_train_error, training_info->train_accuracy, 
+            printf("==== Epoch %d ==== \ntrain_error: %f, train_accuracy: %f\ntest_error: %f, test_accuracy: %f (passed=%d)\n\n", (*epoch) + 1,
+                    training_info->avg_train_error, training_info->train_accuracy,
                     training_info->avg_test_error, training_info->test_accuracy,
-                    passed_test); 
+                    passed_test);
         }
 
         // check if we can stop
@@ -336,7 +336,7 @@ void model_test_info(training_info_t *training_info) {
     for (*test_index = 0; *test_index < test_size; (*test_index)++) {
         model_predict(model, test_x[*test_index], actual_output);
         avg_test_error += output_layer.loss(model->output_layer, test_y[*test_index]);
-        
+
         nmatrix_t model_guess = output_layer.make_guess(model->output_layer, actual_output);
         if (nmatrix_equal(&test_y[*test_index], &model_guess)) {
             passed_test++;
@@ -353,7 +353,7 @@ void model_test_info(training_info_t *training_info) {
 
 int unpack_one_hot_encoded(nmatrix_t one_hot_encoded) {
     assert(one_hot_encoded.n_dims == 1 || one_hot_encoded.dims[1] == 1);
-    
+
     for (int i = 0; i < one_hot_encoded.n_elements; i++) {
         if (one_hot_encoded.matrix[i] != 0) {
             return i;

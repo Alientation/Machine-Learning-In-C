@@ -7,11 +7,11 @@ Simple, really not too optimized multilayer perceptron model. A model is structu
 series of layers explicitly defined by the user.
 
 ## Progress
-XOR trained model
+XOR trained model\
 digit recognizer trained on handdrawn dataset (only 100 examples, 10 per digit, which explains the model's low performance)
 model visualizer in raylib
-drawing panel for models that take in images, to create dataset files
-dataset file loader
+drawing panel for models that take in images, to create dataset files\
+dataset file loader\
 
 ## Goals
 - Train a model on MNIST

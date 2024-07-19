@@ -11,7 +11,7 @@ XOR trained model\
 digit recognizer trained on handdrawn dataset (only 100 examples, 10 per digit, which explains the model's low performance)
 model visualizer in raylib
 drawing panel for models that take in images, to create dataset files\
-dataset file loader\
+dataset file loader
 
 ## Goals
 - Train a model on MNIST
